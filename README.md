@@ -1,1 +1,1 @@
-# Representation_stability_through_drifting_stimuli
+# Representation stability through a drifting stimuli
