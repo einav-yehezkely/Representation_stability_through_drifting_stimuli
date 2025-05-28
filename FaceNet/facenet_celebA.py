@@ -17,7 +17,7 @@ model = InceptionResnetV1(pretrained="casia-webface", classify=False).eval()
 
 # Directory containing face images (e.g., CelebA dataset)
 script_dir = os.path.dirname(__file__)
-img_dir = os.path.join(script_dir, "celebA_7")
+img_dir = os.path.join(script_dir, "celebA")
 image_files = [f for f in os.listdir(img_dir) if f.lower().endswith(".jpg")]
 
 print("Looking inside:", img_dir)
@@ -48,7 +48,7 @@ for fname in tqdm(image_files):
             # Add batch dimension: from [3, 160, 160] to [1, 3, 160, 160]
             face = face.unsqueeze(0)
 
-            # Forward pass through FaceNet to get 128D embedding
+            # Forward pass through FaceNet to get 512D embedding
             with torch.no_grad():
                 emb = model(face).squeeze().numpy()
                 print(f"Embedding shape for {fname}: {emb.shape}")
@@ -64,4 +64,4 @@ print("Faces not detected:", failed)
 
 # Convert to DataFrame and save to CSV
 df = pd.DataFrame(results)
-df.to_csv("1_celeba_facenet_embeddings.csv", index=False, header=False)
+df.to_csv("celeba_facenet_embeddings.csv", index=False, header=False)
