@@ -7,7 +7,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 
-df = pd.read_csv("pca_2D_24.csv", header=None)
+df = pd.read_csv("pca_top2_filtered.csv", header=None)
 
 # first column = names, second column = dimension 1, third column = dimension 2
 x = df.iloc[:, 1]

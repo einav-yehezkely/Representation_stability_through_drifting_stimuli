@@ -175,3 +175,9 @@ df_similar_vectors.to_csv("pca_rest_vectors_5_percent.csv", index=False)
 print(
     "Saved 5% of images with smallest squared radius in residual PCA space to pca_rest_vectors_5_percent.csv"
 )
+
+df_top2_filtered = df_top2[mask_sq]
+df_top2_filtered.to_csv("pca_top2_filtered.csv", index=False, header=False)
+print(
+    "Saved filtered projection (PC1, PC2) of 5% most similar images to pca_top2_filtered.csv"
+)
