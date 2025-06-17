@@ -6,7 +6,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-path = "celeba_facenet_embeddings_24.csv"  # Path to the data file
+path = "celeba_facenet_embeddings.csv"  # Path to the data file
 
 
 # Load the data
