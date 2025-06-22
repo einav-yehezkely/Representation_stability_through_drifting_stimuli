@@ -2,7 +2,7 @@ import sys
 import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from generate_rotation_sequence import load_top2_filtered, rotate_and_find_nearest
+from generate_rotation_sequence import *
 import os
 from PIL import Image
 import numpy as np
@@ -51,15 +51,20 @@ def create_video_from_sequence(image_names, image_folder, output_path, fps=10):
 
 
 # Step 1: Load the 2D PCA points
-names, points = load_top2_filtered("files/pca_top2_filtered.csv")
+names, points = load_top2_filtered("files/pca_top2_filtered_10per.csv")
 
 # Step 2: Choose a base image (by index)
-base_index = 123
+quadrant_II_indices = np.where((points[:, 0] < 0) & (points[:, 1] > 0))[0]
+if len(quadrant_II_indices) == 0:
+    raise ValueError("No points found in quadrant II")
+base_index = np.random.choice(quadrant_II_indices)
 base_point = points[base_index]
 base_name = names[base_index]
 
 # Step 3: Generate the rotation trajectory (1000 steps = 0.36° per step)
-trajectory = rotate_and_find_nearest(base_point, points, names, num_steps=10000)
+trajectory = greedy_walk_nearest_neighbors(
+    base_point, points, names
+)  # rotate_and_find_nearest(base_point, points, names, num_steps=10000)
 
 # Step 4: Extract the image names along the trajectory
 image_names = [name for (_, _, name) in trajectory]

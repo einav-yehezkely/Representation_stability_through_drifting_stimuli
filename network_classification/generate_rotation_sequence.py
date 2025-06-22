@@ -27,6 +27,10 @@ def load_top2_filtered(csv_path="pca_top2_filtered.csv"):
     but also have low variance in the remaining PCA dimensions (i.e., their radius in the residual components is small).
     This ensures that proximity in 2D reflects real similarity in the full FaceNet space.
     """
+    # df = pd.read_csv(csv_path, header=0)
+    # names = df["filename"].values
+    # x = df["PC1"].values
+    # y = df["PC2"].values
     df = pd.read_csv(csv_path, header=None)
     names = df.iloc[:, 0].values
     x = df.iloc[:, 1].values
@@ -37,7 +41,7 @@ def load_top2_filtered(csv_path="pca_top2_filtered.csv"):
 
 def rotate_vector(v, angle_deg):
     """
-    Rotate a 2D vector by angle_deg (in degrees) around the origin.
+    Rotate a 2D vector counter clockwise by angle_deg (in degrees) around the origin.
 
     Parameters:
     - v: numpy array of shape (2,), the vector to rotate

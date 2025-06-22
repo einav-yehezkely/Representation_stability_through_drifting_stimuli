@@ -163,7 +163,7 @@ print("Saved eigenvalues to pca_eigenvalues.csv")
 # compute squared radius for the rest of the components
 squared_radius_rest = np.sum(X_projected_rest**2, axis=1)
 # Select 5% of vectors with smallest squared radius — most similar in non-dominant components
-threshold_sq = np.percentile(squared_radius_rest, 5)
+threshold_sq = np.percentile(squared_radius_rest, 10)
 mask_sq = squared_radius_rest <= threshold_sq
 # Apply the mask to get only the 5% most similar vectors in the residual space
 similar_vectors_rest = X_projected_rest[mask_sq]
