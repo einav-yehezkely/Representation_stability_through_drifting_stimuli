@@ -96,3 +96,43 @@ def rotate_and_find_nearest(base_point, all_points, all_names, num_steps=1000):
         used_indices.add(idx_closest)
         results.append((i, angle_deg, all_names[idx_closest]))
     return results
+
+
+def greedy_walk_nearest_neighbors(base_point, all_points, all_names, num_steps=1000):
+    """
+    Walk through the 2D space by moving at each step to the closest unused point.
+
+    Parameters:
+    - base_point: starting point in 2D space
+    - all_points: numpy array of shape (N, 2)
+    - all_names: list of image names
+    - num_steps: how many steps to take (or less if points run out)
+
+    Returns:
+    - List of tuples: (step_index, image_name, current_point)
+    """
+    results = []
+    used_indices = set()
+
+    current_point = base_point
+
+    for i in range(num_steps):
+        dists = np.linalg.norm(all_points - current_point, axis=1)
+
+        # Mask already used points
+        for idx in used_indices:
+            dists[idx] = np.inf
+
+        if np.all(dists == np.inf):
+            print("No more unused points available.")
+            break
+
+        idx_closest = np.argmin(dists)
+        used_indices.add(idx_closest)
+
+        current_point = all_points[idx_closest]
+        image_name = all_names[idx_closest]
+
+        results.append((i, image_name, current_point))
+
+    return results
