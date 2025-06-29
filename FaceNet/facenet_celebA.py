@@ -1,5 +1,5 @@
 #################################################################
-# Representation of the face in 128 dimensions vector using FaceNet
+# Representation of the face in 512 dimensions vector using FaceNet
 # This code uses the MTCNN model to detect faces in images and the InceptionResnetV1 model to extract 128D embeddings.
 # The code processes images from the CelebA dataset, extracts face embeddings, and saves them to a CSV file.
 # 04/05/2025
