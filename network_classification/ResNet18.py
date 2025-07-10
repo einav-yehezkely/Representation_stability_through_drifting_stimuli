@@ -154,3 +154,36 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
         # load best model weights
         model.load_state_dict(torch.load(best_model_params_path, weights_only=True))
     return model
+
+
+# Load a pre-trained ResNet-18 model with weights trained on ImageNet
+# This gives us a strong starting point instead of training from scratch
+model_ft = models.resnet18(weights="IMAGENET1K_V1")
+
+# Get the number of input features to the final (fully connected) layer
+num_ftrs = model_ft.fc.in_features
+
+# Replace the final layer with a new one that has 2 output classes (for example: class A and class B)
+# If you have more than 2 classes, you can use: nn.Linear(num_ftrs, len(class_names))
+model_ft.fc = nn.Linear(num_ftrs, 2)
+
+# Move the model to the appropriate device (GPU if available, otherwise CPU)
+model_ft = model_ft.to(device)
+
+# Define the loss function: CrossEntropyLoss is standard for classification tasks
+criterion = nn.CrossEntropyLoss()
+
+# Define the optimizer: here we're using SGD with a small learning rate and momentum
+# This will update all model parameters during training
+optimizer_ft = optim.SGD(model_ft.parameters(), lr=0.001, momentum=0.9)
+
+# Define a learning rate scheduler:
+# Every 7 epochs, reduce the learning rate by a factor of 0.1
+# This helps the model learn quickly at first and then fine-tune gently
+exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.1)
+
+
+# Train and evaluate
+model_ft = train_model(
+    model_ft, criterion, optimizer_ft, exp_lr_scheduler, num_epochs=25
+)
