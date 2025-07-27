@@ -71,6 +71,8 @@ train_losses = []
 val_losses = []
 train_accuracies = []
 val_accuracies = []
+reeval_train_losses = []
+reeval_train_accuracies = []
 
 
 def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
@@ -160,6 +162,33 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
 
             print()
 
+            # Re-evaluate the training set after each epoch - Recompute train loss in eval mode for fair comparison
+            model.eval()
+            running_loss = 0.0
+            running_corrects = 0
+
+            with torch.no_grad():
+                for inputs, labels in dataloaders["train"]:
+                    inputs = inputs.to(device)
+                    labels = labels.to(device)
+
+                    outputs = model(inputs)
+                    _, preds = torch.max(outputs, 1)
+                    loss = criterion(outputs, labels)
+
+                    running_loss += loss.item() * inputs.size(0)
+                    running_corrects += torch.sum(preds == labels.data)
+
+            true_train_loss = running_loss / dataset_sizes["train"]
+            true_train_acc = running_corrects.double() / dataset_sizes["train"]
+
+            reeval_train_losses.append(true_train_loss)
+            reeval_train_accuracies.append(true_train_acc.item())
+
+            print(
+                f"[RECALC] Train Loss (eval mode): {true_train_loss:.4f}, Acc: {true_train_acc:.4f}"
+            )
+
         time_elapsed = time.time() - since
         print(
             f"Training complete in {time_elapsed // 60:.0f}m {time_elapsed % 60:.0f}s"
@@ -174,7 +203,7 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
         plt.figure(figsize=(10, 4))
 
         plt.subplot(1, 2, 1)
-        plt.plot(train_losses, label="Train Loss")
+        plt.plot(reeval_train_losses, label="Train Loss")
         plt.plot(val_losses, label="Val Loss")
         plt.xlabel("Epoch")
         plt.ylabel("Loss")
@@ -183,7 +212,7 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
 
         # Plot accuracy
         plt.subplot(1, 2, 2)
-        plt.plot(train_accuracies, label="Train Accuracy")
+        plt.plot(reeval_train_accuracies, label="Train Accuracy")
         plt.plot(val_accuracies, label="Val Accuracy")
         plt.xlabel("Epoch")
         plt.ylabel("Accuracy")
@@ -191,7 +220,7 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
         plt.legend()
 
         plt.tight_layout()
-        plt.savefig(f"training_progress_LR0.0001_gamma{exp_lr_scheduler.gamma}.png")
+        plt.savefig(f"training_progress_LR0.00001_gamma{exp_lr_scheduler.gamma}.png")
     return model
 
 
@@ -218,7 +247,7 @@ criterion = nn.CrossEntropyLoss()
 
 # Define the optimizer – here we only pass the parameters of the final layer (fc)
 # since all other layers are frozen and don't need to be updated
-optimizer_conv = optim.SGD(model_conv.fc.parameters(), lr=0.0001, momentum=0.9)
+optimizer_conv = optim.SGD(model_conv.fc.parameters(), lr=0.00001, momentum=0.9)
 
 # Define a learning rate scheduler that decays the learning rate by a factor of 0.5 every 5 epochs
 exp_lr_scheduler = lr_scheduler.StepLR(optimizer_conv, step_size=5, gamma=0.5)
