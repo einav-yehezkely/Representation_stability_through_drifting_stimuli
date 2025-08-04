@@ -313,7 +313,7 @@ names, points = load_top2_filtered("pca_top2_filtered_female.csv")
 base_point, opposite_point = create_base_and_opposite_points(135)
 self_training_model = load_model(model_path="model_ft_no_reg_A_vs_B_135.pth")
 
-for i in range(3):  # 360/5=72
+for i in range(72):  # 360/5=72
     base_point = rotate_vector(base_point, angle_deg=5)
     opposite_point = rotate_vector(opposite_point, angle_deg=5)
     collect_nearest_images(
