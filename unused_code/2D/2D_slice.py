@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import os
 import shutil
 
-df = pd.read_csv("pca_2D_24.csv", header=None)
+df = pd.read_csv("pca_top2_filtered_female.csv", header=None)
 
 # first column = names, second column = dimension 1, third column = dimension 2
 x = df.iloc[:, 1]
@@ -49,23 +49,23 @@ for quadrant, info in slices.items():
         x[mask], y[mask], s=10, label=f"{quadrant} Slice: {angle_min}°–{angle_max}°"
     )
 
-    # Save CSV
-    csv_name = f"{quadrant}_slice_{angle_min}_{angle_max}.csv"
-    filtered.to_csv(csv_name, index=False, header=False)
-    print(f"Saved slice to {csv_name}")
+    # # Save CSV
+    # csv_name = f"{quadrant}_slice_{angle_min}_{angle_max}.csv"
+    # filtered.to_csv(csv_name, index=False, header=False)
+    # print(f"Saved slice to {csv_name}")
 
-    # Copy images
-    image_names = filtered.iloc[:, 0].tolist()
-    destination_folder = f"{angle_min}to{angle_max}degrees"
-    os.makedirs(destination_folder, exist_ok=True)
+    # # Copy images
+    # image_names = filtered.iloc[:, 0].tolist()
+    # destination_folder = f"{angle_min}to{angle_max}degrees"
+    # os.makedirs(destination_folder, exist_ok=True)
 
-    for name in image_names:
-        src_path = os.path.join(source_folder, name)
-        dst_path = os.path.join(destination_folder, name)
-        if os.path.exists(src_path):
-            shutil.copy2(src_path, dst_path)
-        else:
-            print(f"Warning: file not found: {src_path}")
+    # for name in image_names:
+    #     src_path = os.path.join(source_folder, name)
+    #     dst_path = os.path.join(destination_folder, name)
+    #     if os.path.exists(src_path):
+    #         shutil.copy2(src_path, dst_path)
+    #     else:
+    #         print(f"Warning: file not found: {src_path}")
 
 # Final plot
 plt.axhline(y=0, color="black", linewidth=1)

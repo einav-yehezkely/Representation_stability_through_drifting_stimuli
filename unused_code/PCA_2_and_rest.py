@@ -17,7 +17,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-path = "female_facenet_embeddings.csv"  # Path to the data file
+path = "male_facenet_embeddings.csv"  # Path to the data file
 
 
 # Load the data
@@ -188,7 +188,7 @@ df_similar_vectors.insert(0, "filename", np.array(names)[mask_sq])
 # )
 
 df_top2_filtered = df_top2[mask_sq]
-df_top2_filtered.to_csv("pca_top2_filtered.csv", index=False, header=False)
+df_top2_filtered.to_csv("pca_top2_filtered_male.csv", index=False, header=False)
 print(
     "Saved filtered projection (PC1, PC2) of 10% most similar images to pca_top2_filtered.csv"
 )

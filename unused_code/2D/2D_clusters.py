@@ -13,7 +13,7 @@ import os
 import shutil
 
 # Load vectors
-df = pd.read_csv("pca_2D_24.csv", header=None)
+df = pd.read_csv("pca_top2_filtered_female.csv", header=None)
 names = df.iloc[:, 0].to_numpy()
 x = df.iloc[:, 1].to_numpy()
 y = df.iloc[:, 2].to_numpy()
@@ -47,8 +47,8 @@ cluster_q1 = df.iloc[indices_q1]
 cluster_q3 = df.iloc[indices_q3]
 
 # Save CSVs
-cluster_q1.to_csv("random_cluster_q1.csv", index=False, header=False)
-cluster_q3.to_csv("random_cluster_q3.csv", index=False, header=False)
+# cluster_q1.to_csv("random_cluster_q1.csv", index=False, header=False)
+# cluster_q3.to_csv("random_cluster_q3.csv", index=False, header=False)
 
 # Plot
 plt.figure(figsize=(6, 6))

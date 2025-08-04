@@ -44,7 +44,7 @@ data_transforms = {
 }
 
 # Load the dataset
-data_dir = "split_data"  ###################################################################### TODO: change
+data_dir = "split_data"
 # Create a dictionary with two datasets: one for training ("train") and one for validation ("val")
 # Each dataset loads images from the corresponding folder and applies the appropriate transformations
 image_datasets = {
@@ -55,7 +55,7 @@ image_datasets = {
 # Each DataLoader handles batching, shuffling (for training), and parallel data loading
 dataloaders = {
     x: torch.utils.data.DataLoader(
-        image_datasets[x], batch_size=4, shuffle=True, num_workers=0
+        image_datasets[x], batch_size=50, shuffle=True, num_workers=0
     )
     for x in ["train", "val"]
 }
@@ -160,28 +160,34 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
                     best_acc = epoch_acc
                     torch.save(model.state_dict(), best_model_params_path)
 
-            print()
-
-            # Re-evaluate the training set after each epoch - Recompute train loss in eval mode for fair comparison
+            ### Re-evaluate the training set after each epoch - Recompute train loss in eval mode for fair comparison
+            # Set the model to evaluation mode to ensure consistent behavior
             model.eval()
+            # Initialize accumulators for loss and correct predictions on the training set
             running_loss = 0.0
             running_corrects = 0
-
+            # Disable gradient tracking to reduce memory usage and speed up computations
             with torch.no_grad():
-                for inputs, labels in dataloaders["train"]:
+                # Iterate over the entire training set
+                for inputs, labels in tqdm(
+                    dataloaders["train"],
+                    desc="[RECALC] Eval Train Progress",
+                    leave=False,
+                ):
                     inputs = inputs.to(device)
                     labels = labels.to(device)
 
+                    # Forward pass: compute model outputs and predictions
                     outputs = model(inputs)
                     _, preds = torch.max(outputs, 1)
                     loss = criterion(outputs, labels)
-
+                    # Accumulate loss and correct predictions
                     running_loss += loss.item() * inputs.size(0)
                     running_corrects += torch.sum(preds == labels.data)
-
+            # Calculate the average loss and accuracy over the training set
             true_train_loss = running_loss / dataset_sizes["train"]
             true_train_acc = running_corrects.double() / dataset_sizes["train"]
-
+            # Store the re-evaluated training loss and accuracy for plotting
             reeval_train_losses.append(true_train_loss)
             reeval_train_accuracies.append(true_train_acc.item())
 
@@ -204,6 +210,7 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
 
         plt.subplot(1, 2, 1)
         plt.plot(reeval_train_losses, label="Train Loss")
+        # plt.plot(train_losses, label="Train Loss")
         plt.plot(val_losses, label="Val Loss")
         plt.xlabel("Epoch")
         plt.ylabel("Loss")
@@ -213,6 +220,7 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
         # Plot accuracy
         plt.subplot(1, 2, 2)
         plt.plot(reeval_train_accuracies, label="Train Accuracy")
+        # plt.plot(train_accuracies, label="Train Accuracy")
         plt.plot(val_accuracies, label="Val Accuracy")
         plt.xlabel("Epoch")
         plt.ylabel("Accuracy")
@@ -220,74 +228,75 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
         plt.legend()
 
         plt.tight_layout()
-        plt.savefig(f"training_progress_LR0.00001_gamma{exp_lr_scheduler.gamma}.png")
+        plt.savefig(f"training_progress_LR0.00005_gamma{exp_lr_scheduler.gamma}.png")
     return model
 
 
-### change only last layer - freeze all other layers - feature extraction
-# model_conv = Convolutional feature extractor
+# ### change only last layer - freeze all other layers - feature extraction
+# # model_conv = Convolutional feature extractor
 
+# # Load a pre-trained ResNet-18 model with weights trained on ImageNet
+# model_conv = torchvision.models.resnet18(weights="IMAGENET1K_V1")
+# # Freeze all the layers so that their weights are not updated during training
+# # Only the final fully-connected layer (fc) will be trained
+# for param in model_conv.parameters():
+#     param.requires_grad = False
+
+# # Get the number of input features to the final fully-connected layer
+# num_ftrs = model_conv.fc.in_features
+# # Replace the final layer with a new one that has 2 output classes (e.g., class A and class B)
+# model_conv.fc = nn.Linear(num_ftrs, 2)
+
+# # Move the model to the appropriate device (GPU if available, else CPU)
+# model_conv = model_conv.to(device)
+
+# # Define the loss function: CrossEntropyLoss is standard for classification tasks
+# criterion = nn.CrossEntropyLoss()
+
+# # Define the optimizer – here we only pass the parameters of the final layer (fc)
+# # since all other layers are frozen and don't need to be updated
+# optimizer_conv = optim.SGD(model_conv.fc.parameters(), lr=0.00005, momentum=0.9)
+
+# # Define a learning rate scheduler that decays the learning rate by a factor of 0.5 every 7 epochs
+# exp_lr_scheduler = lr_scheduler.StepLR(optimizer_conv, step_size=7, gamma=0.5)
+
+##################################################################################################
+
+### change all the layers - fine-tuning the whole model
 # Load a pre-trained ResNet-18 model with weights trained on ImageNet
-model_conv = torchvision.models.resnet18(weights="IMAGENET1K_V1")
-# Freeze all the layers so that their weights are not updated during training
-# Only the final fully-connected layer (fc) will be trained
-for param in model_conv.parameters():
-    param.requires_grad = False
+# This gives us a strong starting point instead of training from scratch
+model_ft = models.resnet18(weights="IMAGENET1K_V1")  # model_ft = Fine-Tuned Model
 
-# Get the number of input features to the final fully-connected layer
-num_ftrs = model_conv.fc.in_features
-# Replace the final layer with a new one that has 2 output classes (e.g., class A and class B)
-model_conv.fc = nn.Linear(num_ftrs, 2)
+# Get the number of input features to the final (fully connected) layer
+num_ftrs = model_ft.fc.in_features
 
-# Move the model to the appropriate device (GPU if available, else CPU)
-model_conv = model_conv.to(device)
+# Replace the final layer with a new one that has 2 output classes (for example: class A and class B)
+# If you have more than 2 classes, you can use: nn.Linear(num_ftrs, len(class_names))
+model_ft.fc = nn.Linear(num_ftrs, 2)
+
+# Move the model to the appropriate device (GPU if available, otherwise CPU)
+model_ft = model_ft.to(device)
 
 # Define the loss function: CrossEntropyLoss is standard for classification tasks
 criterion = nn.CrossEntropyLoss()
 
-# Define the optimizer – here we only pass the parameters of the final layer (fc)
-# since all other layers are frozen and don't need to be updated
-optimizer_conv = optim.SGD(model_conv.fc.parameters(), lr=0.00001, momentum=0.9)
+# Define the optimizer: here we're using Adam with a small learning rate
+# This will update all model parameters during training
+optimizer_ft = optim.Adam(model_ft.parameters(), lr=0.00005)
 
-# Define a learning rate scheduler that decays the learning rate by a factor of 0.5 every 5 epochs
-exp_lr_scheduler = lr_scheduler.StepLR(optimizer_conv, step_size=5, gamma=0.5)
+# Define a learning rate scheduler:
+# Every 7 epochs, reduce the learning rate by a factor of 0.1
+# This helps the model learn quickly at first and then fine-tune gently
+exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.1)
 
 
 if __name__ == "__main__":
     # Train the model using the defined parameters
     # This will train only the final layer (fc) while keeping all other layers frozen
-    model_conv = train_model(
-        model_conv, criterion, optimizer_conv, exp_lr_scheduler, num_epochs=25
+    model_ft = train_model(
+        model_ft, criterion, optimizer_ft, exp_lr_scheduler, num_epochs=20
     )
 
     # Save the trained model parameters to a file
     # This allows us to load the model later without retraining
-    torch.save(model_conv.state_dict(), "model_conv_no_reg_A_vs_B.pth")
-
-
-#### change all the layers - fine-tuning the whole model
-# # Load a pre-trained ResNet-18 model with weights trained on ImageNet
-# # This gives us a strong starting point instead of training from scratch
-# model_ft = models.resnet18(weights="IMAGENET1K_V1")   # model_ft = Fine-Tuned Model
-
-# # Get the number of input features to the final (fully connected) layer
-# num_ftrs = model_ft.fc.in_features
-
-# # Replace the final layer with a new one that has 2 output classes (for example: class A and class B)
-# # If you have more than 2 classes, you can use: nn.Linear(num_ftrs, len(class_names))
-# model_ft.fc = nn.Linear(num_ftrs, 2)
-
-# # Move the model to the appropriate device (GPU if available, otherwise CPU)
-# model_ft = model_ft.to(device)
-
-# # Define the loss function: CrossEntropyLoss is standard for classification tasks
-# criterion = nn.CrossEntropyLoss()
-
-# # Define the optimizer: here we're using SGD with a small learning rate and momentum
-# # This will update all model parameters during training
-# optimizer_ft = optim.SGD(model_ft.parameters(), lr=0.001, momentum=0.9)
-
-# # Define a learning rate scheduler:
-# # Every 7 epochs, reduce the learning rate by a factor of 0.1
-# # This helps the model learn quickly at first and then fine-tune gently
-# exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.1)
+    torch.save(model_ft.state_dict(), "model_ft_no_reg_A_vs_B_90.pth")

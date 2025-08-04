@@ -13,6 +13,7 @@
 #################################################################
 
 
+from operator import ne
 import numpy as np
 import pandas as pd
 import os
@@ -241,6 +242,8 @@ def plot_clusters_with_given_indices(
     plt.ylabel("PC2")
     plt.legend()
     plt.grid(True)
+    plt.axhline(y=0, color="black", linewidth=1)
+    plt.axvline(x=0, color="black", linewidth=1)
 
     if save_path:
         plt.savefig(save_path, bbox_inches="tight")
@@ -327,6 +330,8 @@ def plot_two_rotation_paths_fixed_color(
     plt.ylabel("PC2")
     plt.legend()
     plt.grid(True)
+    plt.axhline(y=0, color="black", linewidth=1)
+    plt.axvline(x=0, color="black", linewidth=1)
 
     if save_path:
         plt.savefig(save_path, bbox_inches="tight")
@@ -338,9 +343,36 @@ def plot_two_rotation_paths_fixed_color(
 names, points = load_top2_filtered("pca_top2_filtered_female.csv")
 
 # Base and opposite points
-base_idx = 0
+# base_idx = 0
+# base_point = points[base_idx]
+# opposite_point = -base_point
+
+# Compute angles (in radians) of each point from the origin
+angles = np.arctan2(points[:, 1], points[:, 0])
+
+# Convert angles from radians to degrees, now in range [-180, 180]
+angles_deg = np.degrees(angles)
+# Shift all angles to be in the range [0, 360)
+angles_deg = (angles_deg + 360) % 360
+
+radii = np.linalg.norm(points, axis=1)
+
+# Define the target angle in degrees
+target_angle = 90
+
+target_radius = 0.45
+
+angle_error = np.abs(angles_deg - target_angle)
+radius_error = np.abs(radii - target_radius)
+combined_error = angle_error + radius_error * 100
+
+# Find the index of the point whose angle is closest to the target angle
+base_idx = np.argmin(combined_error)
+# Retrieve the actual 2D PCA coordinates of the selected base point
 base_point = points[base_idx]
+
 opposite_point = -base_point
+
 
 # save clusters of k=1000 points around base and opposite points
 base_indices = collect_nearest_images(base_point, points, names, output_dir="A")
@@ -353,33 +385,34 @@ plot_clusters_with_given_indices(
     points,
     base_indices,
     opp_indices,
-    title="Base vs Opposite Clusters (PCA)",
+    title=f"{target_angle}° - {target_angle+180}° Clusters",
+    save_path=f"clusters_{target_angle}_{target_angle+180}.png",
 )
 
 # Generate rotation sequences
-# rotation_seq_A = rotate_and_find_nearest(
-#     base_point=base_point, all_points=points, all_names=names, num_steps=360
-# )
-# df_A = pd.DataFrame(rotation_seq_A, columns=["step", "angle_deg", "filename"])
-# df_A.to_csv("rotation_sequence_A.csv", index=False)
-# print("Saved rotation sequence A to rotation_sequence_A.csv")
+rotation_seq_A = rotate_and_find_nearest(
+    base_point=base_point, all_points=points, all_names=names, num_steps=360
+)
+df_A = pd.DataFrame(rotation_seq_A, columns=["step", "angle_deg", "filename"])
+df_A.to_csv("rotation_sequence_A.csv", index=False)
+print("Saved rotation sequence A to rotation_sequence_A.csv")
 
-# rotation_seq_B = rotate_and_find_nearest(
-#     base_point=opposite_point, all_points=points, all_names=names, num_steps=360
-# )
-# df_B = pd.DataFrame(rotation_seq_B, columns=["step", "angle_deg", "filename"])
-# df_B.to_csv("rotation_sequence_B.csv", index=False)
-# print("Saved rotation sequence B to rotation_sequence_B.csv")
+rotation_seq_B = rotate_and_find_nearest(
+    base_point=opposite_point, all_points=points, all_names=names, num_steps=360
+)
+df_B = pd.DataFrame(rotation_seq_B, columns=["step", "angle_deg", "filename"])
+df_B.to_csv("rotation_sequence_B.csv", index=False)
+print("Saved rotation sequence B to rotation_sequence_B.csv")
 
-# plot_two_rotation_paths_fixed_color(
-#     all_points=points,
-#     all_names=names,
-#     base_point=base_point,
-#     opposite_point=opposite_point,
-#     rotation_seq_A=rotation_seq_A,
-#     rotation_seq_B=rotation_seq_B,
-#     title="Rotation Paths Around Base and Opposite Points",
-# )
+plot_two_rotation_paths_fixed_color(
+    all_points=points,
+    all_names=names,
+    base_point=base_point,
+    opposite_point=opposite_point,
+    rotation_seq_A=rotation_seq_A,
+    rotation_seq_B=rotation_seq_B,
+    title="Rotation Paths Around Base and Opposite Points",
+)
 
 
 def save_rotation_comparison_series_with_plots(
