@@ -350,7 +350,7 @@ for i in range(3):  # 360/5=72
         criterion,
         optimizer_ft,
         exp_lr_scheduler,
-        num_epochs=4,
+        num_epochs=8,
     )
     # now we have a trained model - self trained on it's own predictions
     classify_images(
@@ -364,3 +364,5 @@ for i in range(3):  # 360/5=72
     shutil.rmtree("B", ignore_errors=True)
     shutil.rmtree("split_data", ignore_errors=True)
     # clean up the split_data directory for the next iteration
+
+torch.save(self_training_model.state_dict(), "model_self_trained.pth")
