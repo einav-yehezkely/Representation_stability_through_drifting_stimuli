@@ -45,22 +45,25 @@ data_transforms = {
 
 # Load the dataset
 data_dir = "split_data"
+
+
 # Create a dictionary with two datasets: one for training ("train") and one for validation ("val")
 # Each dataset loads images from the corresponding folder and applies the appropriate transformations
-image_datasets = {
-    x: datasets.ImageFolder(os.path.join(data_dir, x), data_transforms[x])
-    for x in ["train", "val"]
-}
-# Create a dictionary with two DataLoaders: one for training and one for validation
-# Each DataLoader handles batching, shuffling (for training), and parallel data loading
-dataloaders = {
-    x: torch.utils.data.DataLoader(
-        image_datasets[x], batch_size=50, shuffle=True, num_workers=0
-    )
-    for x in ["train", "val"]
-}
-dataset_sizes = {x: len(image_datasets[x]) for x in ["train", "val"]}
-class_names = image_datasets["train"].classes
+def get_dataloaders(data_dir="split_data", batch_size=50):
+    image_datasets = {
+        x: datasets.ImageFolder(os.path.join(data_dir, x), data_transforms[x])
+        for x in ["train", "val"]
+    }
+    dataloaders = {
+        x: torch.utils.data.DataLoader(
+            image_datasets[x], batch_size=batch_size, shuffle=True, num_workers=0
+        )
+        for x in ["train", "val"]
+    }
+    dataset_sizes = {x: len(image_datasets[x]) for x in ["train", "val"]}
+    class_names = image_datasets["train"].classes
+    return dataloaders, dataset_sizes, class_names
+
 
 # Automatically sets the device to GPU if available (CUDA), or falls back to CPU
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -75,7 +78,9 @@ reeval_train_losses = []
 reeval_train_accuracies = []
 
 
-def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
+def train_model(
+    model, dataloaders, dataset_sizes, criterion, optimizer, scheduler, num_epochs=25
+):
     """
     Trains a PyTorch model using a given optimizer, loss function, and learning rate scheduler.
 
@@ -153,7 +158,7 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
                     val_losses.append(epoch_loss)
                     val_accuracies.append(epoch_acc.item())
 
-                print(f"{phase} Loss: {epoch_loss:.4f} Acc: {epoch_acc:.4f}")
+                    print(f"{phase} Loss: {epoch_loss:.4f} Acc: {epoch_acc:.4f}")
 
                 # deep copy the model
                 if phase == "val" and epoch_acc > best_acc:
@@ -204,31 +209,31 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
         # load best model weights
         model.load_state_dict(torch.load(best_model_params_path, weights_only=True))
 
-        # Plot training and validation losses and accuracies
-        # Plot loss
-        plt.figure(figsize=(10, 4))
+        # # Plot training and validation losses and accuracies
+        # # Plot loss
+        # plt.figure(figsize=(10, 4))
 
-        plt.subplot(1, 2, 1)
-        plt.plot(reeval_train_losses, label="Train Loss")
-        # plt.plot(train_losses, label="Train Loss")
-        plt.plot(val_losses, label="Val Loss")
-        plt.xlabel("Epoch")
-        plt.ylabel("Loss")
-        plt.title("Loss over Epochs")
-        plt.legend()
+        # plt.subplot(1, 2, 1)
+        # plt.plot(reeval_train_losses, label="Train Loss")
+        # # plt.plot(train_losses, label="Train Loss")
+        # plt.plot(val_losses, label="Val Loss")
+        # plt.xlabel("Epoch")
+        # plt.ylabel("Loss")
+        # plt.title("Loss over Epochs")
+        # plt.legend()
 
-        # Plot accuracy
-        plt.subplot(1, 2, 2)
-        plt.plot(reeval_train_accuracies, label="Train Accuracy")
-        # plt.plot(train_accuracies, label="Train Accuracy")
-        plt.plot(val_accuracies, label="Val Accuracy")
-        plt.xlabel("Epoch")
-        plt.ylabel("Accuracy")
-        plt.title("Accuracy over Epochs")
-        plt.legend()
+        # # Plot accuracy
+        # plt.subplot(1, 2, 2)
+        # plt.plot(reeval_train_accuracies, label="Train Accuracy")
+        # # plt.plot(train_accuracies, label="Train Accuracy")
+        # plt.plot(val_accuracies, label="Val Accuracy")
+        # plt.xlabel("Epoch")
+        # plt.ylabel("Accuracy")
+        # plt.title("Accuracy over Epochs")
+        # plt.legend()
 
-        plt.tight_layout()
-        plt.savefig(f"training_progress_LR0.00005_gamma{exp_lr_scheduler.gamma}.png")
+        # plt.tight_layout()
+        # plt.savefig(f"training_progress_LR0.00005_gamma0.1.png")
     return model
 
 
@@ -262,39 +267,51 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
 
 ##################################################################################################
 
+
 ### change all the layers - fine-tuning the whole model
 # Load a pre-trained ResNet-18 model with weights trained on ImageNet
 # This gives us a strong starting point instead of training from scratch
-model_ft = models.resnet18(weights="IMAGENET1K_V1")  # model_ft = Fine-Tuned Model
+def create_model_and_optim():
+    model_ft = models.resnet18(weights="IMAGENET1K_V1")  # model_ft = Fine-Tuned Model
 
-# Get the number of input features to the final (fully connected) layer
-num_ftrs = model_ft.fc.in_features
+    # Get the number of input features to the final (fully connected) layer
+    num_ftrs = model_ft.fc.in_features
 
-# Replace the final layer with a new one that has 2 output classes (for example: class A and class B)
-# If you have more than 2 classes, you can use: nn.Linear(num_ftrs, len(class_names))
-model_ft.fc = nn.Linear(num_ftrs, 2)
+    # Replace the final layer with a new one that has 2 output classes (for example: class A and class B)
+    # If you have more than 2 classes, you can use: nn.Linear(num_ftrs, len(class_names))
+    model_ft.fc = nn.Linear(num_ftrs, 2)
 
-# Move the model to the appropriate device (GPU if available, otherwise CPU)
-model_ft = model_ft.to(device)
+    # Move the model to the appropriate device (GPU if available, otherwise CPU)
+    model_ft = model_ft.to(device)
 
-# Define the loss function: CrossEntropyLoss is standard for classification tasks
-criterion = nn.CrossEntropyLoss()
+    # Define the loss function: CrossEntropyLoss is standard for classification tasks
+    criterion = nn.CrossEntropyLoss()
 
-# Define the optimizer: here we're using Adam with a small learning rate
-# This will update all model parameters during training
-optimizer_ft = optim.Adam(model_ft.parameters(), lr=0.00005)
+    # Define the optimizer: here we're using Adam with a small learning rate
+    # This will update all model parameters during training
+    optimizer_ft = optim.Adam(model_ft.parameters(), lr=0.00005)
 
-# Define a learning rate scheduler:
-# Every 7 epochs, reduce the learning rate by a factor of 0.1
-# This helps the model learn quickly at first and then fine-tune gently
-exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.1)
+    # Define a learning rate scheduler:
+    # Every 7 epochs, reduce the learning rate by a factor of 0.1
+    # This helps the model learn quickly at first and then fine-tune gently
+    exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.1)
+
+    return model_ft, criterion, optimizer_ft, exp_lr_scheduler
 
 
 if __name__ == "__main__":
+    dataloaders, dataset_sizes, class_names = get_dataloaders()
+    model_ft, criterion, optimizer_ft, exp_lr_scheduler = create_model_and_optim()
     # Train the model using the defined parameters
     # This will train only the final layer (fc) while keeping all other layers frozen
     model_ft = train_model(
-        model_ft, criterion, optimizer_ft, exp_lr_scheduler, num_epochs=20
+        model_ft,
+        dataloaders,
+        dataset_sizes,
+        criterion,
+        optimizer_ft,
+        exp_lr_scheduler,
+        num_epochs=20,
     )
 
     # Save the trained model parameters to a file

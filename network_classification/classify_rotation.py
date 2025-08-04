@@ -1,15 +1,14 @@
 import os
-from collections import defaultdict
 from PIL import Image
 import torch
 from torchvision import transforms, models
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
-from operator import ne
-import numpy as np
-import pandas as pd
 import shutil
+from sklearn.model_selection import train_test_split
+from tqdm import tqdm
+from ResNet18 import train_model, get_dataloaders, create_model_and_optim
 
 
 def load_top2_filtered(csv_path="pca_top2_filtered_female.csv"):
@@ -214,27 +213,154 @@ def classify_images(model, csv_path):
     pd.DataFrame(predicted_B).to_csv("predicted_as_B.csv", index=False)
 
 
+def split_and_copy_images(
+    csv_path,
+    label,
+    image_source_dir="female_faces",
+    train_ratio=0.8,
+    root_dir="split_data",
+):
+    # Load the CSV with predicted filenames
+    df = pd.read_csv(csv_path)
+    filenames = df["filename"].tolist()
+
+    # Split into train and val sets
+    train_files, val_files = train_test_split(
+        filenames, train_size=train_ratio, random_state=42
+    )
+
+    # Define output directories
+    for subset, files in [("train", train_files), ("val", val_files)]:
+        target_dir = os.path.join(root_dir, subset, label)
+        os.makedirs(target_dir, exist_ok=True)
+
+        for name in tqdm(files, desc=f"Copying {subset}/{label}"):
+            src = os.path.join(image_source_dir, name)
+            dst = os.path.join(target_dir, name)
+            try:
+                shutil.copy2(src, dst)
+            except FileNotFoundError:
+                print(f"Warning: {src} not found.")
+
+
+def create_prediction_scatter(frame_id, save_dir="frames"):
+    """
+    Create a scatter plot showing model predictions over 2D PCA space.
+    Saves the result as an image in the specified folder (default: 'frames').
+
+    Args:
+        frame_id (int): Frame number for the filename.
+        save_dir (str): Directory to save the image.
+    """
+    os.makedirs(save_dir, exist_ok=True)
+
+    # Load PCA data
+    df = pd.read_csv("pca_top2_filtered_female.csv", header=None)
+    df.columns = ["name", "x", "y"]
+
+    # Load predictions
+    pred_a = pd.read_csv("predicted_as_A.csv", header=None)[3]
+    pred_b = pd.read_csv("predicted_as_B.csv", header=None)[3]
+
+    cluster_a = pd.read_csv("filenames_A.csv", header=None)[0]
+    cluster_b = pd.read_csv("filenames_B.csv", header=None)[0]
+
+    df_a = df[df["name"].isin(pred_a)]
+    df_b = df[df["name"].isin(pred_b)]
+    df_cluster_a = df[df["name"].isin(cluster_a)]
+    df_cluster_b = df[df["name"].isin(cluster_b)]
+
+    plt.figure(figsize=(10, 10))
+    plt.scatter(df["x"], df["y"], s=5, alpha=0.3, color="gray", label="All Vectors")
+    plt.scatter(
+        df_cluster_a["x"],
+        df_cluster_a["y"],
+        s=9,
+        alpha=0.8,
+        color="lightblue",
+        label="Trained A",
+    )
+    plt.scatter(
+        df_a["x"], df_a["y"], s=10, alpha=0.7, color="blue", label="Predicted A"
+    )
+    plt.scatter(
+        df_cluster_b["x"],
+        df_cluster_b["y"],
+        s=9,
+        alpha=0.7,
+        color="pink",
+        label="Trained B",
+    )
+    plt.scatter(df_b["x"], df_b["y"], s=10, alpha=0.7, color="red", label="Predicted B")
+
+    plt.xlabel("PC1")
+    plt.ylabel("PC2")
+    plt.axhline(y=0, color="black", linewidth=1)
+    plt.axvline(x=0, color="black", linewidth=1)
+    plt.title("Model Predictions")
+    plt.grid(True)
+    plt.axis("equal")
+    plt.legend()
+    plt.tight_layout()
+
+    path = os.path.join(save_dir, f"frame_{frame_id:03d}.png")
+    plt.savefig(path, dpi=150)
+    print(f"\nFrame {i} complete. Model re-trained and evaluated.\n")
+    plt.close()
+
+
 names, points = load_top2_filtered("pca_top2_filtered_female.csv")
 base_point, opposite_point = create_base_and_opposite_points(135)
+self_training_model = load_model(model_path="model_ft_no_reg_A_vs_B_135.pth")
 
-
-for i in range(72):  # 360/5=72
-    rotated_base = rotate_vector(base_point, angle=5)
-    rotated_opposite = rotate_vector(opposite_point, angle=5)
-    base_indices = collect_nearest_images(
-        rotated_base,
+for i in range(3):  # 360/5=72
+    base_point = rotate_vector(base_point, angle_deg=5)
+    opposite_point = rotate_vector(opposite_point, angle_deg=5)
+    collect_nearest_images(
+        base_point,
         points,
         names,
         output_dir="A",
     )
-    opp_indices = collect_nearest_images(
-        rotated_opposite,
+    collect_nearest_images(
+        opposite_point,
         points,
         names,
         output_dir="B",
     )
-    model = load_model(model_path="model_ft_no_reg_A_vs_B_135.pth")
+    # now we have two directories: A and B with 200 images each from opposite clusters
+    # we can now classify these images using the model
     merge_clusters()
     # now we have a merged CSV with filenames from both clusters
-    classify_images(model, csv_path="filenames_merged.csv")  # clusters
+    classify_images(
+        self_training_model, csv_path="filenames_merged.csv"
+    )  # classify clusters A and B
     # now there are two CSVs: predicted_as_A.csv and predicted_as_B.csv
+    ### we will now retrain the model on these classifications ###
+    split_and_copy_images(csv_path="predicted_as_A.csv", label="A")
+    # now we have a split_data/train/A and split_data/val/A
+    split_and_copy_images(csv_path="predicted_as_B.csv", label="B")
+    # now we have a split_data/train/B and split_data/val/B
+    dataloaders, dataset_sizes, class_names = get_dataloaders(data_dir="split_data")
+    _, criterion, optimizer_ft, exp_lr_scheduler = create_model_and_optim()
+    self_training_model = train_model(
+        self_training_model,
+        dataloaders,
+        dataset_sizes,
+        criterion,
+        optimizer_ft,
+        exp_lr_scheduler,
+        num_epochs=4,
+    )
+    # now we have a trained model - self trained on it's own predictions
+    classify_images(
+        self_training_model, csv_path="merged_sequences.csv"
+    )  # classify rotation sequence
+    # now we have two CSVs: predicted_as_A.csv and predicted_as_B.csv
+    create_prediction_scatter(frame_id=i)
+    # create a scatter plot of the predictions
+    # save the scatter plot in the frames directory
+    shutil.rmtree("A", ignore_errors=True)
+    shutil.rmtree("B", ignore_errors=True)
+    shutil.rmtree("split_data", ignore_errors=True)
+    # clean up the split_data directory for the next iteration
