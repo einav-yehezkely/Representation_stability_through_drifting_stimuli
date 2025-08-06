@@ -4,7 +4,6 @@ from PIL import Image
 import torch
 from torchvision import transforms, models
 import pandas as pd
-from sklearn.metrics import ConfusionMatrixDisplay
 import matplotlib.pyplot as plt
 
 # Load model
@@ -70,13 +69,6 @@ for i, row in df.iterrows():
 pd.DataFrame(predicted_A).to_csv("predicted_as_A.csv", index=False)
 pd.DataFrame(predicted_B).to_csv("predicted_as_B.csv", index=False)
 
-# Show confusion matrix
-ConfusionMatrixDisplay.from_predictions(
-    all_labels, all_predictions, display_labels=["A", "B"], cmap="Blues"
-)
-plt.title("Confusion Matrix")
-plt.tight_layout()
-plt.show()
 
 # Print accuracy
 correct = sum(p == t for p, t in zip(all_predictions, all_labels))

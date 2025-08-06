@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import shutil
 from sklearn.model_selection import train_test_split
+import torch.nn as nn
 from tqdm import tqdm
 from ResNet18 import train_model, get_dataloaders, create_model_and_optim
 from merge_sequences import merge_sequences
@@ -164,9 +165,24 @@ def load_model(model_path="model_ft_no_reg_A_vs_B_135.pth"):
     Load the pre-trained model for classification.
     The model is trained on images from 135 and 315 degrees.
     """
+    # # Load the ResNet18 model without dropout
+    # model = models.resnet18(pretrained=False)
+    # num_ftrs = model.fc.in_features
+    # model.fc = torch.nn.Linear(num_ftrs, 2)  # 2 classes: A and B
+    # model.load_state_dict(torch.load(model_path))
+    # model.eval()
+    # return model
+
+    # Load the ResNet18 model with dropout
     model = models.resnet18(pretrained=False)
     num_ftrs = model.fc.in_features
-    model.fc = torch.nn.Linear(num_ftrs, 2)  # 2 classes: A and B
+    model.fc = nn.Sequential(
+        nn.Dropout(p=0.5),
+        nn.Linear(num_ftrs, 256),
+        nn.ReLU(),
+        nn.Dropout(p=0.3),
+        nn.Linear(256, 2),
+    )
     model.load_state_dict(torch.load(model_path))
     model.eval()
     return model
@@ -315,23 +331,12 @@ def create_prediction_scatter(frame_id, save_dir="frames"):
     plt.figure(figsize=(10, 10))
     plt.scatter(df["x"], df["y"], s=5, alpha=0.3, color="gray", label="All Vectors")
     plt.scatter(
-        df_predicted_cluster_a["x"],
-        df_predicted_cluster_a["y"],
-        s=9,
-        alpha=0.8,
-        color="lightblue",
-        label="Trained A - predicted",
-    )
-    plt.scatter(
         df_cluster_a["x"],
         df_cluster_a["y"],
         s=9,
         alpha=0.8,
         color="lightblue",
         label="Trained A",
-    )
-    plt.scatter(
-        df_a["x"], df_a["y"], s=10, alpha=0.7, color="blue", label="Predicted A"
     )
     plt.scatter(
         df_cluster_b["x"],
@@ -342,12 +347,23 @@ def create_prediction_scatter(frame_id, save_dir="frames"):
         label="Trained B",
     )
     plt.scatter(
+        df_predicted_cluster_a["x"],
+        df_predicted_cluster_a["y"],
+        s=9,
+        alpha=0.8,
+        color="lightblue",
+        label="Trained A - predicted",
+    )
+    plt.scatter(
         df_predicted_cluster_b["x"],
         df_predicted_cluster_b["y"],
         s=9,
         alpha=0.7,
         color="pink",
         label="Trained B - predicted",
+    )
+    plt.scatter(
+        df_a["x"], df_a["y"], s=10, alpha=0.7, color="blue", label="Predicted A"
     )
     plt.scatter(df_b["x"], df_b["y"], s=10, alpha=0.7, color="red", label="Predicted B")
 
@@ -363,29 +379,19 @@ def create_prediction_scatter(frame_id, save_dir="frames"):
 
     path = os.path.join(save_dir, f"frame_{frame_id:03d}.png")
     plt.savefig(path, dpi=150)
-    print(f"\nFrame {i} complete. Model re-trained and evaluated.\n")
+    print(f"\nFrame {i} completed. Model re-trained and evaluated.\n")
     plt.close()
 
 
 names, points = load_top2_filtered("pca_top2_filtered_female.csv")
 base_point, opposite_point = create_base_and_opposite_points(135)
-self_training_model = load_model(model_path="model_ft_no_reg_A_vs_B_135.pth")
+self_training_model = load_model(model_path="model_ft_reg1_A_vs_B_135.pth")
 
-for i in range(10):  # 360/5=72
-    base_point = rotate_vector(base_point, angle_deg=10)
-    opposite_point = rotate_vector(opposite_point, angle_deg=10)
-    collect_nearest_images(
-        base_point,
-        points,
-        names,
-        output_dir="A",
-    )
-    collect_nearest_images(
-        opposite_point,
-        points,
-        names,
-        output_dir="B",
-    )
+for i in range(72):  # 360/5=72
+    base_point = rotate_vector(base_point, angle_deg=5)
+    opposite_point = rotate_vector(opposite_point, angle_deg=5)
+    collect_nearest_images(base_point, points, names, output_dir="A", k=800)
+    collect_nearest_images(opposite_point, points, names, output_dir="B", k=800)
     # now we have two directories: A and B with 200 images each from opposite clusters
     # we can now classify these images using the model
     merge_clusters()
@@ -393,11 +399,12 @@ for i in range(10):  # 360/5=72
     classify_images(
         self_training_model, csv_path="filenames_merged.csv", clusters=True
     )  # classify clusters A and B
+    print("Classified images in clusters A and B.")
     # now there are two CSVs: predicted_as_A.csv and predicted_as_B.csv
     ### we will now retrain the model on these classifications ###
-    split_and_copy_images(csv_path="predicted_as_A.csv", label="A")
+    split_and_copy_images(csv_path="cluster_predicted_as_A.csv", label="A")
     # now we have a split_data/train/A and split_data/val/A
-    split_and_copy_images(csv_path="predicted_as_B.csv", label="B")
+    split_and_copy_images(csv_path="cluster_predicted_as_B.csv", label="B")
     # now we have a split_data/train/B and split_data/val/B
     dataloaders, dataset_sizes, class_names = get_dataloaders(data_dir="split_data")
     _, criterion, optimizer_ft, exp_lr_scheduler = create_model_and_optim()
@@ -429,6 +436,7 @@ for i in range(10):  # 360/5=72
     classify_images(
         self_training_model, csv_path="merged_sequences.csv"
     )  # classify rotation sequence
+    print("Classified rotation sequence.")
     # now we have two CSVs: predicted_as_A.csv and predicted_as_B.csv
     create_prediction_scatter(frame_id=i)
     # create a scatter plot of the predictions

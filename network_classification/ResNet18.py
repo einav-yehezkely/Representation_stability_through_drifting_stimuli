@@ -29,7 +29,8 @@ data_transforms = {
     "train": transforms.Compose(
         [
             transforms.Resize((224, 224)),  # Resize images to 224x224
-            # transforms.RandomHorizontalFlip(),
+            transforms.RandomHorizontalFlip(),
+            transforms.RandomPerspective(distortion_scale=0.5, p=0.5),
             transforms.ToTensor(),  # Convert images to PyTorch tensors (multi-dimensional arrays)
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
         ]
@@ -202,7 +203,7 @@ def train_model(
 
         time_elapsed = time.time() - since
         print(
-            f"Training complete in {time_elapsed // 60:.0f}m {time_elapsed % 60:.0f}s"
+            f"Training completed in {time_elapsed // 60:.0f}m {time_elapsed % 60:.0f}s"
         )
         print(f"Best val Acc: {best_acc:4f}")
 
@@ -233,7 +234,7 @@ def train_model(
         # plt.legend()
 
         # plt.tight_layout()
-        # plt.savefig(f"training_progress_LR0.00005_gamma0.1.png")
+        # plt.savefig(f"training_progress_reg1.png")
     return model
 
 
@@ -277,9 +278,19 @@ def create_model_and_optim():
     # Get the number of input features to the final (fully connected) layer
     num_ftrs = model_ft.fc.in_features
 
-    # Replace the final layer with a new one that has 2 output classes (for example: class A and class B)
-    # If you have more than 2 classes, you can use: nn.Linear(num_ftrs, len(class_names))
-    model_ft.fc = nn.Linear(num_ftrs, 2)
+    # Here, we add dropout layers to prevent overfitting
+    # The first dropout layer has a dropout probability of 0.5, and the second has 0.3
+    # This means that during training, 50% and 30% of the neurons will be randomly set to zero
+    # This helps the model generalize better by preventing it from relying too much on any single neuron
+    # The final layer has 256 neurons followed by a ReLU activation function, and then another dropout layer
+    # Finally, the last layer outputs 2 classes (A and B)
+    model_ft.fc = nn.Sequential(
+        nn.Dropout(p=0.5),
+        nn.Linear(num_ftrs, 256),
+        nn.ReLU(),
+        nn.Dropout(p=0.3),
+        nn.Linear(256, 2),
+    )
 
     # Move the model to the appropriate device (GPU if available, otherwise CPU)
     model_ft = model_ft.to(device)
@@ -289,7 +300,7 @@ def create_model_and_optim():
 
     # Define the optimizer: here we're using Adam with a small learning rate
     # This will update all model parameters during training
-    optimizer_ft = optim.Adam(model_ft.parameters(), lr=0.00005)
+    optimizer_ft = optim.AdamW(model_ft.parameters(), lr=0.00005, weight_decay=0.01)
 
     # Define a learning rate scheduler:
     # Every 7 epochs, reduce the learning rate by a factor of 0.1
@@ -300,7 +311,7 @@ def create_model_and_optim():
 
 
 if __name__ == "__main__":
-    dataloaders, dataset_sizes, class_names = get_dataloaders()
+    dataloaders, dataset_sizes, class_names = get_dataloaders(batch_size=50)
     model_ft, criterion, optimizer_ft, exp_lr_scheduler = create_model_and_optim()
     # Train the model using the defined parameters
     # This will train only the final layer (fc) while keeping all other layers frozen
@@ -311,9 +322,9 @@ if __name__ == "__main__":
         criterion,
         optimizer_ft,
         exp_lr_scheduler,
-        num_epochs=20,
+        num_epochs=10,
     )
 
     # Save the trained model parameters to a file
     # This allows us to load the model later without retraining
-    torch.save(model_ft.state_dict(), "model_ft_no_reg_A_vs_B_90.pth")
+    torch.save(model_ft.state_dict(), "model_ft_reg1_A_vs_B_135.pth")
