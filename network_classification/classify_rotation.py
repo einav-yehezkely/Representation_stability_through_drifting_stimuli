@@ -172,7 +172,7 @@ def load_model(model_path="model_ft_no_reg_A_vs_B_135.pth"):
     return model
 
 
-def classify_images(model, csv_path):
+def classify_images(model, csv_path, clusters=False):
     # Load CSV
     df = pd.read_csv(csv_path)
 
@@ -210,8 +210,12 @@ def classify_images(model, csv_path):
             predicted_B.append(row)
 
     # Save predicted CSVs
-    pd.DataFrame(predicted_A).to_csv("predicted_as_A.csv", index=False)
-    pd.DataFrame(predicted_B).to_csv("predicted_as_B.csv", index=False)
+    if clusters:
+        pd.DataFrame(predicted_A).to_csv("cluster_predicted_as_A.csv", index=False)
+        pd.DataFrame(predicted_B).to_csv("cluster_predicted_as_B.csv", index=False)
+    else:
+        pd.DataFrame(predicted_A).to_csv("predicted_as_A.csv", index=False)
+        pd.DataFrame(predicted_B).to_csv("predicted_as_B.csv", index=False)
 
 
 def split_and_copy_images(
@@ -298,13 +302,26 @@ def create_prediction_scatter(frame_id, save_dir="frames"):
     cluster_a = pd.read_csv("filenames_A.csv", header=None)[0]
     cluster_b = pd.read_csv("filenames_B.csv", header=None)[0]
 
+    predicted_cluster_a = pd.read_csv("cluster_predicted_as_A.csv", header=None)[0]
+    predicted_cluster_b = pd.read_csv("cluster_predicted_as_B.csv", header=None)[0]
+
     df_a = df[df["name"].isin(pred_a)]
     df_b = df[df["name"].isin(pred_b)]
     df_cluster_a = df[df["name"].isin(cluster_a)]
     df_cluster_b = df[df["name"].isin(cluster_b)]
+    df_predicted_cluster_a = df[df["name"].isin(predicted_cluster_a)]
+    df_predicted_cluster_b = df[df["name"].isin(predicted_cluster_b)]
 
     plt.figure(figsize=(10, 10))
     plt.scatter(df["x"], df["y"], s=5, alpha=0.3, color="gray", label="All Vectors")
+    plt.scatter(
+        df_predicted_cluster_a["x"],
+        df_predicted_cluster_a["y"],
+        s=9,
+        alpha=0.8,
+        color="lightblue",
+        label="Trained A - predicted",
+    )
     plt.scatter(
         df_cluster_a["x"],
         df_cluster_a["y"],
@@ -323,6 +340,14 @@ def create_prediction_scatter(frame_id, save_dir="frames"):
         alpha=0.7,
         color="pink",
         label="Trained B",
+    )
+    plt.scatter(
+        df_predicted_cluster_b["x"],
+        df_predicted_cluster_b["y"],
+        s=9,
+        alpha=0.7,
+        color="pink",
+        label="Trained B - predicted",
     )
     plt.scatter(df_b["x"], df_b["y"], s=10, alpha=0.7, color="red", label="Predicted B")
 
@@ -346,9 +371,9 @@ names, points = load_top2_filtered("pca_top2_filtered_female.csv")
 base_point, opposite_point = create_base_and_opposite_points(135)
 self_training_model = load_model(model_path="model_ft_no_reg_A_vs_B_135.pth")
 
-for i in range(72):  # 360/5=72
-    base_point = rotate_vector(base_point, angle_deg=5)
-    opposite_point = rotate_vector(opposite_point, angle_deg=5)
+for i in range(10):  # 360/5=72
+    base_point = rotate_vector(base_point, angle_deg=10)
+    opposite_point = rotate_vector(opposite_point, angle_deg=10)
     collect_nearest_images(
         base_point,
         points,
@@ -366,7 +391,7 @@ for i in range(72):  # 360/5=72
     merge_clusters()
     # now we have a merged CSV with filenames from both clusters
     classify_images(
-        self_training_model, csv_path="filenames_merged.csv"
+        self_training_model, csv_path="filenames_merged.csv", clusters=True
     )  # classify clusters A and B
     # now there are two CSVs: predicted_as_A.csv and predicted_as_B.csv
     ### we will now retrain the model on these classifications ###
@@ -412,5 +437,25 @@ for i in range(72):  # 360/5=72
     shutil.rmtree("B", ignore_errors=True)
     shutil.rmtree("split_data", ignore_errors=True)
     # clean up the split_data directory for the next iteration
+    # delete csv files
+    csv_files_to_delete = [
+        "filenames_A.csv",
+        "filenames_B.csv",
+        "filenames_merged.csv",
+        "predicted_as_A.csv",
+        "predicted_as_B.csv",
+        "rotation_sequence_A.csv",
+        "rotation_sequence_B.csv",
+        "merged_sequences.csv",
+        "cluster_predicted_as_A.csv",
+        "cluster_predicted_as_B.csv",
+    ]
+
+    for fname in csv_files_to_delete:
+        if os.path.exists(fname):
+            try:
+                os.remove(fname)
+            except Exception as e:
+                print(f"Could not delete {fname}: {e}")
 
 torch.save(self_training_model.state_dict(), "model_self_trained.pth")
