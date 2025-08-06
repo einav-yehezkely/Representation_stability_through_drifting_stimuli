@@ -76,7 +76,7 @@ def find_opposite(base_point, all_points):
     return np.argmin(dists)
 
 
-def rotate_and_find_nearest(base_point, all_points, all_names, num_steps=1000):
+def generate_rotation_sequence(base_point, all_points, all_names, num_steps=1000):
     """
     Rotate base_point around the origin in num_steps steps (in degrees)
     and find the closest point from all_points at each step.
@@ -390,14 +390,14 @@ plot_clusters_with_given_indices(
 )
 
 # Generate rotation sequences
-rotation_seq_A = rotate_and_find_nearest(
+rotation_seq_A = generate_rotation_sequence(
     base_point=base_point, all_points=points, all_names=names, num_steps=360
 )
 df_A = pd.DataFrame(rotation_seq_A, columns=["step", "angle_deg", "filename"])
 df_A.to_csv("rotation_sequence_A.csv", index=False)
 print("Saved rotation sequence A to rotation_sequence_A.csv")
 
-rotation_seq_B = rotate_and_find_nearest(
+rotation_seq_B = generate_rotation_sequence(
     base_point=opposite_point, all_points=points, all_names=names, num_steps=360
 )
 df_B = pd.DataFrame(rotation_seq_B, columns=["step", "angle_deg", "filename"])

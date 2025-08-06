@@ -9,6 +9,7 @@ import shutil
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 from ResNet18 import train_model, get_dataloaders, create_model_and_optim
+from merge_sequences import merge_sequences
 
 
 def load_top2_filtered(csv_path="pca_top2_filtered_female.csv"):
@@ -243,6 +244,38 @@ def split_and_copy_images(
                 print(f"Warning: {src} not found.")
 
 
+def generate_rotation_sequence(base_point, all_points, all_names, num_steps=1000):
+    """
+    Rotate base_point around the origin in num_steps steps (in degrees)
+    and find the closest point from all_points at each step.
+
+    Parameters:
+    - base_point: 2D numpy array representing the starting point
+    - all_points: numpy array of shape (N, 2), 2D positions of all images
+    - all_names: list or array of N image names corresponding to all_points
+    - num_steps: number of rotation steps (default 1000 = every 0.36 degrees)
+
+    Returns:
+    - List of tuples: (step_index, angle_in_degrees, closest_image_name)
+    """
+    results = []
+    used_indices = set()
+
+    for i in range(num_steps):
+        angle_deg = 360 * i / num_steps  # degrees
+        rotated = rotate_vector(base_point, angle_deg)
+
+        dists = np.linalg.norm(all_points - rotated, axis=1)
+
+        for idx in used_indices:
+            dists[idx] = np.inf  # Ignore already used indices
+
+        idx_closest = np.argmin(dists)
+        used_indices.add(idx_closest)
+        results.append((i, angle_deg, all_names[idx_closest]))
+    return results
+
+
 def create_prediction_scatter(frame_id, save_dir="frames"):
     """
     Create a scatter plot showing model predictions over 2D PCA space.
@@ -352,6 +385,21 @@ for i in range(72):  # 360/5=72
         exp_lr_scheduler,
         num_epochs=8,
     )
+    # Generate rotation sequences
+    rotation_seq_A = generate_rotation_sequence(
+        base_point=base_point, all_points=points, all_names=names, num_steps=360
+    )
+    df_A = pd.DataFrame(rotation_seq_A, columns=["step", "angle_deg", "filename"])
+    df_A.to_csv("rotation_sequence_A.csv", index=False)
+    print("Saved rotation sequence A to rotation_sequence_A.csv")
+
+    rotation_seq_B = generate_rotation_sequence(
+        base_point=opposite_point, all_points=points, all_names=names, num_steps=360
+    )
+    df_B = pd.DataFrame(rotation_seq_B, columns=["step", "angle_deg", "filename"])
+    df_B.to_csv("rotation_sequence_B.csv", index=False)
+    print("Saved rotation sequence B to rotation_sequence_B.csv")
+    merge_sequences()  # merge the two sequences into one CSV
     # now we have a trained model - self trained on it's own predictions
     classify_images(
         self_training_model, csv_path="merged_sequences.csv"
