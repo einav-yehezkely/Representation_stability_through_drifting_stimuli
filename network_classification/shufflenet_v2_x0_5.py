@@ -1,5 +1,5 @@
 #####################################################
-# ShuffleNet V2 Model Training
+# ResNet18 Model Training
 # groups are A and B
 # https://docs.pytorch.org/tutorials/beginner/transfer_learning_tutorial.html
 #####################################################
@@ -28,9 +28,8 @@ plt.ion()  # interactive mode
 data_transforms = {
     "train": transforms.Compose(
         [
-            # transforms.Resize((224, 224)),  # Resize images to 224x224
-            transforms.Resize((128, 128)),
-            # transforms.RandomHorizontalFlip(),
+            transforms.Resize((224, 224)),  # Resize images to 224x224
+            transforms.RandomHorizontalFlip(),
             # transforms.RandomPerspective(distortion_scale=0.5, p=0.5),
             transforms.ToTensor(),  # Convert images to PyTorch tensors (multi-dimensional arrays)
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
@@ -38,8 +37,7 @@ data_transforms = {
     ),
     "val": transforms.Compose(
         [
-            # transforms.Resize((224, 224)),  # Resize images to 224x224
-            transforms.Resize((160, 160)),
+            transforms.Resize((224, 224)),  # Resize images to 224x224
             transforms.ToTensor(),
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
         ]
@@ -62,7 +60,7 @@ def get_dataloaders(data_dir="split_data", batch_size=128):
             image_datasets[x],
             batch_size=batch_size,
             shuffle=True,
-            num_workers=4,
+            num_workers=2,
             persistent_workers=True,
         )
         for x in ["train", "val"]
@@ -146,110 +144,89 @@ def train_model(
         )
 
         for epoch in tqdm(range(num_epochs), desc="Epoch Progress"):
+            epoch_start_time = time.time()
             print(f"Epoch {epoch+1}/{num_epochs}")
             print("-" * 10)
 
             # Each epoch has a training and validation phase
-            for phase in ["train", "val"]:
-                if phase == "train":
-                    model.train()  # Set model to training mode
-                else:
-                    model.eval()  # Set model to evaluate mode
 
-                running_loss = 0.0
-                running_corrects = 0
-
-                data_loading_time = 0.0
-                forward_backward_time = 0.0
-
-                # Iterate over data.
-                for inputs, labels in dataloaders[phase]:
-                    t0 = time.time()
-
-                    t1 = time.time()
-                    data_loading_time += t1 - t0
-
-                    inputs = inputs.to(device)
-                    labels = labels.to(device)
-
-                    # zero the parameter gradients
-                    optimizer.zero_grad()
-
-                    t2 = time.time()
-                    # forward
-                    # track history if only in train
-                    with torch.set_grad_enabled(phase == "train"):
-                        outputs = model(inputs)
-                        _, preds = torch.max(outputs, 1)
-                        loss = criterion(outputs, labels)
-
-                        # backward + optimize only if in training phase
-                        if phase == "train":
-                            loss.backward()
-                            optimizer.step()
-                    t3 = time.time()
-                    forward_backward_time += t3 - t2
-
-                    # statistics
-                    running_loss += loss.item() * inputs.size(0)
-                    running_corrects += torch.sum(preds == labels.data)
-
-                print(
-                    f"[{phase}] Data loading time: {data_loading_time:.2f}s, "
-                    f"Model compute time: {forward_backward_time:.2f}s"
-                )
-                if phase == "train":
-                    scheduler.step()
-
-                epoch_loss = running_loss / dataset_sizes[phase]
-                epoch_acc = running_corrects.double() / dataset_sizes[phase]
-
-                # Store the loss and accuracy for plotting later
-                if phase == "train":
-                    train_losses.append(epoch_loss)
-                    train_accuracies.append(epoch_acc.item())
-                else:
-                    val_losses.append(epoch_loss)
-                    val_accuracies.append(epoch_acc.item())
-
-                    print(f"{phase} Loss: {epoch_loss:.4f} Acc: {epoch_acc:.4f}")
-
-                # deep copy the model
-                if phase == "val" and epoch_acc > best_acc:
-                    best_acc = epoch_acc
-                    torch.save(model.state_dict(), best_model_params_path)
-
-            ### Re-evaluate the training set after each epoch - Recompute train loss in eval mode for fair comparison
-            # Set the model to evaluation mode to ensure consistent behavior
-            model.eval()
-            # Initialize accumulators for loss and correct predictions on the training set
+            # -- Train Phase --
+            model.train()  # Set model to training mode
             running_loss = 0.0
             running_corrects = 0
-            # Disable gradient tracking to reduce memory usage and speed up computations
-            with torch.no_grad():
-                # Iterate over the entire training set
-                for inputs, labels in dataloaders["train"]:
-                    inputs = inputs.to(device)
-                    labels = labels.to(device)
 
-                    # Forward pass: compute model outputs and predictions
-                    outputs = model(inputs)
-                    _, preds = torch.max(outputs, 1)
-                    loss = criterion(outputs, labels)
-                    # Accumulate loss and correct predictions
-                    running_loss += loss.item() * inputs.size(0)
-                    running_corrects += torch.sum(preds == labels.data)
-            # Calculate the average loss and accuracy over the training set
-            true_train_loss = running_loss / dataset_sizes["train"]
-            true_train_acc = running_corrects.double() / dataset_sizes["train"]
-            # Store the re-evaluated training loss and accuracy for plotting
-            reeval_train_losses.append(true_train_loss)
-            reeval_train_accuracies.append(true_train_acc.item())
+            data_loading_time = 0.0
+            forward_backward_time = 0.0
+
+            t0 = time.time()
+            # Iterate over data.
+            for inputs, labels in dataloaders["train"]:
+                t1 = time.time()
+                data_loading_time += t1 - t0
+
+                inputs = inputs.to(device)
+                labels = labels.to(device)
+
+                # zero the parameter gradients
+                optimizer.zero_grad()
+
+                t2 = time.time()
+                # forward
+                outputs = model(inputs)
+                _, preds = torch.max(outputs, 1)
+                loss = criterion(outputs, labels)
+                # backward + optimize
+                loss.backward()
+                optimizer.step()
+
+                t3 = time.time()
+                forward_backward_time += t3 - t2
+
+                # statistics
+                running_loss += loss.item() * inputs.size(0)
+                running_corrects += (preds == labels).sum().item()
+
+                t0 = time.time()
+
+            scheduler.step()
+
+            epoch_loss = running_loss / dataset_sizes["train"]
+            epoch_acc = running_corrects / dataset_sizes["train"]
+            train_losses.append(epoch_loss)
+            train_accuracies.append(float(epoch_acc))
 
             print(
-                f"[RECALC] Train Loss (eval mode): {true_train_loss:.4f}, Acc: {true_train_acc:.4f}"
+                f"[Train] Data loading time: {data_loading_time:.2f}s, "
+                f"Model compute time: {forward_backward_time:.2f}s"
             )
 
+            # -- Validation Phase --
+            val_loss, val_acc = evaluate(model, dataloaders["val"], criterion, device)
+            val_losses.append(val_loss)
+            val_accuracies.append(val_acc)
+            print(f"[val] Loss: {val_loss:.4f} Acc: {val_acc:.4f}")
+
+            if val_acc > best_acc:
+                best_acc = val_acc
+                torch.save(model.state_dict(), best_model_params_path)
+
+            # ---- RECALC TRAIN (eval mode, fair comparison) ----
+            true_train_loss, true_train_acc = evaluate(
+                model, dataloaders["train"], criterion, device
+            )
+            reeval_train_losses.append(true_train_loss)
+            reeval_train_accuracies.append(true_train_acc)
+            print(
+                f"[RECALC] Train Loss (eval mode): {true_train_loss:.4f}, "
+                f"Acc: {true_train_acc:.4f}"
+            )
+
+            # -- Epoch total time --
+            epoch_total_time = time.time() - epoch_start_time
+            print(f"[Epoch {epoch+1}] Total time: {epoch_total_time:.2f}s")
+
+        # -- End training --
+        # Measure the total training time
         time_elapsed = time.time() - since
         print(
             f"Training completed in {time_elapsed // 60:.0f}m {time_elapsed % 60:.0f}s"
@@ -259,13 +236,13 @@ def train_model(
         # load best model weights
         model.load_state_dict(torch.load(best_model_params_path, weights_only=True))
 
+        # -- Plots --
         # Plot training and validation losses and accuracies
         # Plot loss
         plt.figure(figsize=(10, 4))
 
         plt.subplot(1, 2, 1)
         plt.plot(reeval_train_losses, label="Train Loss")
-        # plt.plot(train_losses, label="Train Loss")
         plt.plot(val_losses, label="Val Loss")
         plt.xlabel("Epoch")
         plt.ylabel("Loss")
@@ -283,119 +260,100 @@ def train_model(
         plt.legend()
 
         plt.tight_layout()
-        plt.savefig(f"training_progress_reg1.png")
+        plt.savefig(f"training_progress_no_reg.png")
     return model
 
 
 ### change only last layer - freeze all other layers - feature extraction
 # model_conv = Convolutional feature extractor
 def create_model_and_optim_feature_extraction():
-    # Use a very lightweight backbone that's fast on CPU
-    model = torchvision.models.shufflenet_v2_x0_5(weights="IMAGENET1K_V1")
+    # Load a pre-trained ShuffleNet V2 model with weights trained on ImageNet
+    model_conv = torchvision.models.shufflenet_v2_x0_5(weights="IMAGENET1K_V1")
+    # Freeze all layers except the final fully-connected layer (fc) and stage4
+    for param in model_conv.parameters():
+        param.requires_grad = False
+    for param in model_conv.stage4.parameters():
+        param.requires_grad = True
+    for param in model_conv.fc.parameters():
+        param.requires_grad = True
 
-    # Replace the final classification layer to output 2 classes (A/B)
-    in_f = model.fc.in_features
-    model.fc = nn.Linear(in_f, 2)
+    # Get the number of input features to the final fully-connected layer
+    num_ftrs = model_conv.fc.in_features
+    # Replace the final layer with a new one that has 2 output classes (e.g., class A and class B)
+    model_conv.fc = nn.Linear(num_ftrs, 2)
 
-    # Freeze all parameters by default (no gradients, no updates)
-    for p in model.parameters():
-        p.requires_grad = False
+    # Move the model to the appropriate device (GPU if available, else CPU)
+    model_conv = model_conv.to(device)
 
-    # Unfreeze ONLY the head
-    for p in model.fc.parameters():
-        p.requires_grad = True
-
-    # PARTIAL FINE-TUNING:
-    # # Unfreeze only the very last feature stage (+ the final conv and the head)
-    # # This gives the model some capacity to adapt, without the cost of full fine-tuning.
-    # for m in [model.stage4, model.conv5]:
-    #     for p in m.parameters():
-    #         p.requires_grad = True
-    # for p in model.fc.parameters():
-    #     p.requires_grad = True
-
-    # Move model to the selected device (CPU in your setup)
-    model = model.to(device)
-
-    # Loss with mild label smoothing helps stabilize training on small datasets / 2 classes
+    # Define the loss function: CrossEntropyLoss is standard for classification tasks
     criterion = nn.CrossEntropyLoss()
 
-    # # Parameter groups: smaller LR for the partially unfrozen backbone,
-    # # larger LR for the freshly initialized head (fc).
-    # backbone_params = []
-    # for m in [model.stage4, model.conv5]:
-    #     backbone_params += list(m.parameters())
-    # head_params = list(model.fc.parameters())
+    # Define the optimizer – here we only pass the parameters of the final layer (fc)
+    # since all other layers are frozen and don't need to be updated
+    optimizer_conv = optim.Adam(
+        list(model_conv.stage4.parameters()) + list(model_conv.fc.parameters()),
+        lr=0.001,
+    )
+    # optimizer_conv = optim.AdamW(model_conv.parameters(), lr=0.00005, weight_decay=0.01)
 
-    # optimizer = torch.optim.AdamW(
-    #     [
-    #         {
-    #             "params": backbone_params,
-    #             "lr": 5e-4,
-    #             "weight_decay": 1e-2,
-    #         },  # conservative updates
-    #         {
-    #             "params": head_params,
-    #             "lr": 3e-3,
-    #             "weight_decay": 0.0,
-    #         },  # faster learning for new head
-    #     ]
-    # )
-
-    # # Gently decay the learning rate every 5 epochs (good for CPU runs)
-    # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.5)
-
-    # Train only the head
-    optimizer = torch.optim.Adam(model.fc.parameters(), lr=0.001)
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.5)
-
-    return model, criterion, optimizer, scheduler
+    # Define a learning rate scheduler that decays the learning rate by a factor of 0.1 every 7 epochs
+    # exp_lr_scheduler = lr_scheduler.StepLR(optimizer_conv, step_size=7, gamma=0.1)
+    exp_lr_scheduler = lr_scheduler.StepLR(optimizer_conv, step_size=5, gamma=0.5)
+    return model_conv, criterion, optimizer_conv, exp_lr_scheduler
 
 
 ##################################################################################################
 
 
 ### change all the layers - fine-tuning the whole model
+# Load a pre-trained ResNet-18 model with weights trained on ImageNet
+# This gives us a strong starting point instead of training from scratch
 def create_model_and_optim():
-    model = torchvision.models.shufflenet_v2_x0_5(weights="IMAGENET1K_V1")
+    model_ft = models.shufflenet_v2_x0_5(
+        weights="IMAGENET1K_V1"
+    )  # model_ft = Fine-Tuned Model
 
-    in_f = model.fc.in_features
-    model.fc = nn.Linear(in_f, 2)
+    # Get the number of input features to the final (fully connected) layer
+    num_ftrs = model_ft.fc.in_features
 
-    for p in model.parameters():
-        p.requires_grad = False
+    # Here, we add dropout layers to prevent overfitting
+    # The first dropout layer has a dropout probability of 0.5, and the second has 0.3
+    # This means that during training, 50% and 30% of the neurons will be randomly set to zero
+    # This helps the model generalize better by preventing it from relying too much on any single neuron
+    # The final layer has 256 neurons followed by a ReLU activation function, and then another dropout layer
+    # Finally, the last layer outputs 2 classes (A and B)
+    model_ft.fc = nn.Sequential(
+        nn.Dropout(p=0.5),
+        nn.Linear(num_ftrs, 256),
+        nn.ReLU(),
+        nn.Dropout(p=0.3),
+        nn.Linear(256, 2),
+    )
 
-    for m in [model.stage4, model.conv5]:
-        for p in m.parameters():
-            p.requires_grad = True
-    for p in model.fc.parameters():
-        p.requires_grad = True
+    # Move the model to the appropriate device (GPU if available, otherwise CPU)
+    model_ft = model_ft.to(device)
 
-    model = model.to(device)
-
+    # Define the loss function: CrossEntropyLoss is standard for classification tasks
     criterion = nn.CrossEntropyLoss()
 
-    backbone_params = []
-    for m in [model.stage4, model.conv5]:
-        backbone_params += list(m.parameters())
-    head_params = list(model.fc.parameters())
+    # Define the optimizer: here we're using Adam with a small learning rate
+    # This will update all model parameters during training
+    optimizer_ft = optim.AdamW(model_ft.parameters(), lr=0.01, weight_decay=0.01)
 
-    optimizer = torch.optim.AdamW(
-        [
-            {"params": backbone_params, "lr": 5e-4, "weight_decay": 1e-2},
-            {"params": head_params, "lr": 3e-3, "weight_decay": 0.0},
-        ]
-    )
-    # optimizer = torch.optim.AdamW(model.parameters(), lr=0.01)
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.5)
+    # Define a learning rate scheduler:
+    # Every 7 epochs, reduce the learning rate by a factor of 0.1
+    # This helps the model learn quickly at first and then fine-tune gently
+    exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.5)
 
-    return model, criterion, optimizer, scheduler
+    return model_ft, criterion, optimizer_ft, exp_lr_scheduler
 
 
 if __name__ == "__main__":
     print(f"Using device: {device}")
     dataloaders, dataset_sizes, class_names = get_dataloaders(batch_size=128)
-    model_ft, criterion, optimizer_ft, exp_lr_scheduler = create_model_and_optim()
+    model_ft, criterion, optimizer_ft, exp_lr_scheduler = (
+        create_model_and_optim_feature_extraction()
+    )
     # Train the model using the defined parameters
     # This will train only the final layer (fc) while keeping all other layers frozen
     model_ft = train_model(
@@ -405,7 +363,7 @@ if __name__ == "__main__":
         criterion,
         optimizer_ft,
         exp_lr_scheduler,
-        num_epochs=25,
+        num_epochs=15,
     )
 
     # Save the trained model parameters to a file

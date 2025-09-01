@@ -29,7 +29,7 @@ data_transforms = {
     "train": transforms.Compose(
         [
             transforms.Resize((224, 224)),  # Resize images to 224x224
-            transforms.RandomHorizontalFlip(),
+            # transforms.RandomHorizontalFlip(),
             # transforms.RandomPerspective(distortion_scale=0.5, p=0.5),
             transforms.ToTensor(),  # Convert images to PyTorch tensors (multi-dimensional arrays)
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
@@ -260,7 +260,7 @@ def train_model(
         plt.legend()
 
         plt.tight_layout()
-        plt.savefig(f"training_progress_reg1.png")
+        plt.savefig(f"training_progress_no_reg.png")
     return model
 
 
@@ -346,7 +346,7 @@ def create_model_and_optim():
 
 if __name__ == "__main__":
     print(f"Using device: {device}")
-    dataloaders, dataset_sizes, class_names = get_dataloaders(batch_size=128)
+    dataloaders, dataset_sizes, class_names = get_dataloaders(batch_size=256)
     model_ft, criterion, optimizer_ft, exp_lr_scheduler = (
         create_model_and_optim_feature_extraction()
     )
