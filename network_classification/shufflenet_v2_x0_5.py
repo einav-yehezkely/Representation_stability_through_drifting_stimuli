@@ -292,7 +292,7 @@ def create_model_and_optim_feature_extraction():
     # since all other layers are frozen and don't need to be updated
     optimizer_conv = optim.Adam(
         list(model_conv.stage4.parameters()) + list(model_conv.fc.parameters()),
-        lr=0.001,
+        lr=3e-4,
     )
     # optimizer_conv = optim.AdamW(model_conv.parameters(), lr=0.00005, weight_decay=0.01)
 
@@ -368,4 +368,4 @@ if __name__ == "__main__":
 
     # Save the trained model parameters to a file
     # This allows us to load the model later without retraining
-    torch.save(model_ft.state_dict(), "model_ft_no_reg_0.pth")
+    torch.save(model_ft.state_dict(), "model_ft_no_reg_45.pth")

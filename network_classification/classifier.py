@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 model = models.shufflenet_v2_x0_5(pretrained=False)
 num_ftrs = model.fc.in_features
 model.fc = torch.nn.Linear(num_ftrs, 2)  # 2 classes: A and B
-model.load_state_dict(torch.load("model_ft_no_reg_135.pth"))
+model.load_state_dict(torch.load("model_ft_no_reg_45.pth"))
 model.eval()
 
 # Load CSV

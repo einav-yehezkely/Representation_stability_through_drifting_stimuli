@@ -8,7 +8,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
-angle = 135
+angle = 0
 opposite_angle = (angle + 180) % 360
 
 # Load full embeddings: name, x, y
@@ -90,8 +90,6 @@ df_full = pd.read_csv("pca_top2_filtered_female.csv", header=None)
 df_full.columns = ["filename", "x", "y"]
 
 df = df.merge(df_full, on="filename", how="left")
-
-# df["angle_true"] = np.degrees(np.arctan2(df["y"], df["x"])) % 360
 
 window_size = 20
 results = []

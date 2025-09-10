@@ -77,7 +77,13 @@ def find_opposite(base_point, all_points):
 
 
 def generate_rotation_sequence(
-    base_point, all_points, all_names, num_steps=180, start_angle=0, rotation_range=180
+    base_point,
+    all_points,
+    all_names,
+    num_steps=180,
+    start_angle=0,
+    rotation_range=180,
+    used_indices=None,
 ):
     """
     Rotate base_point around the origin in num_steps steps (in degrees)
@@ -90,12 +96,14 @@ def generate_rotation_sequence(
     - num_steps: number of rotation steps (default 1000 = every 0.36 degrees)
     - start_angle: starting angle in degrees (default 0)
     - rotation_range: range of rotation in degrees (default 180)
+    - used_indices: set of indices to avoid reusing across runs
 
     Returns:
     - List of tuples: (step_index, angle_in_degrees, closest_image_name)
     """
     results = []
-    used_indices = set()
+    if used_indices is None:
+        used_indices = set()
 
     for i in range(num_steps):
         angle_deg = (start_angle + (rotation_range * i / num_steps)) % 360
@@ -109,7 +117,7 @@ def generate_rotation_sequence(
         idx_closest = np.argmin(dists)
         used_indices.add(idx_closest)
         results.append((i, true_angle, all_names[idx_closest]))
-    return results
+    return results, used_indices
 
 
 def greedy_walk_nearest_neighbors(base_point, all_points, all_names, num_steps=1000):
@@ -362,7 +370,7 @@ angles_deg = (angles_deg + 360) % 360
 radii = np.linalg.norm(points, axis=1)
 
 # Define the target angle in degrees
-target_angle = 135
+target_angle = 45
 
 target_radius = 0.45
 
@@ -392,27 +400,30 @@ opposite_point = -base_point
 #     title=f"{target_angle}° - {target_angle+180}° Clusters",
 #     save_path=f"clusters_{target_angle}_{target_angle+180}.png",
 # )
+used = set()
 
 # Generate rotation sequences
-rotation_seq_A = generate_rotation_sequence(
+rotation_seq_A, used = generate_rotation_sequence(
     base_point=base_point,
     all_points=points,
     all_names=names,
     num_steps=180,
     start_angle=0,
     rotation_range=180,
+    used_indices=used,
 )
 df_A = pd.DataFrame(rotation_seq_A, columns=["step", "angle_deg", "filename"])
 df_A.to_csv("rotation_sequence_A.csv", index=False)
 print("Saved rotation sequence A to rotation_sequence_A.csv")
 
-rotation_seq_B = generate_rotation_sequence(
+rotation_seq_B, used = generate_rotation_sequence(
     base_point=opposite_point,
     all_points=points,
     all_names=names,
     num_steps=180,
     start_angle=0,
     rotation_range=180,
+    used_indices=used,
 )
 df_B = pd.DataFrame(rotation_seq_B, columns=["step", "angle_deg", "filename"])
 df_B.to_csv("rotation_sequence_B.csv", index=False)
