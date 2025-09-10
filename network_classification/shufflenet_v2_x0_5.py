@@ -368,4 +368,4 @@ if __name__ == "__main__":
 
     # Save the trained model parameters to a file
     # This allows us to load the model later without retraining
-    torch.save(model_ft.state_dict(), "model_ft_no_reg_135.pth")
+    torch.save(model_ft.state_dict(), "model_ft_no_reg_0.pth")

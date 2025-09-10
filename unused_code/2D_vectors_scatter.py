@@ -19,8 +19,28 @@ print(f"Vector dimensionality: {df.shape[1] - 1}")  # Subtract 1 for the names c
 x = df.iloc[:, 1]
 y = df.iloc[:, 2]
 
+
 plt.figure(figsize=(10, 10))
 plt.scatter(x, y, s=1, alpha=0.3)
+
+target_name = "088668.jpg"  # תחליפי לשם התמונה שאת רוצה
+
+# מציאת השורה המתאימה
+row = df[df.iloc[:, 0] == target_name]
+
+if not row.empty:
+    x_target = row.iloc[0, 1]
+    y_target = row.iloc[0, 2]
+
+    # ציור מחדש של אותה נקודה בצבע שחור, עם גודל גדול יותר
+    plt.scatter(x_target, y_target, color="black", s=50, label=target_name)
+
+    # כדי שתופיע מקרא (legend)
+    plt.legend()
+else:
+    print(f"Name {target_name} not found in CSV.")
+
+
 plt.xlabel("Dimension 1")
 plt.ylabel("Dimension 2")
 plt.axhline(y=0, color="black", linewidth=1)

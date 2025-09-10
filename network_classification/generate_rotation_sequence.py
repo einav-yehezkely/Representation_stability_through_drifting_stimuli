@@ -76,7 +76,9 @@ def find_opposite(base_point, all_points):
     return np.argmin(dists)
 
 
-def generate_rotation_sequence(base_point, all_points, all_names, num_steps=1000):
+def generate_rotation_sequence(
+    base_point, all_points, all_names, num_steps=180, start_angle=0, rotation_range=180
+):
     """
     Rotate base_point around the origin in num_steps steps (in degrees)
     and find the closest point from all_points at each step.
@@ -86,6 +88,8 @@ def generate_rotation_sequence(base_point, all_points, all_names, num_steps=1000
     - all_points: numpy array of shape (N, 2), 2D positions of all images
     - all_names: list or array of N image names corresponding to all_points
     - num_steps: number of rotation steps (default 1000 = every 0.36 degrees)
+    - start_angle: starting angle in degrees (default 0)
+    - rotation_range: range of rotation in degrees (default 180)
 
     Returns:
     - List of tuples: (step_index, angle_in_degrees, closest_image_name)
@@ -94,9 +98,9 @@ def generate_rotation_sequence(base_point, all_points, all_names, num_steps=1000
     used_indices = set()
 
     for i in range(num_steps):
-        angle_deg = 360 * i / num_steps  # degrees
+        angle_deg = (start_angle + (rotation_range * i / num_steps)) % 360
         rotated = rotate_vector(base_point, angle_deg)
-
+        true_angle = np.degrees(np.arctan2(rotated[1], rotated[0])) % 360
         dists = np.linalg.norm(all_points - rotated, axis=1)
 
         for idx in used_indices:
@@ -104,7 +108,7 @@ def generate_rotation_sequence(base_point, all_points, all_names, num_steps=1000
 
         idx_closest = np.argmin(dists)
         used_indices.add(idx_closest)
-        results.append((i, angle_deg, all_names[idx_closest]))
+        results.append((i, true_angle, all_names[idx_closest]))
     return results
 
 
@@ -358,7 +362,7 @@ angles_deg = (angles_deg + 360) % 360
 radii = np.linalg.norm(points, axis=1)
 
 # Define the target angle in degrees
-target_angle = 90
+target_angle = 135
 
 target_radius = 0.45
 
@@ -375,44 +379,54 @@ opposite_point = -base_point
 
 
 # save clusters of k=1000 points around base and opposite points
-base_indices = collect_nearest_images(base_point, points, names, output_dir="A")
-opp_indices = collect_nearest_images(opposite_point, points, names, output_dir="B")
+# base_indices = collect_nearest_images(base_point, points, names, output_dir="A")
+# opp_indices = collect_nearest_images(opposite_point, points, names, output_dir="B")
 
 # Plot using saved clusters
-plot_clusters_with_given_indices(
-    base_point,
-    opposite_point,
-    points,
-    base_indices,
-    opp_indices,
-    title=f"{target_angle}° - {target_angle+180}° Clusters",
-    save_path=f"clusters_{target_angle}_{target_angle+180}.png",
-)
+# plot_clusters_with_given_indices(
+#     base_point,
+#     opposite_point,
+#     points,
+#     base_indices,
+#     opp_indices,
+#     title=f"{target_angle}° - {target_angle+180}° Clusters",
+#     save_path=f"clusters_{target_angle}_{target_angle+180}.png",
+# )
 
 # Generate rotation sequences
 rotation_seq_A = generate_rotation_sequence(
-    base_point=base_point, all_points=points, all_names=names, num_steps=360
+    base_point=base_point,
+    all_points=points,
+    all_names=names,
+    num_steps=180,
+    start_angle=0,
+    rotation_range=180,
 )
 df_A = pd.DataFrame(rotation_seq_A, columns=["step", "angle_deg", "filename"])
 df_A.to_csv("rotation_sequence_A.csv", index=False)
 print("Saved rotation sequence A to rotation_sequence_A.csv")
 
 rotation_seq_B = generate_rotation_sequence(
-    base_point=opposite_point, all_points=points, all_names=names, num_steps=360
+    base_point=opposite_point,
+    all_points=points,
+    all_names=names,
+    num_steps=180,
+    start_angle=0,
+    rotation_range=180,
 )
 df_B = pd.DataFrame(rotation_seq_B, columns=["step", "angle_deg", "filename"])
 df_B.to_csv("rotation_sequence_B.csv", index=False)
 print("Saved rotation sequence B to rotation_sequence_B.csv")
 
-plot_two_rotation_paths_fixed_color(
-    all_points=points,
-    all_names=names,
-    base_point=base_point,
-    opposite_point=opposite_point,
-    rotation_seq_A=rotation_seq_A,
-    rotation_seq_B=rotation_seq_B,
-    title="Rotation Paths Around Base and Opposite Points",
-)
+# plot_two_rotation_paths_fixed_color(
+#     all_points=points,
+#     all_names=names,
+#     base_point=base_point,
+#     opposite_point=opposite_point,
+#     rotation_seq_A=rotation_seq_A,
+#     rotation_seq_B=rotation_seq_B,
+#     title="Rotation Paths Around Base and Opposite Points",
+# )
 
 
 def save_rotation_comparison_series_with_plots(
@@ -494,13 +508,13 @@ def save_rotation_comparison_series_with_plots(
         )
 
 
-save_rotation_comparison_series_with_plots(
-    base_point=base_point,
-    opposite_point=opposite_point,
-    all_points=points,
-    all_names=names,
-    num_images=10,
-    angle_step=45,
-    image_source_dir="female_faces",
-    output_root="rotation_pairs",
-)
+# save_rotation_comparison_series_with_plots(
+#     base_point=base_point,
+#     opposite_point=opposite_point,
+#     all_points=points,
+#     all_names=names,
+#     num_images=10,
+#     angle_step=45,
+#     image_source_dir="female_faces",
+#     output_root="rotation_pairs",
+# )

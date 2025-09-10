@@ -7,10 +7,10 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # Load model
-model = models.resnet18(pretrained=False)
+model = models.shufflenet_v2_x0_5(pretrained=False)
 num_ftrs = model.fc.in_features
 model.fc = torch.nn.Linear(num_ftrs, 2)  # 2 classes: A and B
-model.load_state_dict(torch.load("model_ft_no_reg_A_vs_B_45.pth"))
+model.load_state_dict(torch.load("model_ft_no_reg_135.pth"))
 model.eval()
 
 # Load CSV
@@ -50,11 +50,11 @@ for i, row in df.iterrows():
         # prediction is the index with max probability
         pred = output.argmax(dim=1).item()
 
-    true_label = label_map[row["group"]]
+    # true_label = label_map[row["group"]]
     angle = row["angle_deg"]
 
     all_predictions.append(pred)
-    all_labels.append(true_label)
+    # all_labels.append(true_label)
 
     # Track predictions
     if pred == 0:
@@ -62,7 +62,7 @@ for i, row in df.iterrows():
     else:
         predicted_B.append(row)
 
-    if pred != true_label:
+        # if pred != true_label:
         angle_errors[angle].append(row["filename"])
 
 # Save predicted CSVs
@@ -71,6 +71,6 @@ pd.DataFrame(predicted_B).to_csv("predicted_as_B.csv", index=False)
 
 
 # Print accuracy
-correct = sum(p == t for p, t in zip(all_predictions, all_labels))
-accuracy = correct / len(all_labels)
-print(f"\nOverall Accuracy: {accuracy:.2%}")
+# correct = sum(p == t for p, t in zip(all_predictions, all_labels))
+# accuracy = correct / len(all_labels)
+# print(f"\nOverall Accuracy: {accuracy:.2%}")

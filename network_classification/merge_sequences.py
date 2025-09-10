@@ -41,3 +41,7 @@ def merge_sequences(path_a="rotation_sequence_A.csv", path_b="rotation_sequence_
 
     # Save to CSV
     merged_df.to_csv("merged_sequences.csv", index=False)
+
+
+if __name__ == "__main__":
+    merge_sequences()
