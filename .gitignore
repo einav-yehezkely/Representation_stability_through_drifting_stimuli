@@ -1,5 +1,6 @@
 **/split_data/
 **/female_faces/
+**/original_data/
 *.csv
 *.png
 *.pth

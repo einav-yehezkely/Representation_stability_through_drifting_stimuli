@@ -29,8 +29,8 @@ data_transforms = {
     "train": transforms.Compose(
         [
             transforms.Resize((224, 224)),  # Resize images to 224x224
-            # transforms.RandomHorizontalFlip(),
-            # transforms.RandomPerspective(distortion_scale=0.5, p=0.5),
+            transforms.RandomHorizontalFlip(),
+            transforms.RandomPerspective(distortion_scale=0.5, p=0.5),
             transforms.ToTensor(),  # Convert images to PyTorch tensors (multi-dimensional arrays)
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
         ]
@@ -123,6 +123,7 @@ def train_model(
 
         torch.save(model.state_dict(), best_model_params_path)
         best_acc = 0.0
+        # best_val_loss = float("inf")
 
         # Evaluate the model on the training and validation sets before training
         init_train_loss, init_train_acc = evaluate(
@@ -210,6 +211,10 @@ def train_model(
                 best_acc = val_acc
                 torch.save(model.state_dict(), best_model_params_path)
 
+            # if val_loss < best_val_loss:
+            #     best_val_loss = val_loss
+            #     torch.save(model.state_dict(), best_model_params_path)
+
             # ---- RECALC TRAIN (eval mode, fair comparison) ----
             true_train_loss, true_train_acc = evaluate(
                 model, dataloaders["train"], criterion, device
@@ -232,6 +237,7 @@ def train_model(
             f"Training completed in {time_elapsed // 60:.0f}m {time_elapsed % 60:.0f}s"
         )
         print(f"Best val Acc: {best_acc:4f}")
+        # print(f"Best (lowest) Val Loss: {best_val_loss:.4f}")
 
         # load best model weights
         model.load_state_dict(torch.load(best_model_params_path, weights_only=True))
@@ -291,12 +297,12 @@ def create_model_and_optim_feature_extraction():
 
     # Define the optimizer – here we only pass the parameters of the final layer (fc)
     # since all other layers are frozen and don't need to be updated
-    optimizer_conv = optim.Adam(model_conv.fc.parameters(), lr=0.001)
-    # optimizer_conv = optim.AdamW(model_conv.parameters(), lr=0.00005, weight_decay=0.01)
+    # optimizer_conv = optim.Adam(model_conv.fc.parameters(), lr=0.001)
+    optimizer_conv = optim.AdamW(model_conv.parameters(), lr=0.00005, weight_decay=0.01)
 
     # Define a learning rate scheduler that decays the learning rate by a factor of 0.1 every 7 epochs
-    # exp_lr_scheduler = lr_scheduler.StepLR(optimizer_conv, step_size=7, gamma=0.1)
-    exp_lr_scheduler = lr_scheduler.StepLR(optimizer_conv, step_size=7, gamma=1)
+    exp_lr_scheduler = lr_scheduler.StepLR(optimizer_conv, step_size=7, gamma=0.1)
+    # exp_lr_scheduler = lr_scheduler.StepLR(optimizer_conv, step_size=5, gamma=0.5)
     return model_conv, criterion, optimizer_conv, exp_lr_scheduler
 
 
@@ -334,22 +340,21 @@ def create_model_and_optim():
 
     # Define the optimizer: here we're using Adam with a small learning rate
     # This will update all model parameters during training
-    optimizer_ft = optim.AdamW(model_ft.parameters(), lr=0.01, weight_decay=0.01)
+    # optimizer_ft = optim.AdamW(model_ft.parameters(), lr=0.01, weight_decay=0.01)
+    optimizer_ft = optim.AdamW(model_ft.parameters(), lr=0.00005, weight_decay=0.01)
 
     # Define a learning rate scheduler:
     # Every 7 epochs, reduce the learning rate by a factor of 0.1
     # This helps the model learn quickly at first and then fine-tune gently
-    exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.5)
+    exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.1)
 
     return model_ft, criterion, optimizer_ft, exp_lr_scheduler
 
 
 if __name__ == "__main__":
     print(f"Using device: {device}")
-    dataloaders, dataset_sizes, class_names = get_dataloaders(batch_size=256)
-    model_ft, criterion, optimizer_ft, exp_lr_scheduler = (
-        create_model_and_optim_feature_extraction()
-    )
+    dataloaders, dataset_sizes, class_names = get_dataloaders(batch_size=50)
+    model_ft, criterion, optimizer_ft, exp_lr_scheduler = create_model_and_optim()
     # Train the model using the defined parameters
     # This will train only the final layer (fc) while keeping all other layers frozen
     model_ft = train_model(
@@ -364,4 +369,4 @@ if __name__ == "__main__":
 
     # Save the trained model parameters to a file
     # This allows us to load the model later without retraining
-    torch.save(model_ft.state_dict(), "model_ft_no_reg_135.pth")
+    torch.save(model_ft.state_dict(), "model_ft_no_reg_45.pth")

@@ -30,7 +30,7 @@ data_transforms = {
         [
             transforms.Resize((224, 224)),  # Resize images to 224x224
             transforms.RandomHorizontalFlip(),
-            # transforms.RandomPerspective(distortion_scale=0.5, p=0.5),
+            transforms.RandomPerspective(distortion_scale=0.5, p=0.5),
             transforms.ToTensor(),  # Convert images to PyTorch tensors (multi-dimensional arrays)
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
         ]
@@ -290,15 +290,16 @@ def create_model_and_optim_feature_extraction():
 
     # Define the optimizer – here we only pass the parameters of the final layer (fc)
     # since all other layers are frozen and don't need to be updated
-    optimizer_conv = optim.Adam(
+    optimizer_conv = optim.AdamW(
         list(model_conv.stage4.parameters()) + list(model_conv.fc.parameters()),
-        lr=3e-4,
+        lr=0.005,
+        weight_decay=0.01,
     )
     # optimizer_conv = optim.AdamW(model_conv.parameters(), lr=0.00005, weight_decay=0.01)
 
     # Define a learning rate scheduler that decays the learning rate by a factor of 0.1 every 7 epochs
     # exp_lr_scheduler = lr_scheduler.StepLR(optimizer_conv, step_size=7, gamma=0.1)
-    exp_lr_scheduler = lr_scheduler.StepLR(optimizer_conv, step_size=5, gamma=0.5)
+    exp_lr_scheduler = lr_scheduler.StepLR(optimizer_conv, step_size=5, gamma=0.1)
     return model_conv, criterion, optimizer_conv, exp_lr_scheduler
 
 
@@ -338,19 +339,20 @@ def create_model_and_optim():
 
     # Define the optimizer: here we're using Adam with a small learning rate
     # This will update all model parameters during training
-    optimizer_ft = optim.AdamW(model_ft.parameters(), lr=0.01, weight_decay=0.01)
+    # optimizer_ft = optim.Adam(model_ft.parameters(), lr=0.01)
+    optimizer_ft = optim.AdamW(model_ft.parameters(), lr=0.005, weight_decay=0.01)
 
     # Define a learning rate scheduler:
     # Every 7 epochs, reduce the learning rate by a factor of 0.1
     # This helps the model learn quickly at first and then fine-tune gently
-    exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.5)
+    exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=5, gamma=0.1)
 
     return model_ft, criterion, optimizer_ft, exp_lr_scheduler
 
 
 if __name__ == "__main__":
     print(f"Using device: {device}")
-    dataloaders, dataset_sizes, class_names = get_dataloaders(batch_size=128)
+    dataloaders, dataset_sizes, class_names = get_dataloaders(batch_size=50)
     model_ft, criterion, optimizer_ft, exp_lr_scheduler = (
         create_model_and_optim_feature_extraction()
     )
