@@ -376,7 +376,7 @@ def create_prediction_scatter(angle, frame_id, save_dir="scatter_frames"):
     plt.axhline(y=0, color="black", linewidth=1)
     plt.axvline(x=0, color="black", linewidth=1)
     plt.title(
-        f"images predicted as A/B, trained on {angle}° and {opposite_angle}° clusters"
+        f"images predicted as A/B, trained on {angle:.1f}° and {opposite_angle:.1f}° clusters"
     )
     plt.grid(True)
     plt.axis("equal")
@@ -391,6 +391,8 @@ def create_prediction_scatter(angle, frame_id, save_dir="scatter_frames"):
 
 def create_linear_graph(angle, frame_id, save_dir="linear_frames"):
     opposite_angle = (angle + 180) % 360
+    os.makedirs(save_dir, exist_ok=True)
+
     pred_a = pd.read_csv("predicted_as_A.csv")
     pred_b = pd.read_csv("predicted_as_B.csv")
 
@@ -450,7 +452,7 @@ def create_linear_graph(angle, frame_id, save_dir="linear_frames"):
     plt.xlabel("Angle")
     plt.ylabel("%")
     plt.title(
-        f"% images predicted as A/B, trained on {angle}° and {opposite_angle}° clusters, {window_size}° slices"
+        f"% images predicted as A/B, trained on {angle:.1f}° and {opposite_angle:.1f}° clusters, {window_size}° slices"
     )
     plt.axhline(y=0, color="black", linewidth=1)
     plt.axvline(x=0, color="black", linewidth=1)
@@ -500,7 +502,7 @@ if __name__ == "__main__":
             criterion,
             optimizer_ft,
             exp_lr_scheduler,
-            num_epochs=10,
+            num_epochs=5,
             plots=False,
         )
         # Generate rotation sequences
