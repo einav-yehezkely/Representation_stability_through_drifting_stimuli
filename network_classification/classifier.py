@@ -5,15 +5,19 @@ import torch
 from torchvision import transforms, models
 import pandas as pd
 import matplotlib.pyplot as plt
+import torch.nn as nn
 
 # Load model
 model = models.shufflenet_v2_x0_5(pretrained=False)
-
-# model = models.resnet18(pretrained=False)
-
 num_ftrs = model.fc.in_features
-model.fc = torch.nn.Linear(num_ftrs, 2)  # 2 classes: A and B
-model.load_state_dict(torch.load("model_ft_no_reg_45.pth"))
+model.fc = nn.Sequential(
+    nn.Dropout(p=0.5),
+    nn.Linear(num_ftrs, 256),
+    nn.ReLU(),
+    nn.Dropout(p=0.3),
+    nn.Linear(256, 2),
+)
+model.load_state_dict(torch.load("model_ft_no_reg_135.pth"))
 model.eval()
 
 # Load CSV

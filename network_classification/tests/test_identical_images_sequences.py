@@ -1,7 +1,7 @@
 import pandas as pd
 
-df1 = pd.read_csv("rotation_sequence_A.csv")
-df2 = pd.read_csv("rotation_sequence_B.csv")
+df1 = pd.read_csv("predicted_as_A.csv")
+df2 = pd.read_csv("predicted_as_B.csv")
 
 column_name = "filename"
 

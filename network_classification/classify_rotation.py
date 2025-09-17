@@ -9,8 +9,9 @@ import shutil
 from sklearn.model_selection import train_test_split
 import torch.nn as nn
 from tqdm import tqdm
-from ResNet18 import train_model, get_dataloaders, create_model_and_optim
+from shufflenet_v2_x0_5 import train_model, get_dataloaders, create_model_and_optim
 from merge_sequences import merge_sequences
+from matplotlib.patches import Circle
 
 
 def load_top2_filtered(csv_path="pca_top2_filtered_female.csv"):
@@ -90,7 +91,7 @@ def collect_nearest_images(
     all_points,
     all_names,
     output_dir,
-    k=200,
+    k=500,
     image_source_dir="female_faces",
 ):
     """
@@ -149,6 +150,10 @@ def collect_nearest_images(
 
 
 def merge_clusters():
+    """
+    Merge the two CSV files filenames_A.csv and filenames_B.csv into filenames_merged.csv in order to retrain the model
+    on both clusters.
+    """
     # Load both CSVs
     df_a = pd.read_csv("filenames_A.csv")
     df_b = pd.read_csv("filenames_B.csv")
@@ -156,25 +161,19 @@ def merge_clusters():
     # Concatenate the DataFrames
     df_merged = pd.concat([df_a, df_b], ignore_index=True)
 
+    # Shuffle rows
+    df_merged = df_merged.sample(frac=1, random_state=42).reset_index(drop=True)
+
     # Save to new CSV
     df_merged.to_csv("filenames_merged.csv", index=False)
 
 
-def load_model(model_path="model_ft_no_reg_A_vs_B_135.pth"):
+def load_model(model_path="model_ft_no_reg_0.pth"):
     """
     Load the pre-trained model for classification.
     The model is trained on images from 135 and 315 degrees.
     """
-    # # Load the ResNet18 model without dropout
-    # model = models.resnet18(pretrained=False)
-    # num_ftrs = model.fc.in_features
-    # model.fc = torch.nn.Linear(num_ftrs, 2)  # 2 classes: A and B
-    # model.load_state_dict(torch.load(model_path))
-    # model.eval()
-    # return model
-
-    # Load the ResNet18 model with dropout
-    model = models.resnet18(pretrained=False)
+    model = models.shufflenet_v2_x0_5(pretrained=False)
     num_ftrs = model.fc.in_features
     model.fc = nn.Sequential(
         nn.Dropout(p=0.5),
@@ -264,7 +263,15 @@ def split_and_copy_images(
                 print(f"Warning: {src} not found.")
 
 
-def generate_rotation_sequence(base_point, all_points, all_names, num_steps=1000):
+def generate_rotation_sequence(
+    base_point,
+    all_points,
+    all_names,
+    num_steps=180,
+    start_angle=0,
+    rotation_range=180,
+    used_indices=None,
+):
     """
     Rotate base_point around the origin in num_steps steps (in degrees)
     and find the closest point from all_points at each step.
@@ -274,17 +281,21 @@ def generate_rotation_sequence(base_point, all_points, all_names, num_steps=1000
     - all_points: numpy array of shape (N, 2), 2D positions of all images
     - all_names: list or array of N image names corresponding to all_points
     - num_steps: number of rotation steps (default 1000 = every 0.36 degrees)
+    - start_angle: starting angle in degrees (default 0)
+    - rotation_range: range of rotation in degrees (default 180)
+    - used_indices: set of indices to avoid reusing across runs
 
     Returns:
     - List of tuples: (step_index, angle_in_degrees, closest_image_name)
     """
     results = []
-    used_indices = set()
+    if used_indices is None:
+        used_indices = set()
 
     for i in range(num_steps):
-        angle_deg = 360 * i / num_steps  # degrees
+        angle_deg = (start_angle + (rotation_range * i / num_steps)) % 360
         rotated = rotate_vector(base_point, angle_deg)
-
+        true_angle = np.degrees(np.arctan2(rotated[1], rotated[0])) % 360
         dists = np.linalg.norm(all_points - rotated, axis=1)
 
         for idx in used_indices:
@@ -292,11 +303,11 @@ def generate_rotation_sequence(base_point, all_points, all_names, num_steps=1000
 
         idx_closest = np.argmin(dists)
         used_indices.add(idx_closest)
-        results.append((i, angle_deg, all_names[idx_closest]))
-    return results
+        results.append((i, true_angle, all_names[idx_closest]))
+    return results, used_indices
 
 
-def create_prediction_scatter(frame_id, save_dir="frames"):
+def create_prediction_scatter(angle, frame_id, save_dir="scatter_frames"):
     """
     Create a scatter plot showing model predictions over 2D PCA space.
     Saves the result as an image in the specified folder (default: 'frames').
@@ -305,6 +316,7 @@ def create_prediction_scatter(frame_id, save_dir="frames"):
         frame_id (int): Frame number for the filename.
         save_dir (str): Directory to save the image.
     """
+    opposite_angle = (angle + 180) % 360
     os.makedirs(save_dir, exist_ok=True)
 
     # Load PCA data
@@ -312,40 +324,19 @@ def create_prediction_scatter(frame_id, save_dir="frames"):
     df.columns = ["name", "x", "y"]
 
     # Load predictions
-    pred_a = pd.read_csv("predicted_as_A.csv", header=None)[3]
-    pred_b = pd.read_csv("predicted_as_B.csv", header=None)[3]
-
-    cluster_a = pd.read_csv("filenames_A.csv", header=None)[0]
-    cluster_b = pd.read_csv("filenames_B.csv", header=None)[0]
+    pred_a = pd.read_csv("predicted_as_A.csv")["filename"]
+    pred_b = pd.read_csv("predicted_as_B.csv")["filename"]
 
     predicted_cluster_a = pd.read_csv("cluster_predicted_as_A.csv", header=None)[0]
     predicted_cluster_b = pd.read_csv("cluster_predicted_as_B.csv", header=None)[0]
 
     df_a = df[df["name"].isin(pred_a)]
     df_b = df[df["name"].isin(pred_b)]
-    df_cluster_a = df[df["name"].isin(cluster_a)]
-    df_cluster_b = df[df["name"].isin(cluster_b)]
     df_predicted_cluster_a = df[df["name"].isin(predicted_cluster_a)]
     df_predicted_cluster_b = df[df["name"].isin(predicted_cluster_b)]
 
     plt.figure(figsize=(10, 10))
     plt.scatter(df["x"], df["y"], s=5, alpha=0.3, color="gray", label="All Vectors")
-    plt.scatter(
-        df_cluster_a["x"],
-        df_cluster_a["y"],
-        s=9,
-        alpha=0.8,
-        color="lightblue",
-        label="Trained A",
-    )
-    plt.scatter(
-        df_cluster_b["x"],
-        df_cluster_b["y"],
-        s=9,
-        alpha=0.7,
-        color="pink",
-        label="Trained B",
-    )
     plt.scatter(
         df_predicted_cluster_a["x"],
         df_predicted_cluster_a["y"],
@@ -367,31 +358,125 @@ def create_prediction_scatter(frame_id, save_dir="frames"):
     )
     plt.scatter(df_b["x"], df_b["y"], s=10, alpha=0.7, color="red", label="Predicted B")
 
+    # Add circle and lines for reference
+    radius = max(np.sqrt(df["x"] ** 2 + df["y"] ** 2)) * 1.05
+    circle = Circle(
+        (0, 0), radius, fill=False, color="black", linestyle="--", alpha=0.5
+    )
+    plt.gca().add_patch(circle)
+    for angle_circ in range(0, 360, 20):
+        rad = np.deg2rad(angle_circ)
+        x = radius * np.cos(rad)
+        y = radius * np.sin(rad)
+        plt.plot([0, x], [0, y], color="gray", linewidth=0.5, alpha=0.5)
+        plt.text(x * 1.05, y * 1.05, f"{angle_circ}°", ha="center", va="center")
+
     plt.xlabel("PC1")
     plt.ylabel("PC2")
     plt.axhline(y=0, color="black", linewidth=1)
     plt.axvline(x=0, color="black", linewidth=1)
-    plt.title("Model Predictions")
+    plt.title(
+        f"images predicted as A/B, trained on {angle}° and {opposite_angle}° clusters"
+    )
     plt.grid(True)
     plt.axis("equal")
     plt.legend()
     plt.tight_layout()
 
-    path = os.path.join(save_dir, f"frame_{frame_id:03d}.png")
-    plt.savefig(path, dpi=150)
-    print(f"\nFrame {i} completed. Model re-trained and evaluated.\n")
+    path = os.path.join(save_dir, f"scatter_frame_{frame_id:03d}.png")
+    plt.savefig(path, dpi=300)
+    print(f"\nScatter Frame {frame_id} completed. Model re-trained and evaluated.\n")
+    plt.close()
+
+
+def create_linear_graph(angle, frame_id, save_dir="linear_frames"):
+    opposite_angle = (angle + 180) % 360
+    pred_a = pd.read_csv("predicted_as_A.csv")
+    pred_b = pd.read_csv("predicted_as_B.csv")
+
+    pred_a["pred"] = "A"
+    pred_b["pred"] = "B"
+
+    df = pd.concat([pred_a, pred_b], ignore_index=True)
+
+    df_full = pd.read_csv("pca_top2_filtered_female.csv", header=None)
+    df_full.columns = ["filename", "x", "y"]
+
+    df = df.merge(df_full, on="filename", how="left")
+
+    window_size = 20
+    results = []
+
+    for step_angle in range(0, 360, 1):
+        end = (step_angle + window_size) % 360
+        if step_angle < end:
+            window_data = df[(df["angle_deg"] >= step_angle) & (df["angle_deg"] < end)]
+        else:
+            window_data = df[(df["angle_deg"] >= step_angle) | (df["angle_deg"] < end)]
+
+        total = len(window_data)
+
+        if total > 0:
+            count_a = (window_data["pred"] == "A").sum()
+            count_b = (window_data["pred"] == "B").sum()
+            percent_a = count_a * 100 / total
+            percent_b = count_b * 100 / total
+        else:
+            percent_a = 0
+            percent_b = 0
+
+        # Use center of window for plotting
+        center_angle = (step_angle + window_size / 2) % 360
+        results.append((center_angle, percent_a, percent_b))
+
+    df_results = pd.DataFrame(results, columns=["angle", "percent_A", "percent_B"])
+
+    # Add closing point at 360°
+    angle0 = df_results[df_results["angle"] == 0]
+    # 360° is the same as 0°
+    angle360 = angle0.copy()
+    angle360["angle"] = 360
+    df_results = pd.concat([df_results, angle360], ignore_index=True)
+    # sort by angle for proper plotting
+    df_results = df_results.sort_values(by="angle")
+
+    plt.figure(figsize=(12, 6))
+    plt.plot(
+        df_results["angle"], df_results["percent_A"], label="Predicted A", color="blue"
+    )
+    plt.plot(
+        df_results["angle"], df_results["percent_B"], label="Predicted B", color="red"
+    )
+    plt.xlabel("Angle")
+    plt.ylabel("%")
+    plt.title(
+        f"% images predicted as A/B, trained on {angle}° and {opposite_angle}° clusters, {window_size}° slices"
+    )
+    plt.axhline(y=0, color="black", linewidth=1)
+    plt.axvline(x=0, color="black", linewidth=1)
+    plt.axvline(x=angle, color="blue", linewidth=1, linestyle="--")
+    plt.axvline(x=opposite_angle, color="red", linewidth=1, linestyle="--")
+    plt.grid(True)
+    plt.legend()
+    plt.tight_layout()
+    plt.ylim(0, 100)
+    plt.xlim(0, 360)
+    path = os.path.join(save_dir, f"linear_frame_{frame_id:03d}.png")
+    plt.savefig(path, dpi=300)
+    print(f"\nLinear Frame {frame_id} completed. Model re-trained and evaluated.\n")
     plt.close()
 
 
 names, points = load_top2_filtered("pca_top2_filtered_female.csv")
-base_point, opposite_point = create_base_and_opposite_points(135)
-self_training_model = load_model(model_path="model_ft_reg1_A_vs_B_135.pth")
+base_point, opposite_point = create_base_and_opposite_points(0)
+self_training_model = load_model(model_path="model_ft_no_reg_0.pth")
+
 
 for i in range(72):  # 360/5=72
     base_point = rotate_vector(base_point, angle_deg=5)
     opposite_point = rotate_vector(opposite_point, angle_deg=5)
-    collect_nearest_images(base_point, points, names, output_dir="A", k=800)
-    collect_nearest_images(opposite_point, points, names, output_dir="B", k=800)
+    collect_nearest_images(base_point, points, names, output_dir="A", k=500)
+    collect_nearest_images(opposite_point, points, names, output_dir="B", k=500)
     # now we have two directories: A and B with 200 images each from opposite clusters
     # we can now classify these images using the model
     merge_clusters()
@@ -415,30 +500,49 @@ for i in range(72):  # 360/5=72
         criterion,
         optimizer_ft,
         exp_lr_scheduler,
-        num_epochs=8,
+        num_epochs=15,
+        plots=False,
     )
     # Generate rotation sequences
-    rotation_seq_A = generate_rotation_sequence(
-        base_point=base_point, all_points=points, all_names=names, num_steps=360
+    used = set()
+
+    rotation_seq_A, used = generate_rotation_sequence(
+        base_point=base_point,
+        all_points=points,
+        all_names=names,
+        num_steps=180,
+        start_angle=0,
+        rotation_range=180,
+        used_indices=used,
     )
     df_A = pd.DataFrame(rotation_seq_A, columns=["step", "angle_deg", "filename"])
     df_A.to_csv("rotation_sequence_A.csv", index=False)
     print("Saved rotation sequence A to rotation_sequence_A.csv")
 
-    rotation_seq_B = generate_rotation_sequence(
-        base_point=opposite_point, all_points=points, all_names=names, num_steps=360
+    rotation_seq_B, used = generate_rotation_sequence(
+        base_point=opposite_point,
+        all_points=points,
+        all_names=names,
+        num_steps=180,
+        start_angle=0,
+        rotation_range=180,
+        used_indices=used,
     )
     df_B = pd.DataFrame(rotation_seq_B, columns=["step", "angle_deg", "filename"])
     df_B.to_csv("rotation_sequence_B.csv", index=False)
     print("Saved rotation sequence B to rotation_sequence_B.csv")
+
     merge_sequences()  # merge the two sequences into one CSV
     # now we have a trained model - self trained on it's own predictions
     classify_images(
-        self_training_model, csv_path="merged_sequences.csv"
+        self_training_model, csv_path="merged_sequences.csv", clusters=False
     )  # classify rotation sequence
     print("Classified rotation sequence.")
+
+    angle_deg = np.degrees(np.arctan2(base_point[1], base_point[0])) % 360
     # now we have two CSVs: predicted_as_A.csv and predicted_as_B.csv
-    create_prediction_scatter(frame_id=i)
+    create_prediction_scatter(angle=angle_deg, frame_id=i)
+    create_linear_graph(angle=angle_deg, frame_id=i)
     # create a scatter plot of the predictions
     # save the scatter plot in the frames directory
     shutil.rmtree("A", ignore_errors=True)

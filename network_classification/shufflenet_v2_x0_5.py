@@ -50,7 +50,7 @@ data_dir = "split_data"
 
 # Create a dictionary with two datasets: one for training ("train") and one for validation ("val")
 # Each dataset loads images from the corresponding folder and applies the appropriate transformations
-def get_dataloaders(data_dir="split_data", batch_size=128):
+def get_dataloaders(data_dir="split_data", batch_size=50):
     image_datasets = {
         x: datasets.ImageFolder(os.path.join(data_dir, x), data_transforms[x])
         for x in ["train", "val"]
@@ -100,7 +100,14 @@ def evaluate(model, dataloader, criterion, device):
 
 
 def train_model(
-    model, dataloaders, dataset_sizes, criterion, optimizer, scheduler, num_epochs=25
+    model,
+    dataloaders,
+    dataset_sizes,
+    criterion,
+    optimizer,
+    scheduler,
+    num_epochs=25,
+    plots=True,
 ):
     """
     Trains a PyTorch model using a given optimizer, loss function, and learning rate scheduler.
@@ -237,30 +244,31 @@ def train_model(
         model.load_state_dict(torch.load(best_model_params_path, weights_only=True))
 
         # -- Plots --
-        # Plot training and validation losses and accuracies
-        # Plot loss
-        plt.figure(figsize=(10, 4))
+        if plots == True:
+            # Plot training and validation losses and accuracies
+            # Plot loss
+            plt.figure(figsize=(10, 4))
 
-        plt.subplot(1, 2, 1)
-        plt.plot(reeval_train_losses, label="Train Loss")
-        plt.plot(val_losses, label="Val Loss")
-        plt.xlabel("Epoch")
-        plt.ylabel("Loss")
-        plt.title("Loss over Epochs")
-        plt.legend()
+            plt.subplot(1, 2, 1)
+            plt.plot(reeval_train_losses, label="Train Loss")
+            plt.plot(val_losses, label="Val Loss")
+            plt.xlabel("Epoch")
+            plt.ylabel("Loss")
+            plt.title("Loss over Epochs")
+            plt.legend()
 
-        # Plot accuracy
-        plt.subplot(1, 2, 2)
-        plt.plot(reeval_train_accuracies, label="Train Accuracy")
-        # plt.plot(train_accuracies, label="Train Accuracy")
-        plt.plot(val_accuracies, label="Val Accuracy")
-        plt.xlabel("Epoch")
-        plt.ylabel("Accuracy")
-        plt.title("Accuracy over Epochs")
-        plt.legend()
+            # Plot accuracy
+            plt.subplot(1, 2, 2)
+            plt.plot(reeval_train_accuracies, label="Train Accuracy")
+            # plt.plot(train_accuracies, label="Train Accuracy")
+            plt.plot(val_accuracies, label="Val Accuracy")
+            plt.xlabel("Epoch")
+            plt.ylabel("Accuracy")
+            plt.title("Accuracy over Epochs")
+            plt.legend()
 
-        plt.tight_layout()
-        plt.savefig(f"training_progress_no_reg.png")
+            plt.tight_layout()
+            plt.savefig(f"training_progress_no_reg.png")
     return model
 
 
@@ -353,9 +361,7 @@ def create_model_and_optim():
 if __name__ == "__main__":
     print(f"Using device: {device}")
     dataloaders, dataset_sizes, class_names = get_dataloaders(batch_size=50)
-    model_ft, criterion, optimizer_ft, exp_lr_scheduler = (
-        create_model_and_optim_feature_extraction()
-    )
+    model_ft, criterion, optimizer_ft, exp_lr_scheduler = create_model_and_optim()
     # Train the model using the defined parameters
     # This will train only the final layer (fc) while keeping all other layers frozen
     model_ft = train_model(
@@ -370,4 +376,4 @@ if __name__ == "__main__":
 
     # Save the trained model parameters to a file
     # This allows us to load the model later without retraining
-    torch.save(model_ft.state_dict(), "model_ft_no_reg_45.pth")
+    torch.save(model_ft.state_dict(), "model_ft_no_reg_0.pth")

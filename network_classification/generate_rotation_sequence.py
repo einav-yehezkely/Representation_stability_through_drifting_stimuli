@@ -370,7 +370,7 @@ angles_deg = (angles_deg + 360) % 360
 radii = np.linalg.norm(points, axis=1)
 
 # Define the target angle in degrees
-target_angle = 45
+target_angle = 135
 
 target_radius = 0.45
 
@@ -387,19 +387,19 @@ opposite_point = -base_point
 
 
 # save clusters of k=1000 points around base and opposite points
-base_indices = collect_nearest_images(base_point, points, names, output_dir="A")
-opp_indices = collect_nearest_images(opposite_point, points, names, output_dir="B")
+# base_indices = collect_nearest_images(base_point, points, names, output_dir="A")
+# opp_indices = collect_nearest_images(opposite_point, points, names, output_dir="B")
 
 # Plot using saved clusters
-plot_clusters_with_given_indices(
-    base_point,
-    opposite_point,
-    points,
-    base_indices,
-    opp_indices,
-    title=f"{target_angle}° - {target_angle+180}° Clusters",
-    save_path=f"clusters_{target_angle}_{target_angle+180}.png",
-)
+# plot_clusters_with_given_indices(
+#     base_point,
+#     opposite_point,
+#     points,
+#     base_indices,
+#     opp_indices,
+#     title=f"{target_angle}° - {target_angle+180}° Clusters",
+#     save_path=f"clusters_{target_angle}_{target_angle+180}.png",
+# )
 used = set()
 
 # Generate rotation sequences

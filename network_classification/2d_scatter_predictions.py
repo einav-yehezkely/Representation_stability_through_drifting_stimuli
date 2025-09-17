@@ -7,8 +7,9 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.patches import Circle
 
-angle = 0
+angle = 135
 opposite_angle = (angle + 180) % 360
 
 # Load full embeddings: name, x, y
@@ -16,8 +17,9 @@ df = pd.read_csv("pca_top2_filtered_female.csv", header=None)
 df.columns = ["name", "x", "y"]
 
 # Load predicted names (from column 4 of each file)
-pred_a = pd.read_csv("predicted_as_A.csv", header=None)[3]
-pred_b = pd.read_csv("predicted_as_B.csv", header=None)[3]
+pred_a = pd.read_csv("predicted_as_A.csv")["filename"]
+pred_b = pd.read_csv("predicted_as_B.csv")["filename"]
+
 
 cluster_a = pd.read_csv("filenames_A.csv", header=None)[0]
 cluster_b = pd.read_csv("filenames_B.csv", header=None)[0]
@@ -63,12 +65,26 @@ plt.scatter(
 # Predicted B in red
 plt.scatter(df_b["x"], df_b["y"], s=10, alpha=0.7, color="red", label="Predicted B")
 
+
+# Add circle and lines for reference
+radius = max(np.sqrt(df["x"] ** 2 + df["y"] ** 2)) * 1.05
+circle = Circle((0, 0), radius, fill=False, color="black", linestyle="--", alpha=0.5)
+plt.gca().add_patch(circle)
+for angle_circ in range(0, 360, 20):
+    rad = np.deg2rad(angle_circ)
+    x = radius * np.cos(rad)
+    y = radius * np.sin(rad)
+    plt.plot([0, x], [0, y], color="gray", linewidth=0.5, alpha=0.5)
+    plt.text(x * 1.05, y * 1.05, f"{angle_circ}°", ha="center", va="center")
+
 # Axes and labels
 plt.xlabel("PC1")
 plt.ylabel("PC2")
 plt.axhline(y=0, color="black", linewidth=1)
 plt.axvline(x=0, color="black", linewidth=1)
-plt.title("Model Predictions")
+plt.title(
+    f"images predicted as A/B, trained on {angle}° and {opposite_angle}° clusters"
+)
 plt.grid(True)
 plt.axis("equal")
 plt.legend()
@@ -112,8 +128,9 @@ for step_angle in range(0, 360, 1):
         percent_a = 0
         percent_b = 0
 
-    results.append((step_angle, percent_a, percent_b))
-
+    # Use center of window for plotting
+    center_angle = (step_angle + window_size / 2) % 360
+    results.append((center_angle, percent_a, percent_b))
 
 df_results = pd.DataFrame(results, columns=["angle", "percent_A", "percent_B"])
 
@@ -123,6 +140,8 @@ angle0 = df_results[df_results["angle"] == 0]
 angle360 = angle0.copy()
 angle360["angle"] = 360
 df_results = pd.concat([df_results, angle360], ignore_index=True)
+# sort by angle for proper plotting
+df_results = df_results.sort_values(by="angle")
 
 plt.figure(figsize=(12, 6))
 plt.plot(
