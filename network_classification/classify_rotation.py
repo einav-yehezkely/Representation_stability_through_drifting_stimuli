@@ -471,103 +471,103 @@ names, points = load_top2_filtered("pca_top2_filtered_female.csv")
 base_point, opposite_point = create_base_and_opposite_points(0)
 self_training_model = load_model(model_path="model_ft_no_reg_0.pth")
 
+if __name__ == "__main__":
+    for i in range(72):  # 360/5=72
+        base_point = rotate_vector(base_point, angle_deg=5)
+        opposite_point = rotate_vector(opposite_point, angle_deg=5)
+        collect_nearest_images(base_point, points, names, output_dir="A", k=500)
+        collect_nearest_images(opposite_point, points, names, output_dir="B", k=500)
+        # now we have two directories: A and B with 200 images each from opposite clusters
+        # we can now classify these images using the model
+        merge_clusters()
+        # now we have a merged CSV with filenames from both clusters
+        classify_images(
+            self_training_model, csv_path="filenames_merged.csv", clusters=True
+        )  # classify clusters A and B
+        print("Classified images in clusters A and B.")
+        # now there are two CSVs: predicted_as_A.csv and predicted_as_B.csv
+        ### we will now retrain the model on these classifications ###
+        split_and_copy_images(csv_path="cluster_predicted_as_A.csv", label="A")
+        # now we have a split_data/train/A and split_data/val/A
+        split_and_copy_images(csv_path="cluster_predicted_as_B.csv", label="B")
+        # now we have a split_data/train/B and split_data/val/B
+        dataloaders, dataset_sizes, class_names = get_dataloaders(data_dir="split_data")
+        _, criterion, optimizer_ft, exp_lr_scheduler = create_model_and_optim()
+        self_training_model = train_model(
+            self_training_model,
+            dataloaders,
+            dataset_sizes,
+            criterion,
+            optimizer_ft,
+            exp_lr_scheduler,
+            num_epochs=10,
+            plots=False,
+        )
+        # Generate rotation sequences
+        used = set()
 
-for i in range(72):  # 360/5=72
-    base_point = rotate_vector(base_point, angle_deg=5)
-    opposite_point = rotate_vector(opposite_point, angle_deg=5)
-    collect_nearest_images(base_point, points, names, output_dir="A", k=500)
-    collect_nearest_images(opposite_point, points, names, output_dir="B", k=500)
-    # now we have two directories: A and B with 200 images each from opposite clusters
-    # we can now classify these images using the model
-    merge_clusters()
-    # now we have a merged CSV with filenames from both clusters
-    classify_images(
-        self_training_model, csv_path="filenames_merged.csv", clusters=True
-    )  # classify clusters A and B
-    print("Classified images in clusters A and B.")
-    # now there are two CSVs: predicted_as_A.csv and predicted_as_B.csv
-    ### we will now retrain the model on these classifications ###
-    split_and_copy_images(csv_path="cluster_predicted_as_A.csv", label="A")
-    # now we have a split_data/train/A and split_data/val/A
-    split_and_copy_images(csv_path="cluster_predicted_as_B.csv", label="B")
-    # now we have a split_data/train/B and split_data/val/B
-    dataloaders, dataset_sizes, class_names = get_dataloaders(data_dir="split_data")
-    _, criterion, optimizer_ft, exp_lr_scheduler = create_model_and_optim()
-    self_training_model = train_model(
-        self_training_model,
-        dataloaders,
-        dataset_sizes,
-        criterion,
-        optimizer_ft,
-        exp_lr_scheduler,
-        num_epochs=15,
-        plots=False,
-    )
-    # Generate rotation sequences
-    used = set()
+        rotation_seq_A, used = generate_rotation_sequence(
+            base_point=base_point,
+            all_points=points,
+            all_names=names,
+            num_steps=180,
+            start_angle=0,
+            rotation_range=180,
+            used_indices=used,
+        )
+        df_A = pd.DataFrame(rotation_seq_A, columns=["step", "angle_deg", "filename"])
+        df_A.to_csv("rotation_sequence_A.csv", index=False)
+        print("Saved rotation sequence A to rotation_sequence_A.csv")
 
-    rotation_seq_A, used = generate_rotation_sequence(
-        base_point=base_point,
-        all_points=points,
-        all_names=names,
-        num_steps=180,
-        start_angle=0,
-        rotation_range=180,
-        used_indices=used,
-    )
-    df_A = pd.DataFrame(rotation_seq_A, columns=["step", "angle_deg", "filename"])
-    df_A.to_csv("rotation_sequence_A.csv", index=False)
-    print("Saved rotation sequence A to rotation_sequence_A.csv")
+        rotation_seq_B, used = generate_rotation_sequence(
+            base_point=opposite_point,
+            all_points=points,
+            all_names=names,
+            num_steps=180,
+            start_angle=0,
+            rotation_range=180,
+            used_indices=used,
+        )
+        df_B = pd.DataFrame(rotation_seq_B, columns=["step", "angle_deg", "filename"])
+        df_B.to_csv("rotation_sequence_B.csv", index=False)
+        print("Saved rotation sequence B to rotation_sequence_B.csv")
 
-    rotation_seq_B, used = generate_rotation_sequence(
-        base_point=opposite_point,
-        all_points=points,
-        all_names=names,
-        num_steps=180,
-        start_angle=0,
-        rotation_range=180,
-        used_indices=used,
-    )
-    df_B = pd.DataFrame(rotation_seq_B, columns=["step", "angle_deg", "filename"])
-    df_B.to_csv("rotation_sequence_B.csv", index=False)
-    print("Saved rotation sequence B to rotation_sequence_B.csv")
+        merge_sequences()  # merge the two sequences into one CSV
+        # now we have a trained model - self trained on it's own predictions
+        classify_images(
+            self_training_model, csv_path="merged_sequences.csv", clusters=False
+        )  # classify rotation sequence
+        print("Classified rotation sequence.")
 
-    merge_sequences()  # merge the two sequences into one CSV
-    # now we have a trained model - self trained on it's own predictions
-    classify_images(
-        self_training_model, csv_path="merged_sequences.csv", clusters=False
-    )  # classify rotation sequence
-    print("Classified rotation sequence.")
+        angle_deg = np.degrees(np.arctan2(base_point[1], base_point[0])) % 360
+        # now we have two CSVs: predicted_as_A.csv and predicted_as_B.csv
+        create_prediction_scatter(angle=angle_deg, frame_id=i)
+        create_linear_graph(angle=angle_deg, frame_id=i)
+        # create a scatter plot of the predictions
+        # save the scatter plot in the frames directory
+        shutil.rmtree("A", ignore_errors=True)
+        shutil.rmtree("B", ignore_errors=True)
+        shutil.rmtree("split_data", ignore_errors=True)
+        # clean up the split_data directory for the next iteration
+        # delete csv files
+        csv_files_to_delete = [
+            "filenames_A.csv",
+            "filenames_B.csv",
+            "filenames_merged.csv",
+            "predicted_as_A.csv",
+            "predicted_as_B.csv",
+            "rotation_sequence_A.csv",
+            "rotation_sequence_B.csv",
+            "merged_sequences.csv",
+            "cluster_predicted_as_A.csv",
+            "cluster_predicted_as_B.csv",
+        ]
 
-    angle_deg = np.degrees(np.arctan2(base_point[1], base_point[0])) % 360
-    # now we have two CSVs: predicted_as_A.csv and predicted_as_B.csv
-    create_prediction_scatter(angle=angle_deg, frame_id=i)
-    create_linear_graph(angle=angle_deg, frame_id=i)
-    # create a scatter plot of the predictions
-    # save the scatter plot in the frames directory
-    shutil.rmtree("A", ignore_errors=True)
-    shutil.rmtree("B", ignore_errors=True)
-    shutil.rmtree("split_data", ignore_errors=True)
-    # clean up the split_data directory for the next iteration
-    # delete csv files
-    csv_files_to_delete = [
-        "filenames_A.csv",
-        "filenames_B.csv",
-        "filenames_merged.csv",
-        "predicted_as_A.csv",
-        "predicted_as_B.csv",
-        "rotation_sequence_A.csv",
-        "rotation_sequence_B.csv",
-        "merged_sequences.csv",
-        "cluster_predicted_as_A.csv",
-        "cluster_predicted_as_B.csv",
-    ]
+        for fname in csv_files_to_delete:
+            if os.path.exists(fname):
+                try:
+                    os.remove(fname)
+                except Exception as e:
+                    print(f"Could not delete {fname}: {e}")
 
-    for fname in csv_files_to_delete:
-        if os.path.exists(fname):
-            try:
-                os.remove(fname)
-            except Exception as e:
-                print(f"Could not delete {fname}: {e}")
-
-torch.save(self_training_model.state_dict(), "model_self_trained.pth")
+    torch.save(self_training_model.state_dict(), "model_self_trained.pth")
