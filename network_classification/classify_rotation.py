@@ -12,6 +12,7 @@ from tqdm import tqdm
 from shufflenet_v2_x0_5 import train_model, get_dataloaders, create_model_and_optim
 from merge_sequences import merge_sequences
 from matplotlib.patches import Circle
+import time
 
 
 def load_top2_filtered(csv_path="pca_top2_filtered_female.csv"):
@@ -474,6 +475,7 @@ base_point, opposite_point = create_base_and_opposite_points(0)
 self_training_model = load_model(model_path="model_ft_no_reg_0.pth")
 
 if __name__ == "__main__":
+    start = time.time()
     for i in range(72):  # 360/5=72
         base_point = rotate_vector(base_point, angle_deg=5)
         opposite_point = rotate_vector(opposite_point, angle_deg=5)
@@ -571,5 +573,8 @@ if __name__ == "__main__":
                     os.remove(fname)
                 except Exception as e:
                     print(f"Could not delete {fname}: {e}")
+    end = time.time()
+    print(f"Total time: {end - start:.2f} seconds")
+    print("Total time (minutes): ", (end - start) / 60, "minutes")
 
     torch.save(self_training_model.state_dict(), "model_self_trained.pth")
