@@ -542,8 +542,6 @@ self_training_model = load_model(model_path="model_ft_no_reg_0.pth")
 if __name__ == "__main__":
     start = time.time()
     for i in range(72):  # 360/5=72
-        base_point = rotate_vector(base_point, angle_deg=5)
-        opposite_point = rotate_vector(opposite_point, angle_deg=5)
         collect_nearest_images(
             base_point, points, names, output_dir=inside_tmp("A"), k=1000
         )
@@ -641,6 +639,10 @@ if __name__ == "__main__":
         create_linear_graph(angle=angle_deg, frame_id=i)
         # create a scatter plot of the predictions
         # save the scatter plot in the frames directory
+        # rotate base_point and opposite_point by 5 degrees for the next iteration
+        base_point = rotate_vector(base_point, angle_deg=5)
+        opposite_point = rotate_vector(opposite_point, angle_deg=5)
+        # clean up A and B directories for the next iteration
         shutil.rmtree(inside_tmp("A"), ignore_errors=True)
         shutil.rmtree(inside_tmp("B"), ignore_errors=True)
         shutil.rmtree(inside_tmp("split_data"), ignore_errors=True)
