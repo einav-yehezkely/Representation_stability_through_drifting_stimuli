@@ -13,6 +13,17 @@ from shufflenet_v2_x0_5 import train_model, get_dataloaders, create_model_and_op
 from merge_sequences import merge_sequences
 from matplotlib.patches import Circle
 import time
+import torch.optim as optim
+from torch.optim import lr_scheduler
+
+
+BASE_DIR = "tmp"
+os.makedirs(BASE_DIR, exist_ok=True)
+
+
+def inside_tmp(*paths):
+    """Return a path inside the BASE_DIR (tmp)."""
+    return os.path.join(BASE_DIR, *paths)
 
 
 def load_top2_filtered(csv_path="pca_top2_filtered_female.csv"):
@@ -143,7 +154,8 @@ def collect_nearest_images(
             print(f"Warning: {src_path} not found.")
 
     # Save filenames to CSV
-    csv_path = f"filenames_{output_dir}.csv"
+    csv_name = f"filenames_{os.path.basename(output_dir)}.csv"
+    csv_path = inside_tmp(csv_name)
     pd.DataFrame(selected_names, columns=["filename"]).to_csv(csv_path, index=False)
     print(f"Saved {len(selected_names)} image names to {csv_path}")
 
@@ -156,8 +168,8 @@ def merge_clusters():
     on both clusters.
     """
     # Load both CSVs
-    df_a = pd.read_csv("filenames_A.csv")
-    df_b = pd.read_csv("filenames_B.csv")
+    df_a = pd.read_csv(inside_tmp("filenames_A.csv"))
+    df_b = pd.read_csv(inside_tmp("filenames_B.csv"))
 
     # Concatenate the DataFrames
     df_merged = pd.concat([df_a, df_b], ignore_index=True)
@@ -166,7 +178,7 @@ def merge_clusters():
     df_merged = df_merged.sample(frac=1, random_state=42).reset_index(drop=True)
 
     # Save to new CSV
-    df_merged.to_csv("filenames_merged.csv", index=False)
+    df_merged.to_csv(inside_tmp("filenames_merged.csv"), index=False)
 
 
 def load_model(model_path="model_ft_no_reg_0.pth"):
@@ -227,11 +239,15 @@ def classify_images(model, csv_path, clusters=False):
 
     # Save predicted CSVs
     if clusters:
-        pd.DataFrame(predicted_A).to_csv("cluster_predicted_as_A.csv", index=False)
-        pd.DataFrame(predicted_B).to_csv("cluster_predicted_as_B.csv", index=False)
+        pd.DataFrame(predicted_A).to_csv(
+            inside_tmp("cluster_predicted_as_A.csv"), index=False
+        )
+        pd.DataFrame(predicted_B).to_csv(
+            inside_tmp("cluster_predicted_as_B.csv"), index=False
+        )
     else:
-        pd.DataFrame(predicted_A).to_csv("predicted_as_A.csv", index=False)
-        pd.DataFrame(predicted_B).to_csv("predicted_as_B.csv", index=False)
+        pd.DataFrame(predicted_A).to_csv(inside_tmp("predicted_as_A.csv"), index=False)
+        pd.DataFrame(predicted_B).to_csv(inside_tmp("predicted_as_B.csv"), index=False)
 
 
 def split_and_copy_images(
@@ -239,7 +255,7 @@ def split_and_copy_images(
     label,
     image_source_dir="female_faces",
     train_ratio=0.8,
-    root_dir="split_data",
+    root_dir=inside_tmp("split_data"),
 ):
     # Load the CSV with predicted filenames
     df = pd.read_csv(csv_path)
@@ -325,11 +341,15 @@ def create_prediction_scatter(angle, frame_id, save_dir="scatter_frames"):
     df.columns = ["name", "x", "y"]
 
     # Load predictions
-    pred_a = pd.read_csv("predicted_as_A.csv")["filename"]
-    pred_b = pd.read_csv("predicted_as_B.csv")["filename"]
+    pred_a = pd.read_csv(inside_tmp("predicted_as_A.csv"))["filename"]
+    pred_b = pd.read_csv(inside_tmp("predicted_as_B.csv"))["filename"]
 
-    predicted_cluster_a = pd.read_csv("cluster_predicted_as_A.csv", header=None)[0]
-    predicted_cluster_b = pd.read_csv("cluster_predicted_as_B.csv", header=None)[0]
+    predicted_cluster_a = pd.read_csv(
+        inside_tmp("cluster_predicted_as_A.csv"), header=None
+    )[0]
+    predicted_cluster_b = pd.read_csv(
+        inside_tmp("cluster_predicted_as_B.csv"), header=None
+    )[0]
 
     df_a = df[df["name"].isin(pred_a)]
     df_b = df[df["name"].isin(pred_b)]
@@ -394,8 +414,8 @@ def create_linear_graph(angle, frame_id, save_dir="linear_frames"):
     opposite_angle = (angle + 180) % 360
     os.makedirs(save_dir, exist_ok=True)
 
-    pred_a = pd.read_csv("predicted_as_A.csv")
-    pred_b = pd.read_csv("predicted_as_B.csv")
+    pred_a = pd.read_csv(inside_tmp("predicted_as_A.csv"))
+    pred_b = pd.read_csv(inside_tmp("predicted_as_B.csv"))
 
     pred_a["pred"] = "A"
     pred_b["pred"] = "B"
@@ -479,9 +499,15 @@ if __name__ == "__main__":
     for i in range(72):  # 360/5=72
         base_point = rotate_vector(base_point, angle_deg=5)
         opposite_point = rotate_vector(opposite_point, angle_deg=5)
-        collect_nearest_images(base_point, points, names, output_dir="A", k=500)
-        collect_nearest_images(opposite_point, points, names, output_dir="B", k=500)
+        collect_nearest_images(
+            base_point, points, names, output_dir=inside_tmp("A"), k=1000
+        )
+        collect_nearest_images(
+            opposite_point, points, names, output_dir=inside_tmp("B"), k=1000
+        )
         # now we have two directories: A and B with 200 images each from opposite clusters
+        """
+        ######################### unsupervised learning
         # we can now classify these images using the model
         merge_clusters()
         # now we have a merged CSV with filenames from both clusters
@@ -489,14 +515,31 @@ if __name__ == "__main__":
             self_training_model, csv_path="filenames_merged.csv", clusters=True
         )  # classify clusters A and B
         print("Classified images in clusters A and B.")
-        # now there are two CSVs: predicted_as_A.csv and predicted_as_B.csv
+        # now there are two CSVs: cluster_predicted_as_A.csv and cluster_predicted_as_B.csv
         ### we will now retrain the model on these classifications ###
         split_and_copy_images(csv_path="cluster_predicted_as_A.csv", label="A")
         # now we have a split_data/train/A and split_data/val/A
         split_and_copy_images(csv_path="cluster_predicted_as_B.csv", label="B")
+        """
+        #########################
+        ######################### supervised learning
+        split_and_copy_images(csv_path=inside_tmp("filenames_A.csv"), label="A")
+        # now we have a split_data/train/A and split_data/val/A
+        split_and_copy_images(csv_path=inside_tmp("filenames_B.csv"), label="B")
+        # to use unsupervised learning, comment out the above two lines and uncomment the previous two lines
+        #########################
         # now we have a split_data/train/B and split_data/val/B
-        dataloaders, dataset_sizes, class_names = get_dataloaders(data_dir="split_data")
-        _, criterion, optimizer_ft, exp_lr_scheduler = create_model_and_optim()
+        dataloaders, dataset_sizes, class_names = get_dataloaders(
+            data_dir=inside_tmp("split_data")
+        )
+        # _, criterion, optimizer_ft, exp_lr_scheduler = create_model_and_optim()
+        ################
+        criterion = nn.CrossEntropyLoss()
+        optimizer_ft = optim.AdamW(
+            self_training_model.parameters(), lr=0.005, weight_decay=0.01
+        )
+        exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=5, gamma=0.1)
+        ################
         self_training_model = train_model(
             self_training_model,
             dataloaders,
@@ -504,7 +547,7 @@ if __name__ == "__main__":
             criterion,
             optimizer_ft,
             exp_lr_scheduler,
-            num_epochs=5,
+            num_epochs=4,
             plots=False,
         )
         # Generate rotation sequences
@@ -520,7 +563,7 @@ if __name__ == "__main__":
             used_indices=used,
         )
         df_A = pd.DataFrame(rotation_seq_A, columns=["step", "angle_deg", "filename"])
-        df_A.to_csv("rotation_sequence_A.csv", index=False)
+        df_A.to_csv(inside_tmp("rotation_sequence_A.csv"), index=False)
         print("Saved rotation sequence A to rotation_sequence_A.csv")
 
         rotation_seq_B, used = generate_rotation_sequence(
@@ -533,13 +576,19 @@ if __name__ == "__main__":
             used_indices=used,
         )
         df_B = pd.DataFrame(rotation_seq_B, columns=["step", "angle_deg", "filename"])
-        df_B.to_csv("rotation_sequence_B.csv", index=False)
+        df_B.to_csv(inside_tmp("rotation_sequence_B.csv"), index=False)
         print("Saved rotation sequence B to rotation_sequence_B.csv")
 
-        merge_sequences()  # merge the two sequences into one CSV
+        merge_sequences(
+            path_a=inside_tmp("rotation_sequence_A.csv"),
+            path_b=inside_tmp("rotation_sequence_B.csv"),
+            to_csv=inside_tmp("merged_sequences.csv"),
+        )  # merge the two sequences into one CSV
         # now we have a trained model - self trained on it's own predictions
         classify_images(
-            self_training_model, csv_path="merged_sequences.csv", clusters=False
+            self_training_model,
+            csv_path=inside_tmp("merged_sequences.csv"),
+            clusters=False,
         )  # classify rotation sequence
         print("Classified rotation sequence.")
 
@@ -549,22 +598,22 @@ if __name__ == "__main__":
         create_linear_graph(angle=angle_deg, frame_id=i)
         # create a scatter plot of the predictions
         # save the scatter plot in the frames directory
-        shutil.rmtree("A", ignore_errors=True)
-        shutil.rmtree("B", ignore_errors=True)
-        shutil.rmtree("split_data", ignore_errors=True)
+        shutil.rmtree(inside_tmp("A"), ignore_errors=True)
+        shutil.rmtree(inside_tmp("B"), ignore_errors=True)
+        shutil.rmtree(inside_tmp("split_data"), ignore_errors=True)
         # clean up the split_data directory for the next iteration
         # delete csv files
         csv_files_to_delete = [
-            "filenames_A.csv",
-            "filenames_B.csv",
-            "filenames_merged.csv",
-            "predicted_as_A.csv",
-            "predicted_as_B.csv",
-            "rotation_sequence_A.csv",
-            "rotation_sequence_B.csv",
-            "merged_sequences.csv",
-            "cluster_predicted_as_A.csv",
-            "cluster_predicted_as_B.csv",
+            inside_tmp("filenames_A.csv"),
+            inside_tmp("filenames_B.csv"),
+            inside_tmp("filenames_merged.csv"),
+            inside_tmp("predicted_as_A.csv"),
+            inside_tmp("predicted_as_B.csv"),
+            inside_tmp("rotation_sequence_A.csv"),
+            inside_tmp("rotation_sequence_B.csv"),
+            inside_tmp("merged_sequences.csv"),
+            inside_tmp("cluster_predicted_as_A.csv"),
+            inside_tmp("cluster_predicted_as_B.csv"),
         ]
 
         for fname in csv_files_to_delete:

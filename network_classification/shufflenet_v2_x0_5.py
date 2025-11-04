@@ -1,5 +1,5 @@
 #####################################################
-# ResNet18 Model Training
+# ShuffleNet Model Training
 # groups are A and B
 # https://docs.pytorch.org/tutorials/beginner/transfer_learning_tutorial.html
 #####################################################
@@ -347,7 +347,7 @@ def create_model_and_optim():
 
     # Define the optimizer: here we're using Adam with a small learning rate
     # This will update all model parameters during training
-    # optimizer_ft = optim.Adam(model_ft.parameters(), lr=0.01)
+    # optimizer_ft = optim.Adam(model_ft.parameters(), lr=0.005)
     optimizer_ft = optim.AdamW(model_ft.parameters(), lr=0.005, weight_decay=0.01)
 
     # Define a learning rate scheduler:
@@ -371,7 +371,7 @@ if __name__ == "__main__":
         criterion,
         optimizer_ft,
         exp_lr_scheduler,
-        num_epochs=15,
+        num_epochs=20,
     )
 
     # Save the trained model parameters to a file

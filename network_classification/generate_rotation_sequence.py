@@ -370,7 +370,7 @@ angles_deg = (angles_deg + 360) % 360
 radii = np.linalg.norm(points, axis=1)
 
 # Define the target angle in degrees
-target_angle = 135
+target_angle = 0
 
 target_radius = 0.45
 
@@ -387,8 +387,10 @@ opposite_point = -base_point
 
 
 # save clusters of k=1000 points around base and opposite points
-# base_indices = collect_nearest_images(base_point, points, names, output_dir="A")
-# opp_indices = collect_nearest_images(opposite_point, points, names, output_dir="B")
+base_indices = collect_nearest_images(base_point, points, names, output_dir="A", k=250)
+opp_indices = collect_nearest_images(
+    opposite_point, points, names, output_dir="B", k=250
+)
 
 # Plot using saved clusters
 # plot_clusters_with_given_indices(
@@ -403,31 +405,31 @@ opposite_point = -base_point
 used = set()
 
 # Generate rotation sequences
-rotation_seq_A, used = generate_rotation_sequence(
-    base_point=base_point,
-    all_points=points,
-    all_names=names,
-    num_steps=180,
-    start_angle=0,
-    rotation_range=180,
-    used_indices=used,
-)
-df_A = pd.DataFrame(rotation_seq_A, columns=["step", "angle_deg", "filename"])
-df_A.to_csv("rotation_sequence_A.csv", index=False)
-print("Saved rotation sequence A to rotation_sequence_A.csv")
+# rotation_seq_A, used = generate_rotation_sequence(
+#     base_point=base_point,
+#     all_points=points,
+#     all_names=names,
+#     num_steps=180,
+#     start_angle=0,
+#     rotation_range=180,
+#     used_indices=used,
+# )
+# df_A = pd.DataFrame(rotation_seq_A, columns=["step", "angle_deg", "filename"])
+# df_A.to_csv("rotation_sequence_A.csv", index=False)
+# print("Saved rotation sequence A to rotation_sequence_A.csv")
 
-rotation_seq_B, used = generate_rotation_sequence(
-    base_point=opposite_point,
-    all_points=points,
-    all_names=names,
-    num_steps=180,
-    start_angle=0,
-    rotation_range=180,
-    used_indices=used,
-)
-df_B = pd.DataFrame(rotation_seq_B, columns=["step", "angle_deg", "filename"])
-df_B.to_csv("rotation_sequence_B.csv", index=False)
-print("Saved rotation sequence B to rotation_sequence_B.csv")
+# rotation_seq_B, used = generate_rotation_sequence(
+#     base_point=opposite_point,
+#     all_points=points,
+#     all_names=names,
+#     num_steps=180,
+#     start_angle=0,
+#     rotation_range=180,
+#     used_indices=used,
+# )
+# df_B = pd.DataFrame(rotation_seq_B, columns=["step", "angle_deg", "filename"])
+# df_B.to_csv("rotation_sequence_B.csv", index=False)
+# print("Saved rotation sequence B to rotation_sequence_B.csv")
 
 # plot_two_rotation_paths_fixed_color(
 #     all_points=points,

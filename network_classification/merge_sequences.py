@@ -2,7 +2,11 @@ import pandas as pd
 import random
 
 
-def merge_sequences(path_a="rotation_sequence_A.csv", path_b="rotation_sequence_B.csv"):
+def merge_sequences(
+    path_a="rotation_sequence_A.csv",
+    path_b="rotation_sequence_B.csv",
+    to_csv="merged_sequences.csv",
+):
     df_a = pd.read_csv(path_a)
     df_b = pd.read_csv(path_b)
 
@@ -40,7 +44,7 @@ def merge_sequences(path_a="rotation_sequence_A.csv", path_b="rotation_sequence_
     merged_df = merged_df[cols]
 
     # Save to CSV
-    merged_df.to_csv("merged_sequences.csv", index=False)
+    merged_df.to_csv(to_csv, index=False)
 
 
 if __name__ == "__main__":
