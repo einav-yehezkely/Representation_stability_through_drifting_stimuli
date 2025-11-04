@@ -4,40 +4,46 @@
 # https://docs.pytorch.org/tutorials/beginner/transfer_learning_tutorial.html
 #####################################################
 
-import torch
-import torch.nn as nn
-import torch.optim as optim
-from torch.optim import lr_scheduler
-import torch.backends.cudnn as cudnn
-import numpy as np
-import torchvision
-from torchvision import datasets, models, transforms
-import matplotlib.pyplot as plt
-import time
-import os
-from PIL import Image
-from tempfile import TemporaryDirectory
-from tqdm import tqdm
+import torch  # for tensor operations
+import torch.nn as nn  # for neural network modules
+import torch.optim as optim  # for optimization algorithms
+from torch.optim import lr_scheduler  # for learning rate scheduling
+import torch.backends.cudnn as cudnn  # for optimized GPU performance
+import torchvision  # for computer vision tasks
+from torchvision import (
+    datasets,  # allows loading custom folders of images using ImageFolder.
+    models,  # Contains many pre-trained deep learning models
+    transforms,  # Includes tools for preprocessing and augmenting images
+)
+import matplotlib.pyplot as plt  # for plotting graphs
+import time  # for measuring time - training duration
+import os  # for file and directory operations
+from tempfile import TemporaryDirectory  # for creating temporary directories
+from tqdm import tqdm  # for progress bars
 
-
+# Set up CUDA for GPU acceleration if available
 cudnn.benchmark = True
-plt.ion()  # interactive mode
+plt.ion()  # Enables interactive plotting mode for real-time graph updates
 
-# Data augmentation and normalization for training
-# Just normalization for validation
+# Training data uses augmentation for better generalization
+# Validation data uses only resizing and normalization
 data_transforms = {
     "train": transforms.Compose(
         [
             transforms.Resize((224, 224)),  # Resize images to 224x224
-            transforms.RandomHorizontalFlip(),
-            transforms.RandomPerspective(distortion_scale=0.5, p=0.5),
+            transforms.RandomHorizontalFlip(),  # Randomly flip images horizontally (data augmentation)
+            transforms.RandomPerspective(
+                distortion_scale=0.5, p=0.5
+            ),  # Random perspective transformation
             transforms.ToTensor(),  # Convert images to PyTorch tensors (multi-dimensional arrays)
-            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+            transforms.Normalize(
+                [0.485, 0.456, 0.406], [0.229, 0.224, 0.225]
+            ),  # Standard ImageNet normalization - mean and std for each color channel
         ]
     ),
     "val": transforms.Compose(
         [
-            transforms.Resize((224, 224)),  # Resize images to 224x224
+            transforms.Resize((224, 224)),
             transforms.ToTensor(),
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
         ]
@@ -45,23 +51,28 @@ data_transforms = {
 }
 
 # Load the dataset
-data_dir = "split_data"
+data_dir = "split_data"  # Folder structure: split_data/train/A, split_data/train/B, split_data/val/A, split_data/val/B
 
 
 # Create a dictionary with two datasets: one for training ("train") and one for validation ("val")
 # Each dataset loads images from the corresponding folder and applies the appropriate transformations
 def get_dataloaders(data_dir="split_data", batch_size=50):
+    """
+    Load datasets for training and validation using ImageFolder and create DataLoaders.
+    """
+    # Load datasets and apply the appropriate transform (train or val)
     image_datasets = {
         x: datasets.ImageFolder(os.path.join(data_dir, x), data_transforms[x])
         for x in ["train", "val"]
     }
+    # Wrap each dataset in a DataLoader to provide batches, shuffling, and parallel loading
     dataloaders = {
         x: torch.utils.data.DataLoader(
             image_datasets[x],
             batch_size=batch_size,
-            shuffle=True,
-            num_workers=2,
-            persistent_workers=True,
+            shuffle=True,  # Randomize sample order each epoch
+            num_workers=2,  # Load data in parallel (2 worker threads)
+            persistent_workers=True,  # Keep workers alive between epochs for efficiency
         )
         for x in ["train", "val"]
     }

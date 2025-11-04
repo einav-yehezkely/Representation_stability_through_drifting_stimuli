@@ -535,11 +535,135 @@ def create_linear_graph(angle, frame_id, save_dir="linear_frames"):
     plt.close()
 
 
+def compute_angle_concentration_from_csv(
+    angle, iteration, window_size=20, sequence_concentration=None
+):
+    """
+    Compute percentage of images predicted as A/B around their respective training angles,
+
+    Parameters
+    ----------
+    angle : float
+        Training angle in degrees (0-360).
+    iteration : int
+        The current rotation iteration index.
+    window_size : float, optional
+        Angular window size in degrees (default = 20°, i.e., ±10° around the center).
+    sequence_concentration : list, optional
+        List to which results will be appended (creates a new one if None).
+
+    Returns
+    -------
+    sequence_concentration : list of dicts
+        Updated list containing concentration data for this iteration.
+    """
+
+    if sequence_concentration is None:
+        sequence_concentration = []
+
+    # --- Load prediction results ---
+    pred_a_path = inside_tmp("predicted_as_A.csv")
+    pred_b_path = inside_tmp("predicted_as_B.csv")
+    if not (os.path.exists(pred_a_path) and os.path.exists(pred_b_path)):
+        print("Warning: prediction CSVs not found, skipping concentration measurement.")
+        return sequence_concentration
+
+    pred_a = pd.read_csv(pred_a_path)
+    pred_b = pd.read_csv(pred_b_path)
+
+    pred_a["pred"] = "A"
+    pred_b["pred"] = "B"
+
+    df = pd.concat([pred_a, pred_b], ignore_index=True)
+
+    # --- Load PCA coordinates for all images ---
+    df_full = pd.read_csv("pca_top2_filtered_female.csv", header=None)
+    df_full.columns = ["filename", "x", "y"]
+
+    df = df.merge(df_full, on="filename", how="left")
+
+    # Compute angle of each image in PCA space
+    df["angle_deg"] = np.degrees(np.arctan2(df["y"], df["x"])) % 360
+
+    def select_window(df, center, width):
+        """Select subset of df within ±width/2 around center angle."""
+        start = (center - width / 2) % 360
+        end = (center + width / 2) % 360
+        if start < end:
+            return df[(df["angle_deg"] >= start) & (df["angle_deg"] < end)]
+        else:
+            return df[(df["angle_deg"] >= start) | (df["angle_deg"] < end)]
+
+    # --- Compute A/B concentration around respective angles ---
+    opposite_angle = (angle + 180) % 360
+    window_train = select_window(df, angle, window_size)
+    window_opposite = select_window(df, opposite_angle, window_size)
+
+    percent_A = 0
+    percent_B = 0
+    if len(window_train) > 0:
+        percent_A = (window_train["pred"] == "A").sum() * 100 / len(window_train)
+    if len(window_opposite) > 0:
+        percent_B = (window_opposite["pred"] == "B").sum() * 100 / len(window_opposite)
+
+    sequence_concentration.append(
+        {
+            "iteration": iteration,
+            "angle": angle,
+            "A_percent_near_train_angle": percent_A,
+            "B_percent_near_opposite_angle": percent_B,
+        }
+    )
+
+    print(
+        f"Iteration {iteration}: {percent_A:.1f}% A near {angle:.1f}°, {percent_B:.1f}% B near {opposite_angle:.1f}°\n"
+    )
+
+    return sequence_concentration
+
+
+def plot_angle_concentration(
+    sequence_concentration,
+    window_size=20,
+    save_path="linear_concentration_over_rotations.png",
+):
+    """
+    Plot concentration of predictions around training and opposite angles over all iterations.
+    """
+    df_seq = pd.DataFrame(sequence_concentration)
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(
+        df_seq["iteration"],
+        df_seq["A_percent_near_train_angle"],
+        label="A near training angle",
+        color="blue",
+        linewidth=2,
+    )
+    plt.plot(
+        df_seq["iteration"],
+        df_seq["B_percent_near_opposite_angle"],
+        label="B near opposite angle",
+        color="red",
+        linewidth=2,
+    )
+    plt.xlabel("Rotation iteration (0-71)")
+    plt.ylabel(f"% predicted correctly within ±{window_size/2}° window")
+    plt.title(
+        f"Concentration of correct predictions around training and opposite angles ({window_size}° slices)\n--Supervised Learning--"
+    )
+    plt.grid(True, alpha=0.4)
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=300)
+
+
 names, points = load_top2_filtered("pca_top2_filtered_female.csv")
 base_point, opposite_point = create_base_and_opposite_points(0)
 self_training_model = load_model(model_path="model_ft_no_reg_0.pth")
 
 if __name__ == "__main__":
+    sequence_concentration = []
     start = time.time()
     for i in range(72):  # 360/5=72
         collect_nearest_images(
@@ -548,7 +672,7 @@ if __name__ == "__main__":
         collect_nearest_images(
             opposite_point, points, names, output_dir=inside_tmp("B"), k=1000
         )
-        # now we have two directories: A and B with 200 images each from opposite clusters
+        # now we have two directories: A and B with 1000 images each from opposite clusters
         ######################### unsupervised learning
         # we can now classify these images using the model
         merge_clusters()
@@ -635,8 +759,17 @@ if __name__ == "__main__":
 
         angle_deg = np.degrees(np.arctan2(base_point[1], base_point[0])) % 360
         # now we have two CSVs: predicted_as_A.csv and predicted_as_B.csv
+        # create scatter plot of predictions
         create_prediction_scatter(angle=angle_deg, frame_id=i)
+        # create linear graph of predictions
         create_linear_graph(angle=angle_deg, frame_id=i)
+        # compute concentration of predictions around training and opposite angles
+        sequence_concentration = compute_angle_concentration_from_csv(
+            angle=angle_deg,
+            iteration=i,
+            window_size=20,
+            sequence_concentration=sequence_concentration,
+        )
         # create a scatter plot of the predictions
         # save the scatter plot in the frames directory
         # rotate base_point and opposite_point by 5 degrees for the next iteration
@@ -670,5 +803,5 @@ if __name__ == "__main__":
     end = time.time()
     print(f"Total time: {end - start:.2f} seconds")
     print("Total time (minutes): ", (end - start) / 60, "minutes")
-
+    plot_angle_concentration(sequence_concentration, window_size=20)
     torch.save(self_training_model.state_dict(), "model_self_trained.pth")
