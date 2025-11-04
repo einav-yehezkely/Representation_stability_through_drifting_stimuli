@@ -14,6 +14,7 @@ from matplotlib.patches import Circle
 import time
 import torch.optim as optim
 from torch.optim import lr_scheduler
+import random
 
 
 BASE_DIR = "tmp"
@@ -555,7 +556,9 @@ if __name__ == "__main__":
         merge_clusters()
         # now we have a merged CSV with filenames from both clusters
         classify_images(
-            self_training_model, csv_path="filenames_merged.csv", clusters=True
+            self_training_model,
+            csv_path=inside_tmp("filenames_merged.csv"),
+            clusters=True,
         )  # classify clusters A and B
         """
         print("Classified images in clusters A and B.")
