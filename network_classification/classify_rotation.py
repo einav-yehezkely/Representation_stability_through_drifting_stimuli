@@ -10,7 +10,6 @@ from sklearn.model_selection import train_test_split
 import torch.nn as nn
 from tqdm import tqdm
 from shufflenet_v2_x0_5 import train_model, get_dataloaders, create_model_and_optim
-from merge_sequences import merge_sequences
 from matplotlib.patches import Circle
 import time
 import torch.optim as optim
@@ -179,6 +178,51 @@ def merge_clusters():
 
     # Save to new CSV
     df_merged.to_csv(inside_tmp("filenames_merged.csv"), index=False)
+
+
+def merge_sequences(
+    path_a=inside_tmp("rotation_sequence_A.csv"),
+    path_b=inside_tmp("rotation_sequence_B.csv"),
+    to_csv=inside_tmp("merged_sequences.csv"),
+):
+    df_a = pd.read_csv(path_a)
+    df_b = pd.read_csv(path_b)
+
+    i, j = 0, 0
+    rows = []
+
+    while i < len(df_a) or j < len(df_b):
+        if i == len(df_a):
+            row = df_b.iloc[j].copy()
+            row["group"] = "B"
+            rows.append(row)
+            j += 1
+        elif j == len(df_b):
+            row = df_a.iloc[i].copy()
+            row["group"] = "A"
+            rows.append(row)
+            i += 1
+        else:
+            if random.random() < 0.5:
+                row = df_a.iloc[i].copy()
+                row["group"] = "A"
+                rows.append(row)
+                i += 1
+            else:
+                row = df_b.iloc[j].copy()
+                row["group"] = "B"
+                rows.append(row)
+                j += 1
+
+    # Convert list of Series to DataFrame
+    merged_df = pd.DataFrame(rows)
+
+    # Move 'group' column to the front
+    cols = ["group"] + [col for col in merged_df.columns if col != "group"]
+    merged_df = merged_df[cols]
+
+    # Save to CSV
+    merged_df.to_csv(to_csv, index=False)
 
 
 def load_model(model_path="model_ft_no_reg_0.pth"):
@@ -506,7 +550,6 @@ if __name__ == "__main__":
             opposite_point, points, names, output_dir=inside_tmp("B"), k=1000
         )
         # now we have two directories: A and B with 200 images each from opposite clusters
-        """
         ######################### unsupervised learning
         # we can now classify these images using the model
         merge_clusters()
@@ -514,6 +557,7 @@ if __name__ == "__main__":
         classify_images(
             self_training_model, csv_path="filenames_merged.csv", clusters=True
         )  # classify clusters A and B
+        """
         print("Classified images in clusters A and B.")
         # now there are two CSVs: cluster_predicted_as_A.csv and cluster_predicted_as_B.csv
         ### we will now retrain the model on these classifications ###
@@ -579,11 +623,7 @@ if __name__ == "__main__":
         df_B.to_csv(inside_tmp("rotation_sequence_B.csv"), index=False)
         print("Saved rotation sequence B to rotation_sequence_B.csv")
 
-        merge_sequences(
-            path_a=inside_tmp("rotation_sequence_A.csv"),
-            path_b=inside_tmp("rotation_sequence_B.csv"),
-            to_csv=inside_tmp("merged_sequences.csv"),
-        )  # merge the two sequences into one CSV
+        merge_sequences()  # merge the two sequences into one CSV
         # now we have a trained model - self trained on it's own predictions
         classify_images(
             self_training_model,
