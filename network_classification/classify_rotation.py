@@ -650,7 +650,7 @@ def plot_angle_concentration(
     plt.xlabel("Rotation iteration (0-71)")
     plt.ylabel(f"% predicted correctly within ±{window_size/2}° window")
     plt.title(
-        f"Concentration of correct predictions around training and opposite angles ({window_size}° slices)\n--Supervised Learning--"
+        f"Concentration of correct predictions around training and opposite angles ({window_size}° slices)\n--Unsupervised Learning--"
     )
     plt.grid(True, alpha=0.4)
     plt.legend()
@@ -682,21 +682,27 @@ if __name__ == "__main__":
             csv_path=inside_tmp("filenames_merged.csv"),
             clusters=True,
         )  # classify clusters A and B
-        """
         print("Classified images in clusters A and B.")
         # now there are two CSVs: cluster_predicted_as_A.csv and cluster_predicted_as_B.csv
         ### we will now retrain the model on these classifications ###
-        split_and_copy_images(csv_path="cluster_predicted_as_A.csv", label="A")
+        split_and_copy_images(
+            csv_path=inside_tmp("cluster_predicted_as_A.csv"), label="A"
+        )
         # now we have a split_data/train/A and split_data/val/A
-        split_and_copy_images(csv_path="cluster_predicted_as_B.csv", label="B")
+        split_and_copy_images(
+            csv_path=inside_tmp("cluster_predicted_as_B.csv"), label="B"
+        )
+        """
         """
         #########################
+        """
         ######################### supervised learning
         split_and_copy_images(csv_path=inside_tmp("filenames_A.csv"), label="A")
         # now we have a split_data/train/A and split_data/val/A
         split_and_copy_images(csv_path=inside_tmp("filenames_B.csv"), label="B")
         # to use unsupervised learning, comment out the above two lines and uncomment the previous two lines
         #########################
+        """
         # now we have a split_data/train/B and split_data/val/B
         dataloaders, dataset_sizes, class_names = get_dataloaders(
             data_dir=inside_tmp("split_data")
@@ -716,7 +722,7 @@ if __name__ == "__main__":
             criterion,
             optimizer_ft,
             exp_lr_scheduler,
-            num_epochs=4,
+            num_epochs=10,
             plots=False,
         )
         # Generate rotation sequences
