@@ -76,8 +76,12 @@ def get_dataloaders(data_dir="split_data", batch_size=50):
         )
         for x in ["train", "val"]
     }
-    dataset_sizes = {x: len(image_datasets[x]) for x in ["train", "val"]}
-    class_names = image_datasets["train"].classes
+    dataset_sizes = {
+        x: len(image_datasets[x]) for x in ["train", "val"]
+    }  # Get the size of each dataset
+    class_names = image_datasets[
+        "train"
+    ].classes  # Get the class names (subfolder names)
     return dataloaders, dataset_sizes, class_names
 
 
@@ -94,20 +98,32 @@ reeval_train_losses = []
 reeval_train_accuracies = []
 
 
-@torch.no_grad()
+@torch.no_grad()  # Disable gradient calculation for evaluation (saves memory and computations)
 def evaluate(model, dataloader, criterion, device):
-    """Evaluate loss and accuracy over a whole dataloader in eval mode."""
-    model.eval()
-    running_loss, running_corrects, n = 0.0, 0, 0
-    for inputs, labels in dataloader:
-        inputs, labels = inputs.to(device), labels.to(device)
-        outputs = model(inputs)
-        loss = criterion(outputs, labels)
-        _, preds = torch.max(outputs, 1)
-        running_loss += loss.item() * inputs.size(0)
-        running_corrects += (preds == labels).sum().item()
-        n += inputs.size(0)
-    return running_loss / max(1, n), running_corrects / max(1, n)
+    """
+    Evaluate a trained model on a given dataset without updating its parameters.
+    The function runs the model in evaluation mode, disables gradient computation,
+    iterates over all batches in the provided DataLoader, and computes:
+    - the average loss over all samples
+    - the classification accuracy over all samples
+    """
+    model.eval()  # Set model to evaluation mode
+    running_loss, running_corrects, n = 0.0, 0, 0  # Initialize metrics
+    for inputs, labels in dataloader:  # Iterate over batches
+        inputs, labels = inputs.to(device), labels.to(
+            device
+        )  # Move data to the appropriate device
+        outputs = model(inputs)  # Forward pass
+        loss = criterion(outputs, labels)  # Compute loss
+        _, preds = torch.max(outputs, 1)  # Get predicted classes
+        running_loss += loss.item() * inputs.size(0)  # Accumulate loss
+        running_corrects += (
+            (preds == labels).sum().item()
+        )  # Accumulate correct predictions
+        n += inputs.size(0)  # Accumulate number of samples
+    return running_loss / max(1, n), running_corrects / max(
+        1, n
+    )  # Return average loss and accuracy
 
 
 def train_model(
@@ -121,26 +137,50 @@ def train_model(
     plots=True,
 ):
     """
-    Trains a PyTorch model using a given optimizer, loss function, and learning rate scheduler.
+    Train a PyTorch model using supervised learning and track performance over epochs.
+
+    The function performs the following steps:
+    - Evaluates initial train and validation performance before training.
+    - Trains the model for a fixed number of epochs.
+    - At each epoch:
+        * Updates model parameters using the training set.
+        * Evaluates performance on the validation set.
+        * Re-evaluates training performance in evaluation mode.
+        * Tracks loss and accuracy.
+        * Saves the model with the best validation accuracy.
+    - Restores the best-performing model at the end of training.
+    - Optionally generates and saves loss/accuracy plots.
 
     Args:
         model (torch.nn.Module): The neural network model to train.
-        criterion (torch.nn.modules.loss._Loss): The loss function used to evaluate prediction error (e.g., CrossEntropyLoss).
+        dataloaders (dict[str, torch.utils.data.DataLoader]):
+            Dictionary containing DataLoaders for each phase.
+            Expected keys are "train" and "val".
+        dataset_sizes (dict[str, int]):
+            Dictionary containing the number of samples in each dataset split.
+            Expected keys are "train" and "val".
+            Used to compute average loss and accuracy.
+        criterion (torch.nn.modules.loss._Loss): The loss function used to evaluate prediction error (e.g.,     CrossEntropyLoss).
         optimizer (torch.optim.Optimizer): Optimization algorithm that updates model weights (e.g., SGD, Adam).
-        scheduler (torch.optim.lr_scheduler._LRScheduler): Adjusts the learning rate during training (e.g., StepLR).
+        scheduler (torch.optim.lr_scheduler._LRScheduler): Adjusts the learning rate during training.
         num_epochs (int, optional): Number of full training cycles (epochs). Default is 25.
+        plots (bool, optional): Whether to generate and save training/validation loss and accuracy plots. Default is True.
 
     Returns:
         torch.nn.Module: The trained model with the best validation accuracy.
     """
-    since = time.time()
+    since = time.time()  # Record the start time of training
 
     # Create a temporary directory to save training checkpoints
     with TemporaryDirectory() as tempdir:
-        best_model_params_path = os.path.join(tempdir, "best_model_params.pt")
+        best_model_params_path = os.path.join(
+            tempdir, "best_model_params.pt"
+        )  # Path to save best model parameters
 
-        torch.save(model.state_dict(), best_model_params_path)
-        best_acc = 0.0
+        torch.save(
+            model.state_dict(), best_model_params_path
+        )  # Save initial model parameters
+        best_acc = 0.0  # Initialize best accuracy
 
         # Evaluate the model on the training and validation sets before training
         init_train_loss, init_train_acc = evaluate(
@@ -150,9 +190,9 @@ def train_model(
             model, dataloaders["val"], criterion, device
         )
 
+        # Store initial losses and accuracies
         reeval_train_losses.append(init_train_loss)
         reeval_train_accuracies.append(init_train_acc)
-
         val_losses.append(init_val_loss)
         val_accuracies.append(init_val_acc)
 
@@ -161,8 +201,9 @@ def train_model(
             f"Val: loss={init_val_loss:.4f}, acc={init_val_acc:.4f}"
         )
 
+        # Main training loop
         for epoch in tqdm(range(num_epochs), desc="Epoch Progress"):
-            epoch_start_time = time.time()
+            epoch_start_time = time.time()  # Start time for the epoch
             print(f"Epoch {epoch+1}/{num_epochs}")
             print("-" * 10)
 
@@ -170,48 +211,67 @@ def train_model(
 
             # -- Train Phase --
             model.train()  # Set model to training mode
-            running_loss = 0.0
-            running_corrects = 0
+            running_loss = (
+                0.0  # Initialize running loss - for accumulating loss over batches
+            )
+            running_corrects = 0  # Initialize running correct predictions - for accumulating correct predictions
 
+            # Timing variables - to measure data loading and model computation times
             data_loading_time = 0.0
             forward_backward_time = 0.0
 
-            t0 = time.time()
+            t0 = time.time()  # Start time for data loading
             # Iterate over data.
             for inputs, labels in dataloaders["train"]:
-                t1 = time.time()
-                data_loading_time += t1 - t0
+                t1 = time.time()  # End time for data loading
+                data_loading_time += t1 - t0  # Accumulate data loading time
 
-                inputs = inputs.to(device)
-                labels = labels.to(device)
+                inputs = inputs.to(
+                    device
+                )  # Move the input images to the selected device (GPU if available, otherwise CPU).
+                labels = labels.to(
+                    device
+                )  # Move the labels to the selected device (GPU if available, otherwise CPU).
 
-                # zero the parameter gradients
+                # zero the parameter gradients - in order to prevent accumulation from previous batches
                 optimizer.zero_grad()
 
-                t2 = time.time()
-                # forward
-                outputs = model(inputs)
-                _, preds = torch.max(outputs, 1)
-                loss = criterion(outputs, labels)
-                # backward + optimize
-                loss.backward()
-                optimizer.step()
+                t2 = time.time()  # Start time for model computation
+                ## forward ##
+                outputs = model(
+                    inputs
+                )  # Forward pass: compute predicted outputs by passing inputs to the model
+                _, preds = torch.max(
+                    outputs, 1
+                )  # Get the predicted class with the highest score
+                loss = criterion(
+                    outputs, labels
+                )  # Compute the loss between predicted outputs and true labels
+                ## backward + optimize ##
+                loss.backward()  # Backward pass: compute gradient of the loss with respect to model parameters
+                optimizer.step()  # Update model parameters based on computed gradients
 
-                t3 = time.time()
-                forward_backward_time += t3 - t2
+                t3 = time.time()  # End time for model computation
+                forward_backward_time += t3 - t2  # Accumulate model computation time
 
                 # statistics
-                running_loss += loss.item() * inputs.size(0)
-                running_corrects += (preds == labels).sum().item()
+                running_loss += loss.item() * inputs.size(0)  # Accumulate loss
+                running_corrects += (
+                    (preds == labels).sum().item()
+                )  # Accumulate correct predictions
 
-                t0 = time.time()
+                t0 = time.time()  # Start time for next data loading
 
-            scheduler.step()
+            scheduler.step()  # Adjust learning rate according to the scheduler
 
-            epoch_loss = running_loss / dataset_sizes["train"]
-            epoch_acc = running_corrects / dataset_sizes["train"]
-            train_losses.append(epoch_loss)
-            train_accuracies.append(float(epoch_acc))
+            epoch_loss = (
+                running_loss / dataset_sizes["train"]
+            )  # Compute average loss for the epoch
+            epoch_acc = (
+                running_corrects / dataset_sizes["train"]
+            )  # Compute accuracy for the epoch
+            train_losses.append(epoch_loss)  # Store training loss
+            train_accuracies.append(float(epoch_acc))  # Store training accuracy
 
             print(
                 f"[Train] Data loading time: {data_loading_time:.2f}s, "
@@ -219,28 +279,39 @@ def train_model(
             )
 
             # -- Validation Phase --
-            val_loss, val_acc = evaluate(model, dataloaders["val"], criterion, device)
-            val_losses.append(val_loss)
-            val_accuracies.append(val_acc)
+            val_loss, val_acc = evaluate(
+                model, dataloaders["val"], criterion, device
+            )  # Evaluate on validation set
+            val_losses.append(val_loss)  # Store validation loss
+            val_accuracies.append(val_acc)  # Store validation accuracy
             print(f"[val] Loss: {val_loss:.4f} Acc: {val_acc:.4f}")
 
-            if val_acc > best_acc:
-                best_acc = val_acc
-                torch.save(model.state_dict(), best_model_params_path)
+            if val_acc > best_acc:  # If this is the best validation accuracy so far
+                best_acc = val_acc  # Update best accuracy
+                torch.save(
+                    model.state_dict(), best_model_params_path
+                )  # Save the model parameters
 
             # ---- RECALC TRAIN (eval mode, fair comparison) ----
+            # Re-evaluate training performance in evaluation mode
             true_train_loss, true_train_acc = evaluate(
                 model, dataloaders["train"], criterion, device
-            )
-            reeval_train_losses.append(true_train_loss)
-            reeval_train_accuracies.append(true_train_acc)
+            )  # Evaluate on training set
+            reeval_train_losses.append(
+                true_train_loss
+            )  # Store re-evaluated training loss
+            reeval_train_accuracies.append(
+                true_train_acc
+            )  # Store re-evaluated training accuracy
             print(
                 f"[RECALC] Train Loss (eval mode): {true_train_loss:.4f}, "
                 f"Acc: {true_train_acc:.4f}"
             )
 
             # -- Epoch total time --
-            epoch_total_time = time.time() - epoch_start_time
+            epoch_total_time = (
+                time.time() - epoch_start_time
+            )  # Total time for the epoch
             print(f"[Epoch {epoch+1}] Total time: {epoch_total_time:.2f}s")
 
         # -- End training --
@@ -283,12 +354,15 @@ def train_model(
     return model
 
 
-### change only last layer - freeze all other layers - feature extraction
+### Feature extraction with partial fine-tuning
+# Freeze most of the network and fine-tune the last convolutional stage (stage4)
+# together with the final classification layer (fc)
 # model_conv = Convolutional feature extractor
 def create_model_and_optim_feature_extraction():
     # Load a pre-trained ShuffleNet V2 model with weights trained on ImageNet
     model_conv = torchvision.models.shufflenet_v2_x0_5(weights="IMAGENET1K_V1")
-    # Freeze all layers except the final fully-connected layer (fc) and stage4
+    # Freeze all model parameters
+    # Then unfreeze stage4 and the final fully-connected layer for training
     for param in model_conv.parameters():
         param.requires_grad = False
     for param in model_conv.stage4.parameters():
@@ -307,17 +381,15 @@ def create_model_and_optim_feature_extraction():
     # Define the loss function: CrossEntropyLoss is standard for classification tasks
     criterion = nn.CrossEntropyLoss()
 
-    # Define the optimizer – here we only pass the parameters of the final layer (fc)
-    # since all other layers are frozen and don't need to be updated
+    # Define the optimizer – only parameters of stage4 and the final classifier (fc)
+    # are passed, since all other layers are frozen
     optimizer_conv = optim.AdamW(
         list(model_conv.stage4.parameters()) + list(model_conv.fc.parameters()),
-        lr=0.005,
-        weight_decay=0.01,
+        lr=0.005,  # Learning rate for fine-tuning
+        weight_decay=0.01,  # L2 regularization to prevent overfitting
     )
-    # optimizer_conv = optim.AdamW(model_conv.parameters(), lr=0.00005, weight_decay=0.01)
 
-    # Define a learning rate scheduler that decays the learning rate by a factor of 0.1 every 7 epochs
-    # exp_lr_scheduler = lr_scheduler.StepLR(optimizer_conv, step_size=7, gamma=0.1)
+    # Define a learning rate scheduler that decays the learning rate by a factor of 0.1 every 5 epochs
     exp_lr_scheduler = lr_scheduler.StepLR(optimizer_conv, step_size=5, gamma=0.1)
     return model_conv, criterion, optimizer_conv, exp_lr_scheduler
 
@@ -326,7 +398,7 @@ def create_model_and_optim_feature_extraction():
 
 
 ### change all the layers - fine-tuning the whole model
-# Load a pre-trained ResNet-18 model with weights trained on ImageNet
+# Load a pre-trained ShuffleNet V2 (x0.5) model with weights trained on ImageNet
 # This gives us a strong starting point instead of training from scratch
 def create_model_and_optim():
     model_ft = models.shufflenet_v2_x0_5(
@@ -356,13 +428,14 @@ def create_model_and_optim():
     # Define the loss function: CrossEntropyLoss is standard for classification tasks
     criterion = nn.CrossEntropyLoss()
 
-    # Define the optimizer: here we're using Adam with a small learning rate
+    # Define the optimizer: here we're using AdamW with a small learning rate
     # This will update all model parameters during training
-    # optimizer_ft = optim.Adam(model_ft.parameters(), lr=0.005)
+    # AdamW helps prevent overfitting through weight decay (L2 regularization)
+    # weight_decay=0.01 adds a penalty to large weights in the loss function to encourage smaller weights and better generalization
     optimizer_ft = optim.AdamW(model_ft.parameters(), lr=0.005, weight_decay=0.01)
 
     # Define a learning rate scheduler:
-    # Every 7 epochs, reduce the learning rate by a factor of 0.1
+    # Every 5 epochs, reduce the learning rate by a factor of 0.1
     # This helps the model learn quickly at first and then fine-tune gently
     exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=5, gamma=0.1)
 
@@ -371,10 +444,13 @@ def create_model_and_optim():
 
 if __name__ == "__main__":
     print(f"Using device: {device}")
-    dataloaders, dataset_sizes, class_names = get_dataloaders(batch_size=50)
-    model_ft, criterion, optimizer_ft, exp_lr_scheduler = create_model_and_optim()
-    # Train the model using the defined parameters
-    # This will train only the final layer (fc) while keeping all other layers frozen
+    dataloaders, dataset_sizes, class_names = get_dataloaders(
+        batch_size=50
+    )  # Load data
+    model_ft, criterion, optimizer_ft, exp_lr_scheduler = (
+        create_model_and_optim()
+    )  # Create model and optimizer
+    # Train the model using the defined parameters - full fine-tuning
     model_ft = train_model(
         model_ft,
         dataloaders,
