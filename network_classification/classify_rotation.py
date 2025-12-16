@@ -626,6 +626,7 @@ def plot_angle_concentration(
     sequence_concentration,
     window_size=20,
     save_path="linear_concentration_over_rotations.png",
+    type_of_learning="Unsupervised Learning",
 ):
     """
     Plot concentration of predictions around training and opposite angles over all iterations.
@@ -650,7 +651,7 @@ def plot_angle_concentration(
     plt.xlabel("Rotation iteration (0-71)")
     plt.ylabel(f"% predicted correctly within ±{window_size/2}° window")
     plt.title(
-        f"Concentration of correct predictions around training and opposite angles ({window_size}° slices)\n--Unsupervised Learning--"
+        f"Concentration of correct predictions around training and opposite angles ({window_size}° slices)\n--{type_of_learning}--"
     )
     plt.grid(True, alpha=0.4)
     plt.legend()
@@ -658,9 +659,18 @@ def plot_angle_concentration(
     plt.savefig(save_path, dpi=300)
 
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 names, points = load_top2_filtered("pca_top2_filtered_female.csv")
 base_point, opposite_point = create_base_and_opposite_points(0)
 self_training_model = load_model(model_path="model_ft_no_reg_0.pth")
+self_training_model = self_training_model.to(device)
+
+criterion = nn.CrossEntropyLoss()
+optimizer_ft = optim.AdamW(
+    self_training_model.parameters(), lr=0.005, weight_decay=0.01
+)
+exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=5, gamma=1)
 
 if __name__ == "__main__":
     sequence_concentration = []
@@ -709,11 +719,11 @@ if __name__ == "__main__":
         )
         # _, criterion, optimizer_ft, exp_lr_scheduler = create_model_and_optim()
         ################
-        criterion = nn.CrossEntropyLoss()
-        optimizer_ft = optim.AdamW(
-            self_training_model.parameters(), lr=0.005, weight_decay=0.01
-        )
-        exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=5, gamma=0.1)
+        # criterion = nn.CrossEntropyLoss()
+        # optimizer_ft = optim.AdamW(
+        #     self_training_model.parameters(), lr=0.005, weight_decay=0.01
+        # )
+        # exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=5, gamma=0.1)
         ################
         self_training_model = train_model(
             self_training_model,
@@ -809,5 +819,7 @@ if __name__ == "__main__":
     end = time.time()
     print(f"Total time: {end - start:.2f} seconds")
     print("Total time (minutes): ", (end - start) / 60, "minutes")
-    plot_angle_concentration(sequence_concentration, window_size=20)
+    plot_angle_concentration(
+        sequence_concentration, window_size=20, type_of_learning="Unsupervised Learning"
+    )
     torch.save(self_training_model.state_dict(), "model_self_trained.pth")
