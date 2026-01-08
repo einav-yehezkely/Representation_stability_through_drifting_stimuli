@@ -246,6 +246,7 @@ def load_model(model_path="model_ft_no_reg_0.pth"):
 
 
 def classify_images(model, csv_path, clusters=False):
+    model.eval()
     # Load CSV
     df = pd.read_csv(csv_path)
 
@@ -487,6 +488,8 @@ def create_linear_graph(angle, frame_id, save_dir="linear_frames"):
     df_full.columns = ["filename", "x", "y"]
 
     df = df.merge(df_full, on="filename", how="left")
+    # Compute angle of each image in PCA space
+    df["angle_deg"] = np.degrees(np.arctan2(df["y"], df["x"])) % 360
 
     window_size = 20
     results = []
@@ -689,7 +692,7 @@ self_training_model = self_training_model.to(device)
 if __name__ == "__main__":
     sequence_concentration = []
     start = time.time()
-    for i in range(72):  # 360/5=72
+    for i in range(17):  # 360/5=72
         collect_nearest_images(
             base_point, points, names, output_dir=inside_tmp("A"), k=1000
         )
@@ -717,6 +720,9 @@ if __name__ == "__main__":
         split_and_copy_images(
             csv_path=inside_tmp("cluster_predicted_as_B.csv"), label="B"
         )
+        print("A:", len(pd.read_csv(inside_tmp("cluster_predicted_as_A.csv"))))
+        print("B:", len(pd.read_csv(inside_tmp("cluster_predicted_as_B.csv"))))
+
         """
         """
         #########################
