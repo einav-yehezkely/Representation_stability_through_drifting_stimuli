@@ -240,7 +240,7 @@ def load_model(model_path="model_ft_no_reg_0.pth"):
         nn.Dropout(p=0.3),
         nn.Linear(256, 2),
     )
-    model.load_state_dict(torch.load(model_path))
+    model.load_state_dict(torch.load(model_path, map_location=device))
     model.eval()
     return model
 
@@ -269,7 +269,7 @@ def classify_images(model, csv_path, clusters=False):
             continue
 
         image = Image.open(image_path).convert("RGB")
-        input_tensor = transform(image).unsqueeze(0)
+        input_tensor = transform(image).unsqueeze(0).to(device)
 
         with torch.no_grad():
             output = model(input_tensor)
@@ -666,11 +666,9 @@ base_point, opposite_point = create_base_and_opposite_points(0)
 self_training_model = load_model(model_path="model_ft_no_reg_0.pth")
 self_training_model = self_training_model.to(device)
 
-criterion = nn.CrossEntropyLoss()
-optimizer_ft = optim.AdamW(
-    self_training_model.parameters(), lr=0.005, weight_decay=0.01
-)
-exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=5, gamma=1)
+# criterion = nn.CrossEntropyLoss()
+# optimizer_ft = optim.AdamW(self_training_model.parameters(), lr=1e-3, weight_decay=0.01)
+# exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=5, gamma=1)
 
 if __name__ == "__main__":
     sequence_concentration = []
@@ -684,6 +682,7 @@ if __name__ == "__main__":
         )
         # now we have two directories: A and B with 1000 images each from opposite clusters
         ######################### unsupervised learning
+
         # we can now classify these images using the model
         merge_clusters()
         # now we have a merged CSV with filenames from both clusters
@@ -705,25 +704,29 @@ if __name__ == "__main__":
         """
         """
         #########################
-        """
+
         ######################### supervised learning
+        """
         split_and_copy_images(csv_path=inside_tmp("filenames_A.csv"), label="A")
         # now we have a split_data/train/A and split_data/val/A
         split_and_copy_images(csv_path=inside_tmp("filenames_B.csv"), label="B")
         # to use unsupervised learning, comment out the above two lines and uncomment the previous two lines
-        #########################
         """
+        #########################
+
         # now we have a split_data/train/B and split_data/val/B
         dataloaders, dataset_sizes, class_names = get_dataloaders(
             data_dir=inside_tmp("split_data")
         )
         # _, criterion, optimizer_ft, exp_lr_scheduler = create_model_and_optim()
         ################
-        # criterion = nn.CrossEntropyLoss()
-        # optimizer_ft = optim.AdamW(
-        #     self_training_model.parameters(), lr=0.005, weight_decay=0.01
-        # )
-        # exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=5, gamma=0.1)
+        criterion = nn.CrossEntropyLoss()
+        optimizer_ft = optim.AdamW(
+            self_training_model.parameters(), lr=1e-3, weight_decay=0.01  # lr = 0.005
+        )
+        exp_lr_scheduler = lr_scheduler.StepLR(
+            optimizer_ft, step_size=5, gamma=1
+        )  # gamma=0.1
         ################
         self_training_model = train_model(
             self_training_model,
