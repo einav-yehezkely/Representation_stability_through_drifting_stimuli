@@ -761,7 +761,7 @@ def plot_cluster_concentration(
     plt.plot(
         x,
         df_seq["A_percent_in_A_cluster"],
-        label="% predicted A in cluster A",
+        label="% predicted A in cluster centered at base angle",
         color="blue",
         linewidth=2,
     )
@@ -769,13 +769,13 @@ def plot_cluster_concentration(
     plt.plot(
         x,
         df_seq["B_percent_in_B_cluster"],
-        label="% predicted B in cluster B",
+        label="% predicted B in cluster centered at opposite angle",
         color="red",
         linewidth=2,
     )
 
     angle_labels = [
-        f"{row['angle']:.0f}°/{((row['angle'] + 180) % 360):.0f}°"
+        f"{row['angle']:.2f}°/{((row['angle'] + 180) % 360):.2f}°"
         for _, row in df_seq.iterrows()
     ]
 
@@ -783,10 +783,10 @@ def plot_cluster_concentration(
     plt.xticks(x[::step], angle_labels[::step], rotation=45)
 
     plt.xlabel("Base angle / Opposite angle")
-    plt.ylabel("% of images predicted as target class (within each cluster)")
+    plt.ylabel("% of images classified as cluster label")
 
     plt.title(
-        f"Cluster prediction concentration over rotations\n--{type_of_learning}--"
+    f"Cluster classification consistency across rotation\n-- {type_of_learning} --"
     )
 
     plt.ylim(0, 100)
@@ -804,7 +804,7 @@ base_point, opposite_point = create_base_and_opposite_points(0)
 self_training_model = load_model(model_path="model_ft_no_reg_0.pth")
 self_training_model = self_training_model.to(device)
 
-UNSUPERVISED = True 
+UNSUPERVISED = True
 
 if __name__ == "__main__":
     cluster_concentration = []
@@ -822,7 +822,9 @@ if __name__ == "__main__":
         # now we have two directories: A and B with 1000 images each from opposite clusters
         if UNSUPERVISED:
             merge_clusters()
-            classify_images(self_training_model, inside_tmp("filenames_merged.csv"), clusters=True)
+            classify_images(
+                self_training_model, inside_tmp("filenames_merged.csv"), clusters=True
+            )
             print("Classified images in clusters A and B.")
             # now there are two CSVs: cluster_predicted_as_A.csv and cluster_predicted_as_B.csv
             split_and_copy_images(inside_tmp("cluster_predicted_as_A.csv"), label="A")
@@ -910,8 +912,8 @@ if __name__ == "__main__":
         # create a scatter plot of the predictions
         # save the scatter plot in the frames directory
         # rotate base_point and opposite_point by 5 degrees for the next iteration
-        base_point = rotate_vector(base_point, angle_deg=0.5) #TODO: 5
-        opposite_point = rotate_vector(opposite_point, angle_deg=0.5) #TODO: 5
+        base_point = rotate_vector(base_point, angle_deg=0.5)  # TODO: 5
+        opposite_point = rotate_vector(opposite_point, angle_deg=0.5)  # TODO: 5
         # clean up A and B directories for the next iteration
         shutil.rmtree(inside_tmp("A"), ignore_errors=True)
         shutil.rmtree(inside_tmp("B"), ignore_errors=True)
@@ -935,7 +937,6 @@ if __name__ == "__main__":
                 inside_tmp("cluster_predicted_as_B.csv"),
             ]
 
-
         for fname in csv_files_to_delete:
             if os.path.exists(fname):
                 try:
@@ -946,6 +947,9 @@ if __name__ == "__main__":
     print(f"Total time: {end - start:.2f} seconds")
     print("Total time (minutes): ", (end - start) / 60, "minutes")
     plot_cluster_concentration(
-        cluster_concentration, type_of_learning=("Unsupervised Learning" if UNSUPERVISED else "Supervised Learning")
+        cluster_concentration,
+        type_of_learning=(
+            "Unsupervised Learning" if UNSUPERVISED else "Supervised Learning"
+        ),
     )
     torch.save(self_training_model.state_dict(), "model_self_trained.pth")
