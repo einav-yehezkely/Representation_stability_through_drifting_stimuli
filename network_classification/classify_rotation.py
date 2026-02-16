@@ -20,6 +20,10 @@ import random
 BASE_DIR = "tmp"
 os.makedirs(BASE_DIR, exist_ok=True)
 
+PCA_DF = pd.read_csv("pca_top2_filtered_female.csv", header=None)
+PCA_DF.columns = ["filename", "x", "y"]
+PCA_DF["angle_deg"] = np.degrees(np.arctan2(PCA_DF["y"], PCA_DF["x"])) % 360
+
 
 def inside_tmp(*paths):
     """Return a path inside the BASE_DIR (tmp)."""
@@ -390,12 +394,12 @@ def create_prediction_scatter(angle, frame_id, save_dir="scatter_frames"):
     pred_a = pd.read_csv(inside_tmp("predicted_as_A.csv"))["filename"]
     pred_b = pd.read_csv(inside_tmp("predicted_as_B.csv"))["filename"]
 
-    predicted_cluster_a = pd.read_csv(
-        inside_tmp("cluster_predicted_as_A.csv"), header=None
-    )[0]
-    predicted_cluster_b = pd.read_csv(
-        inside_tmp("cluster_predicted_as_B.csv"), header=None
-    )[0]
+    predicted_cluster_a = pd.read_csv(inside_tmp("cluster_predicted_as_A.csv"))[
+        "filename"
+    ]
+    predicted_cluster_b = pd.read_csv(inside_tmp("cluster_predicted_as_B.csv"))[
+        "filename"
+    ]
 
     df_a = df[df["name"].isin(pred_a)]
     df_b = df[df["name"].isin(pred_b)]
@@ -538,6 +542,117 @@ def create_linear_graph(angle, frame_id, save_dir="linear_frames"):
     plt.close()
 
 
+def take_k_closest_to_angle(filenames, center_angle_deg, k, pca_df=PCA_DF):
+    """
+    filenames: iterable of image filenames
+    center_angle_deg: angle in [0,360)
+    returns: list of k filenames closest in ANGLE to center_angle_deg (circular distance)
+    """
+    df = pca_df[pca_df["filename"].isin(filenames)].copy()
+    if df.empty:
+        return []
+
+    delta = (df["angle_deg"] - center_angle_deg).abs()
+    df["ang_dist"] = np.minimum(delta, 360 - delta)
+
+    return df.sort_values("ang_dist").head(k)["filename"].tolist()
+
+
+def percent_predicted_as_filenames(
+    model, filenames, target_pred, image_source_dir="female_faces"
+):
+    """
+    target_pred: 0 for A, 1 for B
+    Returns: (percent, n_used)
+    """
+    model.eval()
+
+    transform = transforms.Compose(
+        [
+            transforms.Resize((224, 224)),
+            transforms.ToTensor(),
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+        ]
+    )
+
+    count_target = 0
+    total = 0
+
+    for fname in filenames:
+        img_path = os.path.join(image_source_dir, fname)
+        if not os.path.exists(img_path):
+            continue
+
+        img = Image.open(img_path).convert("RGB")
+        x = transform(img).unsqueeze(0).to(device)
+
+        with torch.no_grad():
+            pred = model(x).argmax(dim=1).item()
+
+        count_target += int(pred == target_pred)
+        total += 1
+
+    percent = (100 * count_target / total) if total > 0 else 0
+    return percent, total
+
+
+def compute_cluster_concentration(
+    angle, iteration, cluster_concentration=None, k_eval=100
+):
+    """
+    Measures:
+      - % predicted as A among the k_eval images in cluster A closest to 'angle'
+      - % predicted as B among the k_eval images in cluster B closest to 'opposite_angle'
+    """
+    if cluster_concentration is None:
+        cluster_concentration = []
+
+    a_csv = inside_tmp("filenames_A.csv")  # 1000
+    b_csv = inside_tmp("filenames_B.csv")  # 1000
+
+    if not (os.path.exists(a_csv) and os.path.exists(b_csv)):
+        print("Warning: filenames_A/B.csv not found. Skipping.")
+        return cluster_concentration
+
+    dfA = pd.read_csv(a_csv)
+    dfB = pd.read_csv(b_csv)
+
+    opposite_angle = (angle + 180) % 360
+
+    # pick only k_eval closest-by-angle within each 1000 cluster
+    eval_A_filenames = take_k_closest_to_angle(dfA["filename"].tolist(), angle, k_eval)
+    eval_B_filenames = take_k_closest_to_angle(
+        dfB["filename"].tolist(), opposite_angle, k_eval
+    )
+
+    pct_A_in_A, nA = percent_predicted_as_filenames(
+        self_training_model, eval_A_filenames, target_pred=0
+    )
+    pct_B_in_B, nB = percent_predicted_as_filenames(
+        self_training_model, eval_B_filenames, target_pred=1
+    )
+
+    cluster_concentration.append(
+        {
+            "iteration": iteration,
+            "angle": angle,
+            "A_percent_in_A_cluster": pct_A_in_A,
+            "B_percent_in_B_cluster": pct_B_in_B,
+            "nA": nA,
+            "nB": nB,
+            "k_eval": k_eval,
+            "opposite_angle": opposite_angle,
+        }
+    )
+
+    print(
+        f"Iter {iteration}: {pct_A_in_A:.1f}% predicted A in {k_eval} closest-to-{angle:.1f}° from cluster A (n={nA}), "
+        f"{pct_B_in_B:.1f}% predicted B in {k_eval} closest-to-{opposite_angle:.1f}° from cluster B (n={nB})"
+    )
+
+    return cluster_concentration
+
+
 def compute_angle_concentration_from_csv(
     angle, iteration, window_size=20, sequence_concentration=None
 ):
@@ -625,41 +740,61 @@ def compute_angle_concentration_from_csv(
     return sequence_concentration
 
 
-def plot_angle_concentration(
-    sequence_concentration,
-    window_size=20,
-    save_path="linear_concentration_over_rotations.png",
+def plot_cluster_concentration(
+    cluster_concentration,
+    save_path="cluster_concentration_over_rotations.png",
     type_of_learning="Unsupervised Learning",
 ):
     """
-    Plot concentration of predictions around training and opposite angles over all iterations.
-    """
-    df_seq = pd.DataFrame(sequence_concentration)
+    Plot:
+      - % predicted as A in cluster A (1000 images around base angle)
+      - % predicted as B in cluster B (1000 images around opposite angle)
 
-    plt.figure(figsize=(10, 6))
+    X-axis stays in rotation order, but tick labels show: base_angle/opposite_angle
+    """
+    df_seq = pd.DataFrame(cluster_concentration)
+
+    x = np.arange(len(df_seq))
+
+    plt.figure(figsize=(12, 6))
+
     plt.plot(
-        df_seq["iteration"],
-        df_seq["A_percent_near_train_angle"],
-        label="A near training angle",
+        x,
+        df_seq["A_percent_in_A_cluster"],
+        label="% predicted A in cluster A",
         color="blue",
         linewidth=2,
     )
+
     plt.plot(
-        df_seq["iteration"],
-        df_seq["B_percent_near_opposite_angle"],
-        label="B near opposite angle",
+        x,
+        df_seq["B_percent_in_B_cluster"],
+        label="% predicted B in cluster B",
         color="red",
         linewidth=2,
     )
-    plt.xlabel("Rotation iteration (0-71)")
-    plt.ylabel(f"% predicted correctly within ±{window_size/2}° window")
+
+    angle_labels = [
+        f"{row['angle']:.0f}°/{((row['angle'] + 180) % 360):.0f}°"
+        for _, row in df_seq.iterrows()
+    ]
+
+    step = max(1, len(x) // 12)
+    plt.xticks(x[::step], angle_labels[::step], rotation=45)
+
+    plt.xlabel("Base angle / Opposite angle")
+    plt.ylabel("% of images predicted as target class (within each cluster)")
+
     plt.title(
-        f"Concentration of correct predictions around training and opposite angles ({window_size}° slices)\n--{type_of_learning}--"
+        f"Cluster prediction concentration over rotations\n--{type_of_learning}--"
     )
+
+    plt.ylim(0, 100)
     plt.grid(True, alpha=0.4)
     plt.legend()
     plt.tight_layout()
     plt.savefig(save_path, dpi=300)
+    plt.close()
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -669,14 +804,15 @@ base_point, opposite_point = create_base_and_opposite_points(0)
 self_training_model = load_model(model_path="model_ft_no_reg_0.pth")
 self_training_model = self_training_model.to(device)
 
-# criterion = nn.CrossEntropyLoss()
-# optimizer_ft = optim.AdamW(self_training_model.parameters(), lr=1e-3, weight_decay=0.01)
-# exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=5, gamma=1)
+UNSUPERVISED = True 
 
 if __name__ == "__main__":
-    sequence_concentration = []
+    cluster_concentration = []
+
     start = time.time()
-    for i in range(72):  # 360/5=72
+    for i in range(
+        20
+    ):  # 360/5=72 # TODO: 72 iterations for full rotation, currently testing with 20 iterations
         collect_nearest_images(
             base_point, points, names, output_dir=inside_tmp("A"), k=1000
         )
@@ -684,40 +820,19 @@ if __name__ == "__main__":
             opposite_point, points, names, output_dir=inside_tmp("B"), k=1000
         )
         # now we have two directories: A and B with 1000 images each from opposite clusters
-        ######################### unsupervised learning
+        if UNSUPERVISED:
+            merge_clusters()
+            classify_images(self_training_model, inside_tmp("filenames_merged.csv"), clusters=True)
+            print("Classified images in clusters A and B.")
+            # now there are two CSVs: cluster_predicted_as_A.csv and cluster_predicted_as_B.csv
+            split_and_copy_images(inside_tmp("cluster_predicted_as_A.csv"), label="A")
+            split_and_copy_images(inside_tmp("cluster_predicted_as_B.csv"), label="B")
+            # now we have a split_data/train/A and split_data/val/A
+        else:
+            split_and_copy_images(inside_tmp("filenames_A.csv"), label="A")
+            split_and_copy_images(inside_tmp("filenames_B.csv"), label="B")
+            # now we have a split_data/train/A and split_data/val/A
 
-        # we can now classify these images using the model
-        merge_clusters()
-        # now we have a merged CSV with filenames from both clusters
-        classify_images(
-            self_training_model,
-            csv_path=inside_tmp("filenames_merged.csv"),
-            clusters=True,
-        )  # classify clusters A and B
-        print("Classified images in clusters A and B.")
-        # now there are two CSVs: cluster_predicted_as_A.csv and cluster_predicted_as_B.csv
-        ### we will now retrain the model on these classifications ###
-        split_and_copy_images(
-            csv_path=inside_tmp("cluster_predicted_as_A.csv"), label="A"
-        )
-        # now we have a split_data/train/A and split_data/val/A
-        split_and_copy_images(
-            csv_path=inside_tmp("cluster_predicted_as_B.csv"), label="B"
-        )
-        """
-        """
-        #########################
-
-        ######################### supervised learning
-        """
-        split_and_copy_images(csv_path=inside_tmp("filenames_A.csv"), label="A")
-        # now we have a split_data/train/A and split_data/val/A
-        split_and_copy_images(csv_path=inside_tmp("filenames_B.csv"), label="B")
-        # to use unsupervised learning, comment out the above two lines and uncomment the previous two lines
-        """
-        #########################
-
-        # now we have a split_data/train/B and split_data/val/B
         dataloaders, dataset_sizes, class_names = get_dataloaders(
             data_dir=inside_tmp("split_data")
         )
@@ -725,11 +840,11 @@ if __name__ == "__main__":
         ################
         criterion = nn.CrossEntropyLoss()
         optimizer_ft = optim.AdamW(
-            self_training_model.parameters(), lr=1e-3, weight_decay=0.01  # lr = 0.005
+            self_training_model.parameters(), lr=0.001, weight_decay=0.01
         )
         exp_lr_scheduler = lr_scheduler.StepLR(
             optimizer_ft, step_size=5, gamma=1
-        )  # gamma=0.1
+        )  # gamma=0.1, right now no LR decay
         ################
         self_training_model = train_model(
             self_training_model,
@@ -738,7 +853,7 @@ if __name__ == "__main__":
             criterion,
             optimizer_ft,
             exp_lr_scheduler,
-            num_epochs=10,
+            num_epochs=5,
             plots=False,
         )
         # Generate rotation sequences
@@ -782,21 +897,21 @@ if __name__ == "__main__":
         angle_deg = np.degrees(np.arctan2(base_point[1], base_point[0])) % 360
         # now we have two CSVs: predicted_as_A.csv and predicted_as_B.csv
         # create scatter plot of predictions
-        create_prediction_scatter(angle=angle_deg, frame_id=i)
+        if UNSUPERVISED:
+            create_prediction_scatter(angle=angle_deg, frame_id=i)
         # create linear graph of predictions
         create_linear_graph(angle=angle_deg, frame_id=i)
         # compute concentration of predictions around training and opposite angles
-        sequence_concentration = compute_angle_concentration_from_csv(
+        cluster_concentration = compute_cluster_concentration(
             angle=angle_deg,
             iteration=i,
-            window_size=20,
-            sequence_concentration=sequence_concentration,
+            cluster_concentration=cluster_concentration,
         )
         # create a scatter plot of the predictions
         # save the scatter plot in the frames directory
         # rotate base_point and opposite_point by 5 degrees for the next iteration
-        base_point = rotate_vector(base_point, angle_deg=5)
-        opposite_point = rotate_vector(opposite_point, angle_deg=5)
+        base_point = rotate_vector(base_point, angle_deg=0.5) #TODO: 5
+        opposite_point = rotate_vector(opposite_point, angle_deg=0.5) #TODO: 5
         # clean up A and B directories for the next iteration
         shutil.rmtree(inside_tmp("A"), ignore_errors=True)
         shutil.rmtree(inside_tmp("B"), ignore_errors=True)
@@ -806,15 +921,20 @@ if __name__ == "__main__":
         csv_files_to_delete = [
             inside_tmp("filenames_A.csv"),
             inside_tmp("filenames_B.csv"),
-            inside_tmp("filenames_merged.csv"),
             inside_tmp("predicted_as_A.csv"),
             inside_tmp("predicted_as_B.csv"),
             inside_tmp("rotation_sequence_A.csv"),
             inside_tmp("rotation_sequence_B.csv"),
             inside_tmp("merged_sequences.csv"),
-            inside_tmp("cluster_predicted_as_A.csv"),
-            inside_tmp("cluster_predicted_as_B.csv"),
         ]
+
+        if UNSUPERVISED:
+            csv_files_to_delete += [
+                inside_tmp("filenames_merged.csv"),
+                inside_tmp("cluster_predicted_as_A.csv"),
+                inside_tmp("cluster_predicted_as_B.csv"),
+            ]
+
 
         for fname in csv_files_to_delete:
             if os.path.exists(fname):
@@ -825,7 +945,7 @@ if __name__ == "__main__":
     end = time.time()
     print(f"Total time: {end - start:.2f} seconds")
     print("Total time (minutes): ", (end - start) / 60, "minutes")
-    plot_angle_concentration(
-        sequence_concentration, window_size=20, type_of_learning="Unsupervised Learning"
+    plot_cluster_concentration(
+        cluster_concentration, type_of_learning=("Unsupervised Learning" if UNSUPERVISED else "Supervised Learning")
     )
     torch.save(self_training_model.state_dict(), "model_self_trained.pth")
