@@ -217,27 +217,27 @@ def plot_clusters_with_given_indices(
 ):
     plt.figure(figsize=(7, 7))
     plt.scatter(
-        all_points[:, 0], all_points[:, 1], color="lightgray", s=5, label="All points"
+        all_points[:, 0], all_points[:, 1], color="lightgray", s=2, label="All points"
     )
     plt.scatter(
         all_points[base_indices, 0],
         all_points[base_indices, 1],
         color="blue",
-        s=10,
+        s=2,
         label="Group A",
     )
     plt.scatter(
         all_points[opp_indices, 0],
         all_points[opp_indices, 1],
         color="red",
-        s=10,
+        s=2,
         label="Group B",
     )
     plt.scatter(
         base_point[0],
         base_point[1],
         color="black",
-        s=40,
+        s=20,
         marker="x",
         label="Base point",
     )
@@ -245,7 +245,7 @@ def plot_clusters_with_given_indices(
         opposite_point[0],
         opposite_point[1],
         color="black",
-        s=40,
+        s=20,
         marker="*",
         label="Opposite point",
     )
@@ -355,9 +355,9 @@ def plot_two_rotation_paths_fixed_color(
 names, points = load_top2_filtered("pca_top2_filtered_female.csv")
 
 # Base and opposite points
-# base_idx = 0
-# base_point = points[base_idx]
-# opposite_point = -base_point
+base_idx = 0
+base_point = points[base_idx]
+opposite_point = -base_point
 
 # Compute angles (in radians) of each point from the origin
 angles = np.arctan2(points[:, 1], points[:, 0])
@@ -387,21 +387,21 @@ opposite_point = -base_point
 
 
 # save clusters of k=1000 points around base and opposite points
-base_indices = collect_nearest_images(base_point, points, names, output_dir="A", k=250)
+base_indices = collect_nearest_images(base_point, points, names, output_dir="A", k=1000)
 opp_indices = collect_nearest_images(
-    opposite_point, points, names, output_dir="B", k=250
+    opposite_point, points, names, output_dir="B", k=1000
 )
 
 # Plot using saved clusters
-# plot_clusters_with_given_indices(
-#     base_point,
-#     opposite_point,
-#     points,
-#     base_indices,
-#     opp_indices,
-#     title=f"{target_angle}° - {target_angle+180}° Clusters",
-#     save_path=f"clusters_{target_angle}_{target_angle+180}.png",
-# )
+plot_clusters_with_given_indices(
+    base_point,
+    opposite_point,
+    points,
+    base_indices,
+    opp_indices,
+    title=f"{target_angle}° - {target_angle+180}° Clusters",
+    save_path=f"clusters_{target_angle}_{target_angle+180}.png",
+)
 used = set()
 
 # Generate rotation sequences
@@ -442,83 +442,83 @@ used = set()
 # )
 
 
-def save_rotation_comparison_series_with_plots(
-    base_point,
-    opposite_point,
-    all_points,
-    all_names,
-    num_images=10,
-    angle_step=45,
-    image_source_dir="female_faces",
-    output_root="rotation_pairs",
-):
-    os.makedirs(output_root, exist_ok=True)
+# def save_rotation_comparison_series_with_plots(
+#     base_point,
+#     opposite_point,
+#     all_points,
+#     all_names,
+#     num_images=10,
+#     angle_step=45,
+#     image_source_dir="female_faces",
+#     output_root="rotation_pairs",
+# ):
+#     os.makedirs(output_root, exist_ok=True)
 
-    for angle in range(0, 180, angle_step):
-        angle_str = f"{angle:03d}"
-        dir_path = os.path.join(output_root, f"rotation_{angle_str}")
-        os.makedirs(dir_path, exist_ok=True)
-        dir_A = os.path.join(dir_path, "A")
-        dir_B = os.path.join(dir_path, "B")
-        os.makedirs(dir_A, exist_ok=True)
-        os.makedirs(dir_B, exist_ok=True)
+#     for angle in range(0, 180, angle_step):
+#         angle_str = f"{angle:03d}"
+#         dir_path = os.path.join(output_root, f"rotation_{angle_str}")
+#         os.makedirs(dir_path, exist_ok=True)
+#         dir_A = os.path.join(dir_path, "A")
+#         dir_B = os.path.join(dir_path, "B")
+#         os.makedirs(dir_A, exist_ok=True)
+#         os.makedirs(dir_B, exist_ok=True)
 
-        # Rotate base and opposite points
-        rot_A = rotate_vector(base_point, angle)
-        rot_B = rotate_vector(opposite_point, angle)
+#         # Rotate base and opposite points
+#         rot_A = rotate_vector(base_point, angle)
+#         rot_B = rotate_vector(opposite_point, angle)
 
-        # Compute distances
-        dists_A = np.linalg.norm(all_points - rot_A, axis=1)
-        dists_B = np.linalg.norm(all_points - rot_B, axis=1)
+#         # Compute distances
+#         dists_A = np.linalg.norm(all_points - rot_A, axis=1)
+#         dists_B = np.linalg.norm(all_points - rot_B, axis=1)
 
-        nearest_A = np.argsort(dists_A)[:num_images]
-        nearest_B = np.argsort(dists_B)[:num_images]
+#         nearest_A = np.argsort(dists_A)[:num_images]
+#         nearest_B = np.argsort(dists_B)[:num_images]
 
-        selected_A_names = []
-        selected_B_names = []
+#         selected_A_names = []
+#         selected_B_names = []
 
-        for idx in nearest_A:
-            name = all_names[idx]
-            selected_A_names.append(name)
-            src = os.path.join(image_source_dir, name)
-            dst = os.path.join(dir_A, name)
-            try:
-                shutil.copy2(src, dst)
-            except FileNotFoundError:
-                print(f"Missing image A: {src}")
+#         for idx in nearest_A:
+#             name = all_names[idx]
+#             selected_A_names.append(name)
+#             src = os.path.join(image_source_dir, name)
+#             dst = os.path.join(dir_A, name)
+#             try:
+#                 shutil.copy2(src, dst)
+#             except FileNotFoundError:
+#                 print(f"Missing image A: {src}")
 
-        for idx in nearest_B:
-            name = all_names[idx]
-            selected_B_names.append(name)
-            src = os.path.join(image_source_dir, name)
-            dst = os.path.join(dir_B, name)
-            try:
-                shutil.copy2(src, dst)
-            except FileNotFoundError:
-                print(f"Missing image B: {src}")
+#         for idx in nearest_B:
+#             name = all_names[idx]
+#             selected_B_names.append(name)
+#             src = os.path.join(image_source_dir, name)
+#             dst = os.path.join(dir_B, name)
+#             try:
+#                 shutil.copy2(src, dst)
+#             except FileNotFoundError:
+#                 print(f"Missing image B: {src}")
 
-        # Save filenames to CSV
-        pd.DataFrame(selected_A_names, columns=["filename"]).to_csv(
-            os.path.join(dir_A, "A_filenames.csv"), index=False
-        )
-        pd.DataFrame(selected_B_names, columns=["filename"]).to_csv(
-            os.path.join(dir_B, "B_filenames.csv"), index=False
-        )
+#         # Save filenames to CSV
+#         pd.DataFrame(selected_A_names, columns=["filename"]).to_csv(
+#             os.path.join(dir_A, "A_filenames.csv"), index=False
+#         )
+#         pd.DataFrame(selected_B_names, columns=["filename"]).to_csv(
+#             os.path.join(dir_B, "B_filenames.csv"), index=False
+#         )
 
-        # Plot the selected clusters
-        plot_clusters_with_given_indices(
-            base_point=rot_A,
-            opposite_point=rot_B,
-            all_points=all_points,
-            base_indices=nearest_A,
-            opp_indices=nearest_B,
-            title=f"Rotation {angle}°: A vs B",
-            save_path=os.path.join(dir_path, f"rotation_{angle_str}_plot.png"),
-        )
+#         # Plot the selected clusters
+#         plot_clusters_with_given_indices(
+#             base_point=rot_A,
+#             opposite_point=rot_B,
+#             all_points=all_points,
+#             base_indices=nearest_A,
+#             opp_indices=nearest_B,
+#             title=f"Rotation {angle}°: A vs B",
+#             save_path=os.path.join(dir_path, f"rotation_{angle_str}_plot.png"),
+#         )
 
-        print(
-            f"Saved rotation {angle_str}°: {len(nearest_A)} A + {len(nearest_B)} B images"
-        )
+#         print(
+#             f"Saved rotation {angle_str}°: {len(nearest_A)} A + {len(nearest_B)} B images"
+#         )
 
 
 # save_rotation_comparison_series_with_plots(

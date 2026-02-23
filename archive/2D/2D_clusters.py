@@ -52,7 +52,7 @@ cluster_q3 = df.iloc[indices_q3]
 
 # Plot
 plt.figure(figsize=(6, 6))
-plt.scatter(x, y, color="lightgray", s=10)
+plt.scatter(x, y, color="lightgray", s=1)
 plt.scatter(
     x[indices_q1], y[indices_q1], color="red", label="Closest to random Q1 point"
 )
