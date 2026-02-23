@@ -786,7 +786,9 @@ def plot_cluster_concentration(
     plt.ylabel("% of images classified as cluster label")
 
     plt.title(
-    f"Cluster classification consistency across rotation\n-- {type_of_learning} --"
+        f"At Each Rotation Step: How Many of the 100 Closest Images\n"
+        f"Are Classified as the Cluster’s Intended Label\n"
+        f"-- {type_of_learning} --"
     )
 
     plt.ylim(0, 100)
@@ -811,8 +813,8 @@ if __name__ == "__main__":
 
     start = time.time()
     for i in range(
-        20
-    ):  # 360/5=72 # TODO: 72 iterations for full rotation, currently testing with 20 iterations
+        200
+    ):  # 360/5=72 # TODO: 72 iterations for full rotation with 5 degree steps, right now 200 iterations with 0.5 degree steps - overall 100 degrees rotation to see the trend
         collect_nearest_images(
             base_point, points, names, output_dir=inside_tmp("A"), k=1000
         )
