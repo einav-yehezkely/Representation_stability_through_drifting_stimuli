@@ -317,29 +317,34 @@ def classify_images(model, csv_path, clusters=False, inherited_labels=None):
         image = Image.open(image_path).convert("RGB")
         input_tensor = transform(image).unsqueeze(0).to(device)
 
-        # Label inheritance: skip model inference if this image was confidently labeled last step
+        # Label inheritance: label is inherited from previous iteration,
+        # but we still run the model to get the actual prob_A for logging
         if clusters and inherited_labels is not None and row["filename"] in inherited_labels:
             inherited_pred = inherited_labels[row["filename"]]
+            with torch.no_grad():
+                output = model(input_tensor)
+                prob_A_val = torch.softmax(output, dim=1)[0][0].item()
             if inherited_pred == 0:
-                predicted_A.append((row, 1.0))  # confidence=1.0 for inherited labels
+                predicted_A.append((row, 1.0, prob_A_val))  # label=A (inherited), real prob_A
             else:
-                predicted_B.append((row, 1.0))
+                predicted_B.append((row, 1.0, prob_A_val))  # label=B (inherited), real prob_A
             continue
 
         with torch.no_grad():
             output = model(input_tensor)
             if clusters:
-                # Use softmax to get confidence score
+                # Use softmax to get both confidence and prob_A explicitly
                 probs = torch.softmax(output, dim=1)
+                prob_A_val = probs[0][0].item()
                 confidence = probs.max().item()
                 pred = probs.argmax(dim=1).item()
                 # Fix 2: skip low-confidence predictions — don't use ambiguous samples as pseudo-labels
                 if confidence < CONFIDENCE_THRESHOLD:
                     continue
                 if pred == 0:
-                    predicted_A.append((row, confidence))
+                    predicted_A.append((row, confidence, prob_A_val))
                 else:
-                    predicted_B.append((row, confidence))
+                    predicted_B.append((row, confidence, prob_A_val))
             else:
                 pred = output.argmax(dim=1).item()
                 if pred == 0:
@@ -363,14 +368,16 @@ def classify_images(model, csv_path, clusters=False, inherited_labels=None):
             f"Class balance enforced: keeping top {n} samples per class "
             f"(raw counts: A={len(predicted_A)}, B={len(predicted_B)})"
         )
-        balanced_A = [r for r, _ in predicted_A[:n]]
-        balanced_B = [r for r, _ in predicted_B[:n]]
-        pd.DataFrame(balanced_A).to_csv(
+        balanced_A = [(r, pa) for r, _, pa in predicted_A[:n]]
+        balanced_B = [(r, pa) for r, _, pa in predicted_B[:n]]
+        pd.DataFrame([r for r, _ in balanced_A]).to_csv(
             inside_tmp("cluster_predicted_as_A.csv"), index=False
         )
-        pd.DataFrame(balanced_B).to_csv(
+        pd.DataFrame([r for r, _ in balanced_B]).to_csv(
             inside_tmp("cluster_predicted_as_B.csv"), index=False
         )
+        # Return training records for logging: one entry per training image
+        return [{"filename": r["filename"], "prob_A": pa} for r, pa in balanced_A + balanced_B]
     else:
         pd.DataFrame(predicted_A).to_csv(inside_tmp("predicted_as_A.csv"), index=False)
         pd.DataFrame(predicted_B).to_csv(inside_tmp("predicted_as_B.csv"), index=False)
@@ -888,11 +895,13 @@ if __name__ == "__main__":
     cluster_concentration = []
     prev_labeled_A: set = set()  # filenames labeled A in the previous iteration
     prev_labeled_B: set = set()  # filenames labeled B in the previous iteration
+    training_log: list = []  # accumulates one row per training image per iteration
 
     start = time.time()
     for i in range(
         200
     ):  # 360/5=72 # TODO: 72 iterations for full rotation with 5 degree steps, right now 200 iterations with 0.5 degree steps - overall 100 degrees rotation to see the trend
+        angle_deg = np.degrees(np.arctan2(base_point[1], base_point[0])) % 360
         collect_nearest_images(
             base_point, points, names, output_dir=inside_tmp("A"), k=1000
         )
@@ -908,11 +917,19 @@ if __name__ == "__main__":
             inherited_labels = build_inherited_labels(
                 prev_labeled_A, prev_labeled_B, current_A_filenames, current_B_filenames
             )
-            classify_images(
+            training_records = classify_images(
                 self_training_model, inside_tmp("filenames_merged.csv"), clusters=True,
                 inherited_labels=inherited_labels
             )
             print("Classified images in clusters A and B.")
+            # Log each training image: iteration, angle, filename, prob_A
+            for rec in training_records:
+                training_log.append({
+                    "iteration": i,
+                    "angle": angle_deg,
+                    "filename": rec["filename"],
+                    "prob_A": rec["prob_A"],
+                })
             # Update label memory for next iteration's inheritance
             prev_labeled_A = set(pd.read_csv(inside_tmp("cluster_predicted_as_A.csv"))["filename"].tolist())
             prev_labeled_B = set(pd.read_csv(inside_tmp("cluster_predicted_as_B.csv"))["filename"].tolist())
@@ -986,7 +1003,7 @@ if __name__ == "__main__":
         )  # classify rotation sequence
         print("Classified rotation sequence.")
 
-        angle_deg = np.degrees(np.arctan2(base_point[1], base_point[0])) % 360
+        # angle_deg already computed at the top of this iteration
         # now we have two CSVs: predicted_as_A.csv and predicted_as_B.csv
         # create scatter plot of predictions
         if UNSUPERVISED:
@@ -1043,3 +1060,5 @@ if __name__ == "__main__":
         ),
     )
     torch.save(self_training_model.state_dict(), "model_self_trained.pth")
+    pd.DataFrame(training_log).to_csv("training_log.csv", index=False)
+    print(f"Saved training log to training_log.csv ({len(training_log)} rows)")
