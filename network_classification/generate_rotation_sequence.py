@@ -387,9 +387,9 @@ opposite_point = -base_point
 
 
 # save clusters of k=1000 points around base and opposite points
-base_indices = collect_nearest_images(base_point, points, names, output_dir="A", k=1000)
+base_indices = collect_nearest_images(base_point, points, names, output_dir="A", k=200)
 opp_indices = collect_nearest_images(
-    opposite_point, points, names, output_dir="B", k=1000
+    opposite_point, points, names, output_dir="B", k=200
 )
 
 # Plot using saved clusters
