@@ -31,10 +31,10 @@ data_transforms = {
     "train": transforms.Compose(
         [
             transforms.Resize((224, 224)),  # Resize images to 224x224
-            transforms.RandomHorizontalFlip(),  # Randomly flip images horizontally (data augmentation)
-            transforms.RandomPerspective(
-                distortion_scale=0.5, p=0.5
-            ),  # Random perspective transformation
+            # transforms.RandomHorizontalFlip(),  # Randomly flip images horizontally (data augmentation)
+            # transforms.RandomPerspective(
+            #     distortion_scale=0.5, p=0.5
+            # ),  # Random perspective transformation
             transforms.ToTensor(),  # Convert images to PyTorch tensors (multi-dimensional arrays)
             transforms.Normalize(
                 [0.485, 0.456, 0.406], [0.229, 0.224, 0.225]
@@ -384,10 +384,10 @@ def create_model_and_optim():
     # The final layer has 256 neurons followed by a ReLU activation function, and then another dropout layer
     # Finally, the last layer outputs 1 class (A or B)
     model_ft.fc = nn.Sequential(
-        nn.Dropout(p=0.5),
+        # nn.Dropout(p=0.5),
         nn.Linear(num_ftrs, 256),
         nn.ReLU(),
-        nn.Dropout(p=0.3),
+        # nn.Dropout(p=0.3),
         nn.Linear(256, 1),
     )
 
@@ -402,7 +402,9 @@ def create_model_and_optim():
     # This will update all model parameters during training
     # AdamW helps prevent overfitting through weight decay (L2 regularization)
     # weight_decay=0.01 adds a penalty to large weights in the loss function to encourage smaller weights and better generalization
-    optimizer_ft = optim.AdamW(model_ft.parameters(), lr=0.005, weight_decay=0.01)
+    optimizer_ft = optim.AdamW(
+        model_ft.parameters(), lr=0.005, weight_decay=0.0
+    )  # deleted weight_decay=0.01
 
     # Define a learning rate scheduler:
     # Every 5 epochs, reduce the learning rate by a factor of 0.1

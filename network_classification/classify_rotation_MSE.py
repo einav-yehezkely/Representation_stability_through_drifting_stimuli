@@ -253,23 +253,31 @@ def load_model(model_path="model_ft_0_MSE.pth"):
     """
     model = models.shufflenet_v2_x0_5(pretrained=False)
     num_ftrs = model.fc.in_features
-    # model.fc = nn.Sequential(
-    #     nn.Dropout(p=0.5),
-    #     nn.Linear(num_ftrs, 256),
-    #     nn.ReLU(),
-    #     nn.Dropout(p=0.3),
-    #     nn.Linear(256, 2),
-    # )
     model.fc = nn.Sequential(
-        nn.Dropout(p=0.5),
+        # nn.Dropout(p=0.5),
         nn.Linear(num_ftrs, 256),
         nn.ReLU(),
-        nn.Dropout(p=0.3),
+        # nn.Dropout(p=0.3),
         nn.Linear(256, 1),
     )
     model.load_state_dict(torch.load(model_path, map_location=device))
     model.eval()
     return model
+
+
+def safe_read_filenames(csv_path):
+    if not os.path.exists(csv_path) or os.path.getsize(csv_path) == 0:
+        return pd.Series(dtype="object")
+
+    try:
+        df = pd.read_csv(csv_path)
+    except pd.errors.EmptyDataError:
+        return pd.Series(dtype="object")
+
+    if "filename" not in df.columns:
+        return pd.Series(dtype="object")
+
+    return df["filename"]
 
 
 def classify_images(model, csv_path, clusters=False):
@@ -306,8 +314,9 @@ def classify_images(model, csv_path, clusters=False):
         #     pred = output.argmax(dim=1).item()
         with torch.no_grad():
             output = model(input_tensor)
-            prob_a = torch.sigmoid(output).item()
-            pred = 0 if prob_a >= 0.5 else 1
+            prob_b = torch.sigmoid(output).item()
+            prob_a = 1 - prob_b
+            pred = 1 if prob_b >= 0.5 else 0
 
         # Track predictions
         if pred == 0:
@@ -324,18 +333,29 @@ def classify_images(model, csv_path, clusters=False):
                 }
             )
 
-    # Save predicted CSVs
+    # Save predicted CSVs safely, even if one list is empty
+    base_columns = df.columns.tolist()
+
+    df_A = pd.DataFrame(predicted_A)
+    df_B = pd.DataFrame(predicted_B)
+
+    if df_A.empty:
+        df_A = pd.DataFrame(columns=base_columns)
+    else:
+        df_A = df_A.reindex(columns=base_columns)
+
+    if df_B.empty:
+        df_B = pd.DataFrame(columns=base_columns)
+    else:
+        df_B = df_B.reindex(columns=base_columns)
+
     if clusters:
-        pd.DataFrame(predicted_A).to_csv(
-            inside_tmp("cluster_predicted_as_A.csv"), index=False
-        )
-        pd.DataFrame(predicted_B).to_csv(
-            inside_tmp("cluster_predicted_as_B.csv"), index=False
-        )
+        df_A.to_csv(inside_tmp("cluster_predicted_as_A.csv"), index=False)
+        df_B.to_csv(inside_tmp("cluster_predicted_as_B.csv"), index=False)
         return training_records
     else:
-        pd.DataFrame(predicted_A).to_csv(inside_tmp("predicted_as_A.csv"), index=False)
-        pd.DataFrame(predicted_B).to_csv(inside_tmp("predicted_as_B.csv"), index=False)
+        df_A.to_csv(inside_tmp("predicted_as_A.csv"), index=False)
+        df_B.to_csv(inside_tmp("predicted_as_B.csv"), index=False)
 
 
 def split_and_copy_images(
@@ -429,15 +449,11 @@ def create_prediction_scatter(angle, frame_id, save_dir=SCATTER_DIR):
     df.columns = ["name", "x", "y"]
 
     # Load predictions
-    pred_a = pd.read_csv(inside_tmp("predicted_as_A.csv"))["filename"]
-    pred_b = pd.read_csv(inside_tmp("predicted_as_B.csv"))["filename"]
+    pred_a = safe_read_filenames(inside_tmp("predicted_as_A.csv"))
+    pred_b = safe_read_filenames(inside_tmp("predicted_as_B.csv"))
 
-    predicted_cluster_a = pd.read_csv(inside_tmp("cluster_predicted_as_A.csv"))[
-        "filename"
-    ]
-    predicted_cluster_b = pd.read_csv(inside_tmp("cluster_predicted_as_B.csv"))[
-        "filename"
-    ]
+    predicted_cluster_a = safe_read_filenames(inside_tmp("cluster_predicted_as_A.csv"))
+    predicted_cluster_b = safe_read_filenames(inside_tmp("cluster_predicted_as_B.csv"))
 
     df_a = df[df["name"].isin(pred_a)]
     df_b = df[df["name"].isin(pred_b)]
@@ -502,8 +518,12 @@ def create_linear_graph(angle, frame_id, save_dir=LINEAR_DIR):
     opposite_angle = (angle + 180) % 360
     os.makedirs(save_dir, exist_ok=True)
 
-    pred_a = pd.read_csv(inside_tmp("predicted_as_A.csv"))
-    pred_b = pd.read_csv(inside_tmp("predicted_as_B.csv"))
+    pred_a = pd.DataFrame(
+        {"filename": safe_read_filenames(inside_tmp("predicted_as_A.csv"))}
+    )
+    pred_b = pd.DataFrame(
+        {"filename": safe_read_filenames(inside_tmp("predicted_as_B.csv"))}
+    )
 
     pred_a["pred"] = "A"
     pred_b["pred"] = "B"
@@ -628,8 +648,8 @@ def percent_predicted_as_filenames(
         #     pred = model(x).argmax(dim=1).item()
         with torch.no_grad():
             output = model(x)
-            prob_a = torch.sigmoid(output).item()
-            pred = 0 if prob_a >= 0.5 else 1
+            prob_b = torch.sigmoid(output).item()
+            pred = 1 if prob_b >= 0.5 else 0
 
         count_target += int(pred == target_pred)
         total += 1
@@ -970,7 +990,9 @@ if __name__ == "__main__":
         ################
         criterion = nn.MSELoss()  # change to Lease squared error
         optimizer_ft = optim.AdamW(
-            self_training_model.parameters(), lr=0.001, weight_decay=0.01
+            self_training_model.parameters(),
+            lr=0.001,
+            weight_decay=0.0,  # deleted weight_decay=0.01
         )
         exp_lr_scheduler = lr_scheduler.StepLR(
             optimizer_ft, step_size=5, gamma=1
@@ -983,7 +1005,7 @@ if __name__ == "__main__":
             criterion,
             optimizer_ft,
             exp_lr_scheduler,
-            num_epochs=5,
+            num_epochs=10,
             plots=False,
         )
         # Generate rotation sequences
