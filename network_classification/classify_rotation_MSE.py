@@ -201,51 +201,6 @@ def merge_clusters():
     df_merged.to_csv(inside_tmp("filenames_merged.csv"), index=False)
 
 
-def merge_sequences(
-    path_a=inside_tmp("rotation_sequence_A.csv"),
-    path_b=inside_tmp("rotation_sequence_B.csv"),
-    to_csv=inside_tmp("merged_sequences.csv"),
-):
-    df_a = pd.read_csv(path_a)
-    df_b = pd.read_csv(path_b)
-
-    i, j = 0, 0
-    rows = []
-
-    while i < len(df_a) or j < len(df_b):
-        if i == len(df_a):
-            row = df_b.iloc[j].copy()
-            row["group"] = "B"
-            rows.append(row)
-            j += 1
-        elif j == len(df_b):
-            row = df_a.iloc[i].copy()
-            row["group"] = "A"
-            rows.append(row)
-            i += 1
-        else:
-            if random.random() < 0.5:
-                row = df_a.iloc[i].copy()
-                row["group"] = "A"
-                rows.append(row)
-                i += 1
-            else:
-                row = df_b.iloc[j].copy()
-                row["group"] = "B"
-                rows.append(row)
-                j += 1
-
-    # Convert list of Series to DataFrame
-    merged_df = pd.DataFrame(rows)
-
-    # Move 'group' column to the front
-    cols = ["group"] + [col for col in merged_df.columns if col != "group"]
-    merged_df = merged_df[cols]
-
-    # Save to CSV
-    merged_df.to_csv(to_csv, index=False)
-
-
 def load_model(model_path="model_ft_0_MSE.pth"):
     """
     Load the pre-trained model for classification.
@@ -510,7 +465,7 @@ def create_prediction_scatter(angle, frame_id, save_dir=SCATTER_DIR):
 
     path = os.path.join(save_dir, f"scatter_frame_{frame_id:03d}.png")
     plt.savefig(path, dpi=300)
-    print(f"\nScatter Frame {frame_id} completed. Model re-trained and evaluated.\n")
+    print(f"\nScatter Frame {frame_id} completed.\n")
     plt.close()
 
 
@@ -530,18 +485,16 @@ def create_linear_graph(angle, frame_id, save_dir=LINEAR_DIR):
 
     df = pd.concat([pred_a, pred_b], ignore_index=True)
 
-    df_full = pd.read_csv("pca_top2_filtered_female.csv", header=None)
-    df_full.columns = ["filename", "x", "y"]
-
-    df = df.merge(df_full, on="filename", how="left")
-    # Compute angle of each image in PCA space
-    df["angle_deg"] = np.degrees(np.arctan2(df["y"], df["x"])) % 360
+    # use precomputed PCA angles
+    df["angle_deg"] = df["filename"].map(ANGLE_MAP)
+    df = df.dropna(subset=["angle_deg"])
 
     window_size = 20
     results = []
 
     for step_angle in range(0, 360, 1):
         end = (step_angle + window_size) % 360
+
         if step_angle < end:
             window_data = df[(df["angle_deg"] >= step_angle) & (df["angle_deg"] < end)]
         else:
@@ -551,26 +504,21 @@ def create_linear_graph(angle, frame_id, save_dir=LINEAR_DIR):
 
         if total > 0:
             count_a = (window_data["pred"] == "A").sum()
-            count_b = (window_data["pred"] == "B").sum()
             percent_a = count_a * 100 / total
-            percent_b = count_b * 100 / total
+            percent_b = 100 - percent_a
         else:
             percent_a = 0
             percent_b = 0
 
-        # Use center of window for plotting
         center_angle = (step_angle + window_size / 2) % 360
         results.append((center_angle, percent_a, percent_b))
 
     df_results = pd.DataFrame(results, columns=["angle", "percent_A", "percent_B"])
 
-    # Add closing point at 360°
     angle0 = df_results[df_results["angle"] == 0]
-    # 360° is the same as 0°
     angle360 = angle0.copy()
     angle360["angle"] = 360
     df_results = pd.concat([df_results, angle360], ignore_index=True)
-    # sort by angle for proper plotting
     df_results = df_results.sort_values(by="angle")
 
     plt.figure(figsize=(12, 6))
@@ -580,23 +528,27 @@ def create_linear_graph(angle, frame_id, save_dir=LINEAR_DIR):
     plt.plot(
         df_results["angle"], df_results["percent_B"], label="Predicted B", color="red"
     )
+
     plt.xlabel("Angle")
     plt.ylabel("%")
     plt.title(
         f"% images predicted as A/B, trained on {angle:.1f}° and {opposite_angle:.1f}° clusters, {window_size}° slices"
     )
+
     plt.axhline(y=0, color="black", linewidth=1)
     plt.axvline(x=0, color="black", linewidth=1)
     plt.axvline(x=angle, color="blue", linewidth=1, linestyle="--")
     plt.axvline(x=opposite_angle, color="red", linewidth=1, linestyle="--")
+
     plt.grid(True)
     plt.legend()
     plt.tight_layout()
     plt.ylim(0, 100)
     plt.xlim(0, 360)
+
     path = os.path.join(save_dir, f"linear_frame_{frame_id:03d}.png")
     plt.savefig(path, dpi=300)
-    print(f"\nLinear Frame {frame_id} completed. Model re-trained and evaluated.\n")
+    print(f"\nLinear Frame {frame_id} completed.\n")
     plt.close()
 
 
@@ -933,17 +885,37 @@ names, points = load_top2_filtered("pca_top2_filtered_female.csv")
 base_point, opposite_point = create_base_and_opposite_points(0)
 self_training_model = load_model(model_path="model_ft_0_MSE.pth")
 self_training_model = self_training_model.to(device)
+optimizer_ft = optim.Adam(
+    self_training_model.parameters(),
+    lr=0.0001,
+)
+
 
 UNSUPERVISED = True
 
 if __name__ == "__main__":
+    # Generate rotation sequence
+    rotation_seq, _ = generate_rotation_sequence(
+        base_point=base_point,
+        all_points=points,
+        all_names=names,
+        num_steps=360,
+        start_angle=0,
+        rotation_range=360,
+        used_indices=set(),  # ensure we don't reuse the same images to train on in the rotation sequence, so we get 360 unique images in the sequence (one per degree)
+    )
+
+    df_seq = pd.DataFrame(rotation_seq, columns=["step", "angle_deg", "filename"])
+    df_seq.to_csv(inside_tmp("rotation_sequence_all.csv"), index=False)
+    print("Generated rotation sequence with unique images at each step.\n")
+
     cluster_concentration = []
     training_log = []
 
     start = time.time()
     for i in range(
         200
-    ):  # 360/5=72 # TODO: 72 iterations for full rotation with 5 degree steps, right now 200 iterations with 0.5 degree steps - overall 100 degrees rotation to see the trend
+    ):  # 360/0.5=720 # TODO: 720 iterations for full rotation with 5 degree steps, right now 200 iterations with 0.5 degree steps - overall 100 degrees rotation to see the trend
         collect_nearest_images(
             base_point, points, names, output_dir=inside_tmp("A"), k=200
         )
@@ -989,11 +961,11 @@ if __name__ == "__main__":
         # _, criterion, optimizer_ft, exp_lr_scheduler = create_model_and_optim()
         ################
         criterion = nn.MSELoss()  # change to Lease squared error
-        optimizer_ft = optim.AdamW(
-            self_training_model.parameters(),
-            lr=0.001,
-            weight_decay=0.0,  # deleted weight_decay=0.01
-        )
+        # optimizer_ft = optim.AdamW(
+        #     self_training_model.parameters(),
+        #     lr=0.001,
+        #     weight_decay=0.0,  # deleted weight_decay=0.01
+        # )
         exp_lr_scheduler = lr_scheduler.StepLR(
             optimizer_ft, step_size=5, gamma=1
         )  # gamma=0.1, right now no LR decay
@@ -1005,45 +977,16 @@ if __name__ == "__main__":
             criterion,
             optimizer_ft,
             exp_lr_scheduler,
-            num_epochs=10,
+            num_epochs=1,  # 10
             plots=False,
         )
-        # Generate rotation sequences
-        used = set()
 
-        rotation_seq_A, used = generate_rotation_sequence(
-            base_point=base_point,
-            all_points=points,
-            all_names=names,
-            num_steps=180,
-            start_angle=0,
-            rotation_range=180,
-            used_indices=used,
-        )
-        df_A = pd.DataFrame(rotation_seq_A, columns=["step", "angle_deg", "filename"])
-        df_A.to_csv(inside_tmp("rotation_sequence_A.csv"), index=False)
-        print("Saved rotation sequence A to rotation_sequence_A.csv")
-
-        rotation_seq_B, used = generate_rotation_sequence(
-            base_point=opposite_point,
-            all_points=points,
-            all_names=names,
-            num_steps=180,
-            start_angle=0,
-            rotation_range=180,
-            used_indices=used,
-        )
-        df_B = pd.DataFrame(rotation_seq_B, columns=["step", "angle_deg", "filename"])
-        df_B.to_csv(inside_tmp("rotation_sequence_B.csv"), index=False)
-        print("Saved rotation sequence B to rotation_sequence_B.csv")
-
-        merge_sequences()  # merge the two sequences into one CSV
         # now we have a trained model - self trained on it's own predictions
         classify_images(
             self_training_model,
-            csv_path=inside_tmp("merged_sequences.csv"),
+            csv_path=inside_tmp("rotation_sequence_all.csv"),
             clusters=False,
-        )  # classify rotation sequence
+        )
         print("Classified rotation sequence.")
 
         # angle_deg = np.degrees(np.arctan2(base_point[1], base_point[0])) % 360
@@ -1076,9 +1019,6 @@ if __name__ == "__main__":
             inside_tmp("filenames_B.csv"),
             inside_tmp("predicted_as_A.csv"),
             inside_tmp("predicted_as_B.csv"),
-            inside_tmp("rotation_sequence_A.csv"),
-            inside_tmp("rotation_sequence_B.csv"),
-            inside_tmp("merged_sequences.csv"),
         ]
 
         if UNSUPERVISED:

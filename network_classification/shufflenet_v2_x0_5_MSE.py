@@ -239,6 +239,10 @@ def train_model(
                     device
                 )  # Move the labels to the selected device (GPU if available, otherwise CPU).
 
+                labels = (
+                    labels * 0.8 + 0.1
+                )  # Convert labels from {0, 1} to {0.1, 0.9} for MSE loss - this can help with training stability when using MSE for classification TODO: try different label smoothing values
+
                 # zero the parameter gradients - in order to prevent accumulation from previous batches
                 optimizer.zero_grad()
 
