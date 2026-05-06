@@ -16,7 +16,6 @@ import torch.optim as optim
 from torch.optim import lr_scheduler
 import random
 
-
 BASE_DIR = "tmp"
 os.makedirs(BASE_DIR, exist_ok=True)
 
@@ -206,7 +205,7 @@ def load_model(model_path="model_ft_0_MSE.pth"):
     Load the pre-trained model for classification.
     The model is trained on images from 135 and 315 degrees.
     """
-    model = models.shufflenet_v2_x0_5(pretrained=False)
+    model = models.shufflenet_v2_x0_5(weights=None)
     num_ftrs = model.fc.in_features
     model.fc = nn.Sequential(
         # nn.Dropout(p=0.5),
@@ -879,21 +878,20 @@ def save_label_change_csvs(training_log_path="training_log.csv"):
     return changed_csv, summary
 
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-names, points = load_top2_filtered("pca_top2_filtered_female.csv")
-base_point, opposite_point = create_base_and_opposite_points(0)
-self_training_model = load_model(model_path="model_ft_0_MSE.pth")
-self_training_model = self_training_model.to(device)
-optimizer_ft = optim.Adam(
-    self_training_model.parameters(),
-    lr=0.0001,
-)
-
-
-UNSUPERVISED = True
-
 if __name__ == "__main__":
+
+    UNSUPERVISED = True
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    names, points = load_top2_filtered("pca_top2_filtered_female.csv")
+    base_point, opposite_point = create_base_and_opposite_points(0)
+    self_training_model = load_model(model_path="model_ft_0_MSE.pth")
+    self_training_model = self_training_model.to(device)
+    optimizer_ft = optim.Adam(
+        self_training_model.parameters(),
+        lr=0.0001,
+    )
     # Generate rotation sequence
     rotation_seq, _ = generate_rotation_sequence(
         base_point=base_point,
@@ -977,7 +975,7 @@ if __name__ == "__main__":
             criterion,
             optimizer_ft,
             exp_lr_scheduler,
-            num_epochs=1,  # 10
+            num_epochs=4,  # 10
             plots=False,
         )
 
