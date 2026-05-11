@@ -65,3 +65,47 @@ summary.to_csv("changed_images_summary_per_iteration.csv", index=False)
 print("Saved:")
 print("1. changed_images_between_consecutive_iterations.csv")
 print("2. changed_images_summary_per_iteration.csv")
+
+import matplotlib.pyplot as plt
+
+from sklearn.linear_model import LinearRegression
+import numpy as np
+
+# =========================
+# Number of changed images per iteration
+# with linear regression
+# =========================
+
+x = summary["to_iteration"].values.reshape(-1, 1)
+y = summary["num_changed_images"].values
+
+# fit linear regression
+model = LinearRegression()
+model.fit(x, y)
+
+# predicted line
+y_pred = model.predict(x)
+
+plt.figure(figsize=(10, 5))
+
+# scatter only (no connecting lines)
+plt.scatter(x, y, s=15)
+
+# regression line
+plt.plot(
+    x,
+    y_pred,
+    color="red",
+    linestyle="--",
+    label=f"Linear Fit (slope={model.coef_[0]:.2f})",
+)
+
+plt.xlabel("Iteration")
+plt.ylabel("Number of images that changed label")
+plt.title("Label changes between consecutive iterations")
+plt.grid(True)
+plt.tight_layout()
+plt.legend()
+
+plt.savefig("changed_images_summary_per_iteration_with_regression.png", dpi=300)
+plt.show()

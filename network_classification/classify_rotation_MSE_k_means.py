@@ -14,6 +14,14 @@ from matplotlib.patches import Circle
 import time
 import torch.optim as optim
 from torch.optim import lr_scheduler
+import random
+from sklearn.cluster import KMeans  # for optional clustering analysis
+from scipy.spatial.distance import (
+    cdist,
+)  # for optional distance calculations in clustering analysis
+from sklearn.preprocessing import (
+    normalize,
+)  # for optional normalization in clustering analysis
 
 BASE_DIR = "tmp"
 os.makedirs(BASE_DIR, exist_ok=True)
@@ -885,6 +893,223 @@ def save_label_change_csvs(training_log_path="training_log.csv"):
     return changed_csv, summary
 
 
+def extract_embedding(model, input_tensor):
+    """
+    Extract the internal feature representation (embedding)
+    from ShuffleNet before the final classification layer.
+    """
+
+    # ===== Feature extraction backbone =====
+
+    x = model.conv1(input_tensor)
+    x = model.maxpool(x)
+
+    x = model.stage2(x)
+    x = model.stage3(x)
+    x = model.stage4(x)
+
+    x = model.conv5(x)
+
+    # ===== Global Average Pooling =====
+    # Convert feature maps from:
+    # [batch, channels, height, width]
+    # to:
+    # [batch, channels]
+
+    x = x.mean([2, 3])
+
+    # ===== Projection head =====
+    # The classifier is:
+    #
+    # Linear(num_ftrs -> 256)
+    # ReLU()
+    # Linear(256 -> 1)
+    #
+    # We REMOVE the final classifier layer
+    # and keep the 256D representation.
+
+    embedding = model.fc[0](x)  # Linear(num_ftrs -> 256)
+    # embedding = model.fc[1](embedding)  # ReLU
+
+    return embedding
+
+
+def cluster_images_by_embeddings(
+    model,
+    csv_path,
+    prev_centroids=None,
+    image_source_dir="female_faces",
+):
+    """
+    Cluster images according to the model's internal embeddings.
+
+    Instead of using the model's final binary prediction (A/B),
+    this function extracts the internal 256D representation of each image,
+    runs K-means clustering with K=2, and uses the resulting clusters
+    as pseudo-labels for the next training iteration.
+
+    Parameters
+    ----------
+    model : torch.nn.Module
+        The current ShuffleNet model.
+
+    csv_path : str
+        Path to a CSV file containing a column named "filename".
+        These are the images to cluster.
+
+    prev_centroids : np.ndarray or None
+        The centroids from the previous iteration, ordered as:
+        [A_centroid, B_centroid].
+
+        If None, this means this is the first iteration, so labels are assigned
+        using overlap with the original PCA-selected A/B image sets.
+
+    image_source_dir : str
+        Folder containing the source images.
+
+    Returns
+    -------
+    training_records : list of dict
+        A list containing the assigned cluster label for each image.
+
+    ordered_centroids : np.ndarray
+        The current centroids ordered as [A_centroid, B_centroid],
+        so they can be used in the next iteration.
+    """
+
+    # Put the model in evaluation mode.
+    # We only want to extract embeddings, not train the model here.
+    model.eval()
+
+    # Load the image filenames that should be clustered.
+    df = pd.read_csv(csv_path)
+
+    # Use the same preprocessing used during training.
+    transform = transforms.Compose(
+        [
+            transforms.Resize((224, 224)),
+            transforms.ToTensor(),
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+        ]
+    )
+
+    embeddings = []
+    filenames = []
+
+    # Extract one embedding vector for every image.
+    for _, row in df.iterrows():
+        image_path = os.path.join(image_source_dir, row["filename"])
+
+        if not os.path.exists(image_path):
+            continue
+
+        image = Image.open(image_path).convert("RGB")
+        input_tensor = transform(image).unsqueeze(0).to(device)
+
+        with torch.no_grad():
+            emb = extract_embedding(model, input_tensor)
+
+        embeddings.append(emb.squeeze(0).cpu().numpy())
+        filenames.append(row["filename"])
+
+    embeddings = np.array(embeddings)
+    embeddings = normalize(embeddings)
+
+    # Cluster the embeddings into two groups.
+    # These groups are not yet A/B; they are just cluster 0 and cluster 1.
+    kmeans = KMeans(n_clusters=2, random_state=42, n_init=10)
+    cluster_ids = kmeans.fit_predict(embeddings)
+
+    # Each cluster has a centroid: the average embedding of that cluster.
+    centroids = kmeans.cluster_centers_
+    centroids = normalize(centroids)
+
+    # ------------------------------------------------------------
+    # Assign cluster identities: which cluster is A and which is B?
+    # ------------------------------------------------------------
+
+    if prev_centroids is None:
+        # First iteration:
+        # There are no previous centroids, so we use the original PCA-selected
+        # A/B groups to decide which cluster should be called A or B.
+
+        original_A = set(pd.read_csv(inside_tmp("filenames_A.csv"))["filename"])
+        original_B = set(pd.read_csv(inside_tmp("filenames_B.csv"))["filename"])
+
+        cluster0_files = {f for f, c in zip(filenames, cluster_ids) if c == 0}
+        cluster1_files = {f for f, c in zip(filenames, cluster_ids) if c == 1}
+
+        # Check which K-means cluster contains more of the original A images.
+        score0_A = len(cluster0_files & original_A)
+        score1_A = len(cluster1_files & original_A)
+
+        if score0_A >= score1_A:
+            cluster_to_label = {0: "A", 1: "B"}
+            ordered_centroids = np.array([centroids[0], centroids[1]])
+        else:
+            cluster_to_label = {0: "B", 1: "A"}
+            ordered_centroids = np.array([centroids[1], centroids[0]])
+
+    else:
+        # Later iterations:
+        # Match the new centroids to the previous A/B centroids.
+        # This prevents K-means from randomly swapping cluster 0 and cluster 1.
+
+        distances = cdist(centroids, prev_centroids)
+
+        # Option 1:
+        # current cluster 0 -> previous A
+        # current cluster 1 -> previous B
+        same_order_distance = distances[0, 0] + distances[1, 1]
+
+        # Option 2:
+        # current cluster 0 -> previous B
+        # current cluster 1 -> previous A
+        swapped_order_distance = distances[0, 1] + distances[1, 0]
+
+        if same_order_distance <= swapped_order_distance:
+            cluster_to_label = {0: "A", 1: "B"}
+            ordered_centroids = np.array([centroids[0], centroids[1]])
+        else:
+            cluster_to_label = {0: "B", 1: "A"}
+            ordered_centroids = np.array([centroids[1], centroids[0]])
+
+    records_A = []
+    records_B = []
+    training_records = []
+
+    # Convert cluster IDs into A/B labels and prepare CSV files.
+    for filename, cluster_id in zip(filenames, cluster_ids):
+        label = cluster_to_label[cluster_id]
+
+        rec = {"filename": filename}
+
+        if label == "A":
+            records_A.append(rec)
+        else:
+            records_B.append(rec)
+
+        training_records.append(
+            {
+                "filename": filename,
+                "cluster_label": label,
+                "cluster_id": int(cluster_id),
+            }
+        )
+
+    # Save pseudo-labeled files.
+    # These files are later used by split_and_copy_images(...)
+    # to create split_data/train/A, split_data/train/B, etc.
+    pd.DataFrame(records_A).to_csv(
+        inside_tmp("cluster_predicted_as_A.csv"), index=False
+    )
+    pd.DataFrame(records_B).to_csv(
+        inside_tmp("cluster_predicted_as_B.csv"), index=False
+    )
+
+    return training_records, ordered_centroids
+
+
 if __name__ == "__main__":
 
     UNSUPERVISED = True
@@ -917,6 +1142,8 @@ if __name__ == "__main__":
     cluster_concentration = []
     training_log = []
 
+    prev_centroids = None
+
     start = time.time()
     for i in range(
         200
@@ -933,8 +1160,10 @@ if __name__ == "__main__":
             # training_records = classify_images(
             #     self_training_model, inside_tmp("filenames_merged.csv"), clusters=True
             # )
-            training_records = classify_images(
-                self_training_model, inside_tmp("filenames_merged.csv"), clusters=True
+            training_records, prev_centroids = cluster_images_by_embeddings(
+                self_training_model,
+                inside_tmp("filenames_merged.csv"),
+                prev_centroids=prev_centroids,
             )
             # angle_deg = np.degrees(np.arctan2(base_point[1], base_point[0])) % 360
             angle_deg = (i * 0.5) % 360
@@ -948,8 +1177,8 @@ if __name__ == "__main__":
                         "cluster_angle": angle_deg,
                         "filename": rec["filename"],
                         "image_angle": image_angle,
-                        "cluster_label": rec["pred"],
-                        "prob_A": rec["prob_A"],
+                        "cluster_label": rec["cluster_label"],
+                        "cluster_id": rec["cluster_id"],
                     }
                 )
 
