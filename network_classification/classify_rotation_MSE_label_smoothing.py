@@ -9,16 +9,20 @@ import shutil
 from sklearn.model_selection import train_test_split
 import torch.nn as nn
 from tqdm import tqdm
-from shufflenet_v2_x0_5_MSE import train_model, get_dataloaders, create_model_and_optim
+from shufflenet_v2_x0_5_MSE_label_smoothing import (
+    train_model,
+    get_dataloaders,
+    create_model_and_optim,
+)
 from matplotlib.patches import Circle
 import time
 import torch.optim as optim
 from torch.optim import lr_scheduler
 
-BASE_DIR = "tmp"
+BASE_DIR = "tmp_label_smoothing"
 os.makedirs(BASE_DIR, exist_ok=True)
 
-OUTPUT_DIR = "output"
+OUTPUT_DIR = "output_label_smoothing"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 PCA_DF = pd.read_csv("pca_top2_filtered_female.csv", header=None)

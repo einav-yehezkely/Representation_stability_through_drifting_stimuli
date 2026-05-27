@@ -15,10 +15,10 @@ import time
 import torch.optim as optim
 from torch.optim import lr_scheduler
 
-BASE_DIR = "tmp"
+BASE_DIR = "tmp_weight_decay"
 os.makedirs(BASE_DIR, exist_ok=True)
 
-OUTPUT_DIR = "output"
+OUTPUT_DIR = "output_weight_decay"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 PCA_DF = pd.read_csv("pca_top2_filtered_female.csv", header=None)
@@ -937,9 +937,8 @@ if __name__ == "__main__":
     base_point, opposite_point = create_base_and_opposite_points(0)
     self_training_model = load_model(model_path="model_ft_0_MSE.pth")
     self_training_model = self_training_model.to(device)
-    optimizer_ft = optim.Adam(
-        self_training_model.parameters(),
-        lr=0.0001,
+    optimizer_ft = optim.AdamW(
+        self_training_model.parameters(), lr=0.0001, weight_decay=1e-4
     )
     # Generate rotation sequence
     rotation_seq, _ = generate_rotation_sequence(
@@ -962,7 +961,7 @@ if __name__ == "__main__":
 
     start = time.time()
     for i in range(
-        10
+        720
     ):  # 360/0.5=720 # TODO: 720 iterations for full rotation with 5 degree steps, right now 200 iterations with 0.5 degree steps - overall 100 degrees rotation to see the trend
         collect_nearest_images(
             base_point, points, names, output_dir=inside_tmp("A"), k=200
