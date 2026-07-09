@@ -10,7 +10,7 @@ import matplotlib
 # matplotlib.use("Agg")  # Use a non-interactive backend (no GUI)
 import matplotlib.pyplot as plt
 
-df = pd.read_csv("pca_top2_filtered_female.csv", header=None)
+df = pd.read_csv("pca_top2_filtered_female_20_percent.csv", header=None)
 
 print(f"Number of vectors: {df.shape[0]}")
 print(f"Vector dimensionality: {df.shape[1] - 1}")  # Subtract 1 for the names column

@@ -20,11 +20,6 @@ import time  # for measuring time - training duration
 import os  # for file and directory operations
 from tempfile import TemporaryDirectory  # for creating temporary directories
 from tqdm import tqdm  # for progress bars
-import torch.nn.functional as F  # for additional neural network functions (e.g., softmax, KL divergence)
-from itertools import (
-    cycle,
-)  # for creating an infinite loop over the previous dataloader (for consistency loss)
-
 
 # Set up CUDA for GPU acceleration if available
 cudnn.benchmark = True
@@ -36,10 +31,10 @@ data_transforms = {
     "train": transforms.Compose(
         [
             transforms.Resize((224, 224)),  # Resize images to 224x224
-            transforms.RandomHorizontalFlip(),  # Randomly flip images horizontally (data augmentation)
-            transforms.RandomPerspective(
-                distortion_scale=0.5, p=0.5
-            ),  # Random perspective transformation
+            # transforms.RandomHorizontalFlip(),  # Randomly flip images horizontally (data augmentation)
+            # transforms.RandomPerspective(
+            #     distortion_scale=0.5, p=0.5
+            # ),  # Random perspective transformation
             transforms.ToTensor(),  # Convert images to PyTorch tensors (multi-dimensional arrays)
             transforms.Normalize(
                 [0.485, 0.456, 0.406], [0.229, 0.224, 0.225]
@@ -75,9 +70,7 @@ def get_dataloaders(data_dir="split_data", batch_size=50):
         x: torch.utils.data.DataLoader(
             image_datasets[x],
             batch_size=batch_size,
-            shuffle=(
-                True if x == "train" else False
-            ),  # Randomize sample order each epoch for training only
+            shuffle=True,  # Randomize sample order each epoch
             num_workers=2,  # Load data in parallel (2 worker threads)
             persistent_workers=True,  # Keep workers alive between epochs for efficiency
         )
@@ -120,9 +113,15 @@ def evaluate(model, dataloader, criterion, device):
         inputs, labels = inputs.to(device), labels.to(
             device
         )  # Move data to the appropriate device
-        outputs = model(inputs)  # Forward pass
-        loss = criterion(outputs, labels)  # Compute loss
-        _, preds = torch.max(outputs, 1)  # Get predicted classes
+
+        # outputs = model(inputs)  # Forward pass
+        # loss = criterion(outputs, labels)  # Compute loss
+        # _, preds = torch.max(outputs, 1)  # Get predicted classes
+        outputs = model(inputs).squeeze(1)
+        probs = torch.sigmoid(outputs)
+        loss = criterion(probs, labels.float())
+        preds = (probs >= 0.5).long()
+
         running_loss += loss.item() * inputs.size(0)  # Accumulate loss
         running_corrects += (
             (preds == labels).sum().item()
@@ -142,10 +141,6 @@ def train_model(
     scheduler,
     num_epochs=25,
     plots=True,
-    teacher_model=None,
-    prev_dataloader=None,
-    lambda_cons=0.05,
-    T=1.0,
 ):
     """
     Train a PyTorch model using supervised learning and track performance over epochs.
@@ -182,13 +177,6 @@ def train_model(
     """
     since = time.time()  # Record the start time of training
 
-    train_losses.clear()
-    val_losses.clear()
-    train_accuracies.clear()
-    val_accuracies.clear()
-    reeval_train_losses.clear()
-    reeval_train_accuracies.clear()
-
     # Create a temporary directory to save training checkpoints
     with TemporaryDirectory() as tempdir:
         best_model_params_path = os.path.join(
@@ -219,15 +207,6 @@ def train_model(
             f"Val: loss={init_val_loss:.4f}, acc={init_val_acc:.4f}"
         )
 
-        # If a teacher model is provided, set it to evaluation mode - for consistency loss
-        if teacher_model is not None:
-            teacher_model.eval()
-
-        # If a previous dataloader is provided, create an infinite iterator over it - for consistency loss
-        prev_iter = None
-        if teacher_model is not None and prev_dataloader is not None:
-            prev_iter = cycle(prev_dataloader)
-
         # Main training loop
         for epoch in tqdm(range(num_epochs), desc="Epoch Progress"):
             epoch_start_time = time.time()  # Start time for the epoch
@@ -242,13 +221,6 @@ def train_model(
                 0.0  # Initialize running loss - for accumulating loss over batches
             )
             running_corrects = 0  # Initialize running correct predictions - for accumulating correct predictions
-
-            # Additional variables for tracking supervised and consistency losses separately
-            running_sup = 0.0
-            running_cons = 0.0
-            n_sup = 0
-            n_cons = 0
-            used_cons = 0
 
             # Timing variables - to measure data loading and model computation times
             data_loading_time = 0.0
@@ -272,54 +244,20 @@ def train_model(
 
                 t2 = time.time()  # Start time for model computation
                 ## forward ##
-                outputs = model(
-                    inputs
-                )  # Forward pass: compute predicted outputs by passing inputs to the model
-                _, preds = torch.max(
-                    outputs, 1
-                )  # Get the predicted class with the highest score
 
-                # Compute the loss using the criterion (e.g., CrossEntropyLoss)
-                loss_sup = criterion(outputs, labels)
-                loss = loss_sup
-
-                # stats for supervised part
-                running_sup += loss_sup.item() * inputs.size(0)
-                n_sup += inputs.size(0)
-
-                # ---- Consistency loss on previous cluster memory ----
-                if (
-                    teacher_model is not None
-                    and prev_iter is not None
-                    and lambda_cons > 0
-                ):
-                    prev_inputs, _ = next(prev_iter)
-                    prev_inputs = prev_inputs.to(device)
-
-                    # teacher predictions (no grad, teacher is eval)
-                    with torch.no_grad():
-                        teacher_logits = teacher_model(prev_inputs)
-
-                    # student predictions ON THE SAME prev_inputs, but without dropout noise
-                    was_training = model.training
-                    model.eval()
-                    student_logits = model(
-                        prev_inputs
-                    )  # gradients are ON (no no_grad here)
-                    model.train(was_training)
-
-                    loss_cons = F.kl_div(
-                        F.log_softmax(student_logits / T, dim=1),
-                        F.softmax(teacher_logits / T, dim=1),
-                        reduction="batchmean",
-                    ) * (T * T)
-
-                    # stats for consistency part
-                    running_cons += loss_cons.item() * prev_inputs.size(0)
-                    n_cons += prev_inputs.size(0)
-                    used_cons += 1
-
-                    loss = loss_sup + lambda_cons * loss_cons
+                # outputs = model(
+                #     inputs
+                # )  # Forward pass: compute predicted outputs by passing inputs to the model
+                # _, preds = torch.max(
+                #     outputs, 1
+                # )  # Get the predicted class with the highest score
+                # loss = criterion(
+                #     outputs, labels
+                # )  # Compute the loss between predicted outputs and true labels
+                outputs = model(inputs).squeeze(1)
+                probs = torch.sigmoid(outputs)
+                preds = (probs >= 0.5).long()
+                loss = criterion(probs, labels.float())
 
                 ## backward + optimize ##
                 loss.backward()  # Backward pass: compute gradient of the loss with respect to model parameters
@@ -338,18 +276,14 @@ def train_model(
 
             scheduler.step()  # Adjust learning rate according to the scheduler
 
-            epoch_sup = running_sup / max(1, n_sup)
-            epoch_cons = running_cons / max(1, n_cons) if n_cons > 0 else 0.0
-            epoch_loss = epoch_sup + lambda_cons * epoch_cons
-
-            epoch_acc = running_corrects / dataset_sizes["train"]
-
-            train_losses.append(epoch_loss)
-            train_accuracies.append(float(epoch_acc))
-
-            print(
-                f"[Train] sup={epoch_sup:.4f}, cons={epoch_cons:.4f}, total={epoch_loss:.4f}"
-            )
+            epoch_loss = (
+                running_loss / dataset_sizes["train"]
+            )  # Compute average loss for the epoch
+            epoch_acc = (
+                running_corrects / dataset_sizes["train"]
+            )  # Compute accuracy for the epoch
+            train_losses.append(epoch_loss)  # Store training loss
+            train_accuracies.append(float(epoch_acc))  # Store training accuracy
 
             print(
                 f"[Train] Data loading time: {data_loading_time:.2f}s, "
@@ -401,7 +335,7 @@ def train_model(
         print(f"Best val Acc: {best_acc:4f}")
 
         # load best model weights
-        model.load_state_dict(torch.load(best_model_params_path, weights_only=True))
+        model.load_state_dict(torch.load(best_model_params_path, weights_only=True)) 
 
         # -- Plots --
         if plots == True:
@@ -428,51 +362,8 @@ def train_model(
             plt.legend()
 
             plt.tight_layout()
-            plt.savefig(f"training_progress_no_reg.png")
+            plt.savefig(f"training_progress_MSE.png")
     return model
-
-
-### Feature extraction with partial fine-tuning
-# Freeze most of the network and fine-tune the last convolutional stage (stage4)
-# together with the final classification layer (fc)
-# model_conv = Convolutional feature extractor
-def create_model_and_optim_feature_extraction():
-    # Load a pre-trained ShuffleNet V2 model with weights trained on ImageNet
-    model_conv = torchvision.models.shufflenet_v2_x0_5(weights="IMAGENET1K_V1")
-    # Freeze all model parameters
-    # Then unfreeze stage4 and the final fully-connected layer for training
-    for param in model_conv.parameters():
-        param.requires_grad = False
-    for param in model_conv.stage4.parameters():
-        param.requires_grad = True
-    for param in model_conv.fc.parameters():
-        param.requires_grad = True
-
-    # Get the number of input features to the final fully-connected layer
-    num_ftrs = model_conv.fc.in_features
-    # Replace the final layer with a new one that has 2 output classes (e.g., class A and class B)
-    model_conv.fc = nn.Linear(num_ftrs, 2)
-
-    # Move the model to the appropriate device (GPU if available, else CPU)
-    model_conv = model_conv.to(device)
-
-    # Define the loss function: CrossEntropyLoss is standard for classification tasks
-    criterion = nn.CrossEntropyLoss()
-
-    # Define the optimizer – only parameters of stage4 and the final classifier (fc)
-    # are passed, since all other layers are frozen
-    optimizer_conv = optim.AdamW(
-        list(model_conv.stage4.parameters()) + list(model_conv.fc.parameters()),
-        lr=0.005,  # Learning rate for fine-tuning
-        weight_decay=0.01,  # L2 regularization to prevent overfitting
-    )
-
-    # Define a learning rate scheduler that decays the learning rate by a factor of 0.1 every 5 epochs
-    exp_lr_scheduler = lr_scheduler.StepLR(optimizer_conv, step_size=5, gamma=0.1)
-    return model_conv, criterion, optimizer_conv, exp_lr_scheduler
-
-
-##################################################################################################
 
 
 ### change all the layers - fine-tuning the whole model
@@ -491,26 +382,29 @@ def create_model_and_optim():
     # This means that during training, 50% and 30% of the neurons will be randomly set to zero
     # This helps the model generalize better by preventing it from relying too much on any single neuron
     # The final layer has 256 neurons followed by a ReLU activation function, and then another dropout layer
-    # Finally, the last layer outputs 2 classes (A and B)
+    # Finally, the last layer outputs 1 class (A or B)
     model_ft.fc = nn.Sequential(
-        nn.Dropout(p=0.5),
+        # nn.Dropout(p=0.5),
         nn.Linear(num_ftrs, 256),
         nn.ReLU(),
-        nn.Dropout(p=0.3),
-        nn.Linear(256, 2),
+        # nn.Dropout(p=0.3),
+        nn.Linear(256, 1),
     )
 
     # Move the model to the appropriate device (GPU if available, otherwise CPU)
     model_ft = model_ft.to(device)
 
     # Define the loss function: CrossEntropyLoss is standard for classification tasks
-    criterion = nn.CrossEntropyLoss()
+    # criterion = nn.CrossEntropyLoss()
+    criterion = nn.MSELoss()
 
     # Define the optimizer: here we're using AdamW with a small learning rate
     # This will update all model parameters during training
     # AdamW helps prevent overfitting through weight decay (L2 regularization)
     # weight_decay=0.01 adds a penalty to large weights in the loss function to encourage smaller weights and better generalization
-    optimizer_ft = optim.AdamW(model_ft.parameters(), lr=0.005, weight_decay=0.01)
+    optimizer_ft = optim.AdamW(
+        model_ft.parameters(), lr=0.005, weight_decay=0.0
+    )  # deleted weight_decay=0.01
 
     # Define a learning rate scheduler:
     # Every 5 epochs, reduce the learning rate by a factor of 0.1
@@ -536,9 +430,9 @@ if __name__ == "__main__":
         criterion,
         optimizer_ft,
         exp_lr_scheduler,
-        num_epochs=20,
+        num_epochs=10,
     )
 
     # Save the trained model parameters to a file
     # This allows us to load the model later without retraining
-    torch.save(model_ft.state_dict(), "model_ft_cl_0.pth")
+    torch.save(model_ft.state_dict(), "model_ft_0_MSE.pth")

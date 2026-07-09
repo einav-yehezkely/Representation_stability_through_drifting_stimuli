@@ -21,6 +21,31 @@ import os  # for file and directory operations
 from tempfile import TemporaryDirectory  # for creating temporary directories
 from tqdm import tqdm  # for progress bars
 
+from PIL import Image
+from torch.utils.data import Dataset, DataLoader
+from sklearn.model_selection import train_test_split
+
+class FilenameDataset(Dataset):
+    """
+    Dataset for loading images by filename. loads images from a specified directory using a list of filenames and their corresponding labels. Applies transformations to the images as specified.
+    """
+    
+    def __init__(self, filenames, labels, image_dir, transform):
+        self.filenames = filenames
+        self.labels = labels
+        self.image_dir = image_dir
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.filenames)
+
+    def __getitem__(self, idx):
+        img_path = os.path.join(self.image_dir, self.filenames[idx])
+        image = Image.open(img_path).convert("RGB")
+        image = self.transform(image)
+        label = self.labels[idx]
+        return image, label
+
 # Set up CUDA for GPU acceleration if available
 cudnn.benchmark = True
 plt.ion()  # Enables interactive plotting mode for real-time graph updates
@@ -84,6 +109,40 @@ def get_dataloaders(data_dir="split_data", batch_size=50):
     ].classes  # Get the class names (subfolder names)
     return dataloaders, dataset_sizes, class_names
 
+def get_dataloaders_from_lists(filenames, labels, image_dir="female_faces", batch_size=25):
+    """
+    Load datasets for training and validation from lists of filenames and labels, and create DataLoaders.
+    This function splits the provided filenames and labels into training and validation sets, creates custom datasets using the FilenameDataset class, and wraps them in DataLoaders for batch processing.
+    """
+    
+    train_files, val_files, train_labels, val_labels = train_test_split(
+        filenames,
+        labels,
+        train_size=0.8,
+        random_state=42,
+        stratify=labels if len(set(labels)) > 1 else None
+    )
+
+    image_datasets = {
+        "train": FilenameDataset(train_files, train_labels, image_dir, data_transforms["train"]),
+        "val": FilenameDataset(val_files, val_labels, image_dir, data_transforms["val"]),
+    }
+
+    dataloaders = {
+        x: DataLoader(
+            image_datasets[x],
+            batch_size=batch_size,
+            shuffle=True,
+            num_workers=0,
+            persistent_workers=False,
+        )
+        for x in ["train", "val"]
+    }
+
+    dataset_sizes = {x: len(image_datasets[x]) for x in ["train", "val"]}
+    class_names = ["A", "B"]
+
+    return dataloaders, dataset_sizes, class_names
 
 # Automatically sets the device to GPU if available (CUDA), or falls back to CPU
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -114,13 +173,13 @@ def evaluate(model, dataloader, criterion, device):
             device
         )  # Move data to the appropriate device
 
-        # outputs = model(inputs)  # Forward pass
-        # loss = criterion(outputs, labels)  # Compute loss
-        # _, preds = torch.max(outputs, 1)  # Get predicted classes
-        outputs = model(inputs).squeeze(1)
-        probs = torch.sigmoid(outputs)
-        loss = criterion(probs, labels.float())
-        preds = (probs >= 0.5).long()
+        outputs = model(inputs)  # Forward pass
+        loss = criterion(outputs, labels)  # Compute loss
+        _, preds = torch.max(outputs, 1)  # Get predicted classes
+        # outputs = model(inputs).squeeze(1)
+        # probs = torch.sigmoid(outputs)
+        # loss = criterion(probs, labels.float())
+        # preds = (probs >= 0.5).long()
 
         running_loss += loss.item() * inputs.size(0)  # Accumulate loss
         running_corrects += (
@@ -245,19 +304,19 @@ def train_model(
                 t2 = time.time()  # Start time for model computation
                 ## forward ##
 
-                # outputs = model(
-                #     inputs
-                # )  # Forward pass: compute predicted outputs by passing inputs to the model
-                # _, preds = torch.max(
-                #     outputs, 1
-                # )  # Get the predicted class with the highest score
-                # loss = criterion(
-                #     outputs, labels
-                # )  # Compute the loss between predicted outputs and true labels
-                outputs = model(inputs).squeeze(1)
-                probs = torch.sigmoid(outputs)
-                preds = (probs >= 0.5).long()
-                loss = criterion(probs, labels.float())
+                outputs = model(
+                    inputs
+                )  # Forward pass: compute predicted outputs by passing inputs to the model
+                _, preds = torch.max(
+                    outputs, 1
+                )  # Get the predicted class with the highest score
+                loss = criterion(
+                    outputs, labels
+                )  # Compute the loss between predicted outputs and true labels
+                # outputs = model(inputs).squeeze(1)
+                # probs = torch.sigmoid(outputs)
+                # preds = (probs >= 0.5).long()
+                # loss = criterion(probs, labels.float())
 
                 ## backward + optimize ##
                 loss.backward()  # Backward pass: compute gradient of the loss with respect to model parameters
@@ -335,7 +394,8 @@ def train_model(
         print(f"Best val Acc: {best_acc:4f}")
 
         # load best model weights
-        model.load_state_dict(torch.load(best_model_params_path, weights_only=True))
+        # model.load_state_dict(torch.load(best_model_params_path, weights_only=True)) 
+        # so now that we commented out the model.load_state_dict line, the model will be left with the parameters from the last epoch, not the best epoch.
 
         # -- Plots --
         if plots == True:
@@ -362,9 +422,85 @@ def train_model(
             plt.legend()
 
             plt.tight_layout()
-            plt.savefig(f"training_progress_MSE.png")
+            plt.savefig(f"training_progress_CE.png")
     return model
 
+
+def train_model_fast_for_self_training(
+    model,
+    dataloaders,
+    dataset_sizes,
+    criterion,
+    optimizer,
+    scheduler,
+    num_epochs=1,
+):
+    """
+    A faster version of the train_model function that only trains for a few epochs without evaluating on the validation set or recalculating training performance in evaluation mode. This is useful for quickly generating predictions for self-training or pseudo-labeling without the overhead of tracking performance metrics or saving the best model.
+    The evaluation and tracking of training/validation performance is skipped to save time, making this function suitable for scenarios where the primary goal is to quickly update the model parameters rather than monitor training progress or select the best model based on validation accuracy.
+    """
+    
+    since = time.time()
+
+    for epoch in range(num_epochs):
+        epoch_start_time = time.time()
+
+        model.train()
+        running_loss = 0.0
+        running_corrects = 0
+        data_loading_time = 0.0
+        forward_backward_time = 0.0
+
+        t0 = time.time()
+
+        for inputs, labels in dataloaders["train"]:
+            t1 = time.time()
+            data_loading_time += t1 - t0
+
+            inputs = inputs.to(device)
+            labels = labels.to(device)
+
+            optimizer.zero_grad()
+
+            t2 = time.time()
+
+            # outputs = model(inputs).squeeze(1)
+            # probs = torch.sigmoid(outputs)
+            # preds = (probs >= 0.5).long()
+            # loss = criterion(probs, labels.float())
+
+            outputs = model(inputs)
+            loss = criterion(outputs, labels)
+            _, preds = torch.max(outputs, 1)
+
+            loss.backward()
+            optimizer.step()
+
+            t3 = time.time()
+            forward_backward_time += t3 - t2
+
+            running_loss += loss.item() * inputs.size(0)
+            running_corrects += (preds == labels).sum().item()
+
+            t0 = time.time()
+
+        scheduler.step()
+
+        epoch_loss = running_loss / dataset_sizes["train"]
+        epoch_acc = running_corrects / dataset_sizes["train"]
+
+        epoch_total_time = time.time() - epoch_start_time
+
+        print(
+            f"[Train fast] Loss: {epoch_loss:.4f} Acc: {epoch_acc:.4f} | "
+            f"Data: {data_loading_time:.2f}s | "
+            f"Compute: {forward_backward_time:.2f}s | "
+            f"Total: {epoch_total_time:.2f}s"
+        )
+
+    print(f"Fast training completed in {time.time() - since:.2f}s")
+
+    return model
 
 ### change all the layers - fine-tuning the whole model
 # Load a pre-trained ShuffleNet V2 (x0.5) model with weights trained on ImageNet
@@ -382,13 +518,13 @@ def create_model_and_optim():
     # This means that during training, 50% and 30% of the neurons will be randomly set to zero
     # This helps the model generalize better by preventing it from relying too much on any single neuron
     # The final layer has 256 neurons followed by a ReLU activation function, and then another dropout layer
-    # Finally, the last layer outputs 1 class (A or B)
+    # Finally, the last layer outputs logits for the two classes (A and B)
     model_ft.fc = nn.Sequential(
-        # nn.Dropout(p=0.5),
+        nn.Dropout(p=0.5),
         nn.Linear(num_ftrs, 256),
         nn.ReLU(),
-        # nn.Dropout(p=0.3),
-        nn.Linear(256, 1),
+        nn.Dropout(p=0.3),
+        nn.Linear(256, 2),
     )
 
     # Move the model to the appropriate device (GPU if available, otherwise CPU)
@@ -396,15 +532,15 @@ def create_model_and_optim():
 
     # Define the loss function: CrossEntropyLoss is standard for classification tasks
     # criterion = nn.CrossEntropyLoss()
-    criterion = nn.MSELoss()
+    criterion = nn.CrossEntropyLoss()  # For multi-class classification (A vs B)
 
     # Define the optimizer: here we're using AdamW with a small learning rate
     # This will update all model parameters during training
     # AdamW helps prevent overfitting through weight decay (L2 regularization)
     # weight_decay=0.01 adds a penalty to large weights in the loss function to encourage smaller weights and better generalization
     optimizer_ft = optim.AdamW(
-        model_ft.parameters(), lr=0.005, weight_decay=0.0
-    )  # deleted weight_decay=0.01
+        model_ft.parameters(), lr=0.005, weight_decay=0.1
+    )
 
     # Define a learning rate scheduler:
     # Every 5 epochs, reduce the learning rate by a factor of 0.1
@@ -435,4 +571,24 @@ if __name__ == "__main__":
 
     # Save the trained model parameters to a file
     # This allows us to load the model later without retraining
-    torch.save(model_ft.state_dict(), "model_ft_0_MSE.pth")
+    torch.save(model_ft.state_dict(), "model_ft_0_CE.pth")
+
+    
+    print("\nChecking saved model...\n")
+
+    train_loss, train_acc = evaluate(
+        model_ft,
+        dataloaders["train"],
+        criterion,
+        device,
+    )
+
+    val_loss, val_acc = evaluate(
+        model_ft,
+        dataloaders["val"],
+        criterion,
+        device,
+    )
+
+    print(f"TRAIN accuracy = {train_acc*100:.2f}%")
+    print(f"VAL accuracy   = {val_acc*100:.2f}%")

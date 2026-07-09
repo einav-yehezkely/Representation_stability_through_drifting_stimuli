@@ -17,7 +17,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-path = "male_facenet_embeddings.csv"  # Path to the data file
+path = "female_facenet_embeddings.csv"  # Path to the data file
 
 
 # Load the data
@@ -173,22 +173,22 @@ eigenvalues_df = pd.DataFrame(
 
 # compute squared radius for the rest of the components
 squared_radius_rest = np.sum(X_projected_rest**2, axis=1)
-# Select 10% of vectors with smallest squared radius — most similar in non-dominant components
-threshold_sq = np.percentile(squared_radius_rest, 10)
+# Select 20% of vectors with smallest squared radius — most similar in non-dominant components
+threshold_sq = np.percentile(squared_radius_rest, 20)
 mask_sq = squared_radius_rest <= threshold_sq
-# Apply the mask to get only the 10% most similar vectors in the residual space
+# Apply the mask to get only the 20% most similar vectors in the residual space
 similar_vectors_rest = X_projected_rest[mask_sq]
 
 rest_cols = [f"PC{i}" for i in range(3, k_95 + 1)]
 df_similar_vectors = pd.DataFrame(similar_vectors_rest, columns=rest_cols)
 df_similar_vectors.insert(0, "filename", np.array(names)[mask_sq])
-# df_similar_vectors.to_csv("pca_rest_vectors_10_percent.csv", index=False)
+# df_similar_vectors.to_csv("pca_rest_vectors_20_percent.csv", index=False)
 # print(
-#     "Saved 10% of images with smallest squared radius in residual PCA space to pca_rest_vectors_5_percent.csv"
+#     "Saved 20% of images with smallest squared radius in residual PCA space to pca_rest_vectors_20_percent.csv"
 # )
 
 df_top2_filtered = df_top2[mask_sq]
-df_top2_filtered.to_csv("pca_top2_filtered_male.csv", index=False, header=False)
+df_top2_filtered.to_csv("pca_top2_filtered_female_20_percent.csv", index=False, header=False)
 print(
-    "Saved filtered projection (PC1, PC2) of 10% most similar images to pca_top2_filtered.csv"
+    "Saved filtered projection (PC1, PC2) of 20% most similar images to pca_top2_filtered_female_20_percent.csv"
 )
