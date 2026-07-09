@@ -14,6 +14,7 @@ from matplotlib.patches import Circle
 import time
 import torch.optim as optim
 from torch.optim import lr_scheduler
+import sys
 
 BASE_DIR = "tmp_CE"
 os.makedirs(BASE_DIR, exist_ok=True)
@@ -21,11 +22,24 @@ os.makedirs(BASE_DIR, exist_ok=True)
 OUTPUT_DIR = "output_CE"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
+
 PCA_DF = pd.read_csv("pca_top2_filtered_female.csv", header=None)
 PCA_DF.columns = ["filename", "x", "y"]
 PCA_DF["angle_deg"] = np.degrees(np.arctan2(PCA_DF["y"], PCA_DF["x"])) % 360
 ANGLE_MAP = dict(zip(PCA_DF["filename"], PCA_DF["angle_deg"]))
 
+class Tee:
+    def __init__(self, *files):
+        self.files = files
+
+    def write(self, obj):
+        for f in self.files:
+            f.write(obj)
+            f.flush()
+
+    def flush(self):
+        for f in self.files:
+            f.flush()
 
 def inside_tmp(*paths):
     """Return a path inside the BASE_DIR (tmp)."""
@@ -43,6 +57,9 @@ LINEAR_DIR = inside_output("linear_frames")
 os.makedirs(SCATTER_DIR, exist_ok=True)
 os.makedirs(LINEAR_DIR, exist_ok=True)
 
+log_file = open(inside_output("output.txt"), "w", encoding="utf-8")
+sys.stdout = Tee(sys.stdout, log_file)
+sys.stderr = Tee(sys.stderr, log_file)
 
 def load_top2_filtered(csv_path="pca_top2_filtered_female.csv"):
     """
@@ -1059,14 +1076,45 @@ def compute_cluster_classification_errors(model, iteration, angle):
         "correct_B_count": correct_B_count,
     }
 
+def estimate_model_angle_from_predictions():
+    pred_a = safe_read_filenames(inside_tmp("predicted_as_A.csv"))
+    pred_b = safe_read_filenames(inside_tmp("predicted_as_B.csv"))
+
+    df_a = pd.DataFrame({"filename": pred_a, "pred": 0})
+    df_b = pd.DataFrame({"filename": pred_b, "pred": 1})
+    df = pd.concat([df_a, df_b], ignore_index=True)
+
+    df["angle_deg"] = df["filename"].map(ANGLE_MAP)
+    df = df.dropna(subset=["angle_deg"]).sort_values("angle_deg")
+
+    if len(df) == 0:
+        return np.nan
+
+    preds = df["pred"].values
+    angles = df["angle_deg"].values
+
+    changes = np.where(preds[:-1] != preds[1:])[0]
+
+    if len(changes) == 0:
+        return np.nan
+
+    idx = changes[0]
+    boundary_angle = (angles[idx] + angles[idx + 1]) / 2
+
+    model_angle = (boundary_angle - 90) % 360
+
+    return model_angle
+
 
 if __name__ == "__main__":
 
     UNSUPERVISED = True
     ROTATION_DEGS = 0.5
-    NUM_ITERATIONS = 720
-    NUM_EPOCHS = 4
+    NUM_ITERATIONS = 200
+    NUM_EPOCHS = 1
     PLOT_EVERY = 10
+    NUM_OF_IMAGES_PER_CLUSTER = 200
+    LR = 0.001
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -1077,7 +1125,7 @@ if __name__ == "__main__":
 
     optimizer_ft = optim.Adam(
         self_training_model.parameters(),
-        lr=0.0001,
+        lr=LR,
     )
     # Generate rotation sequence
     rotation_seq, _ = generate_rotation_sequence(
@@ -1096,7 +1144,7 @@ if __name__ == "__main__":
 
     cluster_concentration = []
     training_log = []
-    # classification_error_log = []
+    angle_tracking_log = []
 
     start = time.time()
     for i in range(
@@ -1105,10 +1153,10 @@ if __name__ == "__main__":
         angle_deg = (i * ROTATION_DEGS) % 360
 
         collect_nearest_images(
-            base_point, points, names, output_dir=inside_tmp("A"), k=200
+            base_point, points, names, output_dir=inside_tmp("A"), k=NUM_OF_IMAGES_PER_CLUSTER
         )
         collect_nearest_images(
-            opposite_point, points, names, output_dir=inside_tmp("B"), k=200
+            opposite_point, points, names, output_dir=inside_tmp("B"), k=NUM_OF_IMAGES_PER_CLUSTER
         )
         # now we have two directories: A and B with 200 images each from opposite clusters
         if UNSUPERVISED:
@@ -1199,6 +1247,14 @@ if __name__ == "__main__":
 
             print("Classified rotation sequence.")
             print(f"rotation sequence classification time: {time.time()-t:.2f}s")
+
+            model_angle = estimate_model_angle_from_predictions()
+
+            angle_tracking_log.append({
+                "iteration": i,
+                "example_angle": angle_deg,
+                "model_angle": model_angle,
+            })
             
 
             if UNSUPERVISED:
@@ -1213,6 +1269,7 @@ if __name__ == "__main__":
             angle=angle_deg,
             iteration=i,
             cluster_concentration=cluster_concentration,
+            k_eval=NUM_OF_IMAGES_PER_CLUSTER
         )
 
         print(f"Concentration time: {time.time()-t:.2f}s")
@@ -1257,6 +1314,25 @@ if __name__ == "__main__":
 
     changed_csv, summary = save_label_change_csvs(inside_output("training_log.csv"))
 
+    df_angles = pd.DataFrame(angle_tracking_log)
+    df_angles.to_csv(inside_output("angle_tracking_log.csv"), index=False)
+
+    plt.figure(figsize=(10, 5))
+    plt.plot(df_angles["iteration"], df_angles["example_angle"], label="examples")
+    plt.plot(df_angles["iteration"], df_angles["model_angle"], "r", label="weights / model")
+
+    plt.xlabel("iteration")
+    plt.ylabel("angle")
+    plt.legend()
+    plt.title(f"rotation tracking, step={ROTATION_DEGS} degs/iteration")
+    plt.grid(True)
+    plt.tight_layout()
+    plt.savefig(inside_output("angle_tracking_graph.png"), dpi=300)
+    plt.close()
+
+
     torch.save(
         self_training_model.state_dict(), inside_output("model_self_trained.pth")
     )
+
+    log_file.close()
