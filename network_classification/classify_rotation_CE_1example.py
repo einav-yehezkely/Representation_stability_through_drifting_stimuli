@@ -9,7 +9,7 @@ import shutil
 from sklearn.model_selection import train_test_split
 import torch.nn as nn
 from tqdm import tqdm
-from shufflenet_v2_x0_5_CE_last_epoch import train_model, get_dataloaders, create_model_and_optim, get_dataloaders_from_lists, train_model_fast_for_self_training
+from shufflenet_v2_x0_5_CE_linear import train_model, get_dataloaders, create_model_and_optim, get_dataloaders_from_lists, train_model_fast_for_self_training
 from matplotlib.patches import Circle
 import time
 import torch.optim as optim
@@ -204,12 +204,17 @@ def load_model(model_path="model_ft_0_CE.pth"):
     """
     model = models.shufflenet_v2_x0_5(weights=None)
     num_ftrs = model.fc.in_features
-    model.fc = nn.Sequential(
-        nn.Dropout(p=0.5),
-        nn.Linear(num_ftrs, 256),
-        nn.ReLU(),
-        nn.Dropout(p=0.3),
-        nn.Linear(256, 2),
+    # model.fc = nn.Sequential(
+    #     nn.Dropout(p=0.5),
+    #     nn.Linear(num_ftrs, 256),
+    #     nn.ReLU(),
+    #     nn.Dropout(p=0.3),
+    #     nn.Linear(256, 2),
+    # )
+    model.fc = nn.Linear(
+        num_ftrs,
+        1,
+        bias=False,
     )
     model.load_state_dict(torch.load(model_path, map_location=device))
     model.eval()
@@ -260,11 +265,10 @@ def classify_images(model, csv_path, clusters=False):
         input_tensor = transform(image).unsqueeze(0).to(device)
 
         with torch.no_grad():
-            output = model(input_tensor)
-            probs = torch.softmax(output, dim=1)
-            prob_a = probs[0, 0].item()
-            prob_b = probs[0, 1].item()
-            pred = output.argmax(dim=1).item()
+            logit = model(input_tensor).squeeze()
+            prob_b = torch.sigmoid(logit).item()
+            prob_a = 1.0 - prob_b
+            pred = 1 if logit.item() >= 0 else 0
 
         # Track predictions
         if pred == 0:
@@ -388,12 +392,18 @@ def process_classification_batch(
 ):
     batch = torch.stack(batch_tensors).to(device)
 
-    outputs = model(batch)
-    probs = torch.softmax(outputs, dim=1)
-    preds = outputs.argmax(dim=1)
+    # outputs = model(batch)
+    # probs = torch.softmax(outputs, dim=1)
+    # preds = outputs.argmax(dim=1)
 
-    for row, prob, pred in zip(batch_rows, probs, preds):
-        prob_a = prob[0].item()
+
+    logits = model(batch).squeeze(1)
+    prob_B = torch.sigmoid(logits)
+    prob_A = 1.0 - prob_B
+    preds = (logits >= 0).long()
+
+    for row, prob_a, pred in zip(batch_rows, prob_A, preds):
+        prob_a = prob_a.item()
         pred = pred.item()
 
         if pred == 0:
@@ -694,8 +704,8 @@ def percent_predicted_as_filenames(
         x = transform(img).unsqueeze(0).to(device)
 
         with torch.no_grad():
-            output = model(x)
-            pred = output.argmax(dim=1).item()
+            logit = model(x).squeeze().item()
+            pred = 1 if logit >= 0 else 0
 
         count_target += int(pred == target_pred)
         total += 1
@@ -737,8 +747,8 @@ def percent_predicted_as_filenames_batched(
             if len(batch_tensors) == batch_size:
                 batch = torch.stack(batch_tensors).to(device)
 
-                outputs = model(batch)
-                preds = outputs.argmax(dim=1)
+                logits = model(batch).squeeze(1)
+                preds = (logits >= 0).long()
 
                 count_target += (preds == target_pred).sum().item()
                 total += len(batch_tensors)
@@ -748,8 +758,8 @@ def percent_predicted_as_filenames_batched(
         if len(batch_tensors) > 0:
             batch = torch.stack(batch_tensors).to(device)
 
-            outputs = model(batch)
-            preds = outputs.argmax(dim=1)
+            logits = model(batch).squeeze(1)
+            preds = (logits >= 0).long()
 
             count_target += (preds == target_pred).sum().item()
             total += len(batch_tensors)
@@ -758,49 +768,41 @@ def percent_predicted_as_filenames_batched(
     return percent, total
 
 def compute_cluster_concentration(
-    angle, iteration, cluster_concentration=None, k_eval=100
+    angle,
+    iteration,
+    base_point,
+    opposite_point,
+    all_points,
+    all_names,
+    cluster_concentration=None,
+    k_eval=100,
 ):
-    """
-    Evaluate the current trained classifier after clustering-based training.
-
-    Measures:
-      - Among the k_eval images closest to the current A angle,
-        what percentage is classified as A by the final sigmoid classifier.
-      - Among the k_eval images closest to the opposite B angle,
-        what percentage is classified as B by the final sigmoid classifier.
-
-    Note:
-    The model was trained using clustering-based pseudo-labels,
-    but this function evaluates the final binary classifier output.
-    """
     if cluster_concentration is None:
         cluster_concentration = []
 
-    a_csv = inside_tmp("filenames_A.csv")  # 1000
-    b_csv = inside_tmp("filenames_B.csv")  # 1000
+    # Select a separate, larger evaluation set.
+    dists_A = np.linalg.norm(all_points - base_point, axis=1)
+    dists_B = np.linalg.norm(all_points - opposite_point, axis=1)
 
-    if not (os.path.exists(a_csv) and os.path.exists(b_csv)):
-        print("Warning: filenames_A/B.csv not found. Skipping.")
-        return cluster_concentration
+    idx_A = np.argsort(dists_A)[:k_eval]
+    idx_B = np.argsort(dists_B)[:k_eval]
 
-    dfA = pd.read_csv(a_csv)
-    dfB = pd.read_csv(b_csv)
-
-    opposite_angle = (angle + 180) % 360
-
-    # pick only k_eval closest-by-angle within each 1000 cluster
-    eval_A_filenames = take_k_closest_to_angle(dfA["filename"].tolist(), angle, k_eval)
-    eval_B_filenames = take_k_closest_to_angle(
-        dfB["filename"].tolist(), opposite_angle, k_eval
-    )
+    eval_A_filenames = all_names[idx_A].tolist()
+    eval_B_filenames = all_names[idx_B].tolist()
 
     pct_A_in_A, nA = percent_predicted_as_filenames_batched(
-        self_training_model, eval_A_filenames, target_pred=0
+        self_training_model,
+        eval_A_filenames,
+        target_pred=0,
     )
 
     pct_B_in_B, nB = percent_predicted_as_filenames_batched(
-        self_training_model, eval_B_filenames, target_pred=1
+        self_training_model,
+        eval_B_filenames,
+        target_pred=1,
     )
+
+    opposite_angle = (angle + 180) % 360
 
     cluster_concentration.append(
         {
@@ -817,9 +819,9 @@ def compute_cluster_concentration(
 
     print(
         f"Iter {iteration}: classifier predicts A for {pct_A_in_A:.1f}% "
-        f"of {k_eval} images near {angle:.1f}° (n={nA}), "
+        f"of {nA} evaluation images near {angle:.1f}°, "
         f"and predicts B for {pct_B_in_B:.1f}% "
-        f"of {k_eval} images near {opposite_angle:.1f}° (n={nB})"
+        f"of {nB} evaluation images near {opposite_angle:.1f}°"
     )
 
     return cluster_concentration
@@ -1113,22 +1115,30 @@ if __name__ == "__main__":
     NUM_ITERATIONS = 200
     NUM_EPOCHS = 1
     PLOT_EVERY = 10
-    NUM_OF_IMAGES_PER_CLUSTER = 50
-    LR = 0.001
-    WEIGHT_DECAY = 1e-4
+    NUM_OF_IMAGES_PER_CLUSTER = 1
+    LR = 0.1
+    WEIGHT_DECAY = 0.5
     K_EVAL = 100 # number of images to evaluate cluster concentration on
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     names, points = load_top2_filtered("pca_top2_filtered_female.csv")
     base_point, opposite_point = create_base_and_opposite_points(0,csv_path="pca_top2_filtered_female.csv")
-    self_training_model = load_model(model_path="model_ft_0_CE.pth")
+    self_training_model = load_model(model_path="model_ft_0_BCE_no_bias.pth")
     self_training_model = self_training_model.to(device)
 
+    for param in self_training_model.parameters():
+        param.requires_grad = False
+
+
+    for param in self_training_model.fc.parameters():
+        param.requires_grad = True
+
     optimizer_ft = optim.SGD(
-        self_training_model.parameters(),
+        self_training_model.fc.parameters(),
         lr=LR,
-        weight_decay=WEIGHT_DECAY
+        weight_decay=WEIGHT_DECAY,
+        momentum=0.0,
     )
     # Generate rotation sequence
     rotation_seq, _ = generate_rotation_sequence(
@@ -1161,7 +1171,7 @@ if __name__ == "__main__":
         collect_nearest_images(
             opposite_point, points, names, output_dir=inside_tmp("B"), k=NUM_OF_IMAGES_PER_CLUSTER
         )
-        # now we have two directories: A and B with 200 images each from opposite clusters
+        # now we have two directories: A and B with NUM_OF_IMAGES_PER_CLUSTER images each from opposite clusters
         if UNSUPERVISED:
             merge_clusters()
             t = time.time()
@@ -1169,7 +1179,7 @@ if __name__ == "__main__":
                 self_training_model,
                 inside_tmp("filenames_merged.csv"),
                 clusters=True,
-                batch_size=50,
+                batch_size=2,
             )
 
             print("Classified images in clusters A and B.")
@@ -1205,10 +1215,10 @@ if __name__ == "__main__":
             filenames,
             labels,
             image_dir="female_faces",
-            batch_size=100,
+            batch_size=2,
         )
         ################
-        criterion = nn.CrossEntropyLoss()
+        criterion = nn.BCEWithLogitsLoss()
         exp_lr_scheduler = lr_scheduler.StepLR(
             optimizer_ft, step_size=5, gamma=1
         )  # gamma=0.1, right now no LR decay
@@ -1271,8 +1281,12 @@ if __name__ == "__main__":
         cluster_concentration = compute_cluster_concentration(
             angle=angle_deg,
             iteration=i,
+            base_point=base_point,
+            opposite_point=opposite_point,
+            all_points=points,
+            all_names=names,
             cluster_concentration=cluster_concentration,
-            k_eval=K_EVAL
+            k_eval=K_EVAL,
         )
 
         print(f"Concentration time: {time.time()-t:.2f}s")
@@ -1316,22 +1330,6 @@ if __name__ == "__main__":
     pd.DataFrame(training_log).to_csv(inside_output("training_log.csv"), index=False)
 
     changed_csv, summary = save_label_change_csvs(inside_output("training_log.csv"))
-
-    df_angles = pd.DataFrame(angle_tracking_log)
-    df_angles.to_csv(inside_output("angle_tracking_log.csv"), index=False)
-
-    plt.figure(figsize=(10, 5))
-    plt.plot(df_angles["iteration"], df_angles["example_angle"], label="examples")
-    plt.plot(df_angles["iteration"], df_angles["model_angle"], "r", label="weights / model")
-
-    plt.xlabel("iteration")
-    plt.ylabel("angle")
-    plt.legend()
-    plt.title(f"rotation tracking, step={ROTATION_DEGS} degs/iteration")
-    plt.grid(True)
-    plt.tight_layout()
-    plt.savefig(inside_output("angle_tracking_graph.png"), dpi=300)
-    plt.close()
 
 
     torch.save(

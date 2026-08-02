@@ -179,9 +179,12 @@ def evaluate(model, dataloader, criterion, device):
             device
         )  # Move data to the appropriate device
 
-        outputs = model(inputs)  # Forward pass
-        loss = criterion(outputs, labels)  # Compute loss
-        _, preds = torch.max(outputs, 1)  # Get predicted classes
+        outputs = model(inputs).squeeze(1)
+        loss = criterion(outputs, labels.float())
+        preds = (outputs >= 0).long()
+        # outputs = model(inputs)  # Forward pass
+        # loss = criterion(outputs, labels)  # Compute loss
+        # _, preds = torch.max(outputs, 1)  # Get predicted classes
         # outputs = model(inputs).squeeze(1)
         # probs = torch.sigmoid(outputs)
         # loss = criterion(probs, labels.float())
@@ -310,19 +313,22 @@ def train_model(
                 t2 = time.time()  # Start time for model computation
                 ## forward ##
 
-                outputs = model(
-                    inputs
-                )  # Forward pass: compute predicted outputs by passing inputs to the model
-                _, preds = torch.max(
-                    outputs, 1
-                )  # Get the predicted class with the highest score
-                loss = criterion(
-                    outputs, labels
-                )  # Compute the loss between predicted outputs and true labels
+                # outputs = model(
+                #     inputs
+                # )  # Forward pass: compute predicted outputs by passing inputs to the model
+                # _, preds = torch.max(
+                #     outputs, 1
+                # )  # Get the predicted class with the highest score
+                # loss = criterion(
+                #     outputs, labels
+                # )  # Compute the loss between predicted outputs and true labels
                 # outputs = model(inputs).squeeze(1)
                 # probs = torch.sigmoid(outputs)
                 # preds = (probs >= 0.5).long()
                 # loss = criterion(probs, labels.float())
+                outputs = model(inputs).squeeze(1)
+                loss = criterion(outputs, labels.float())
+                preds = (outputs >= 0).long()
 
                 ## backward + optimize ##
                 loss.backward()  # Backward pass: compute gradient of the loss with respect to model parameters
@@ -475,9 +481,13 @@ def train_model_fast_for_self_training(
             # preds = (probs >= 0.5).long()
             # loss = criterion(probs, labels.float())
 
-            outputs = model(inputs)
-            loss = criterion(outputs, labels)
-            _, preds = torch.max(outputs, 1)
+            # outputs = model(inputs)
+            # loss = criterion(outputs, labels)
+            # _, preds = torch.max(outputs, 1)
+
+            outputs = model(inputs).squeeze(1)
+            loss = criterion(outputs, labels.float())
+            preds = (outputs >= 0).long()
 
             loss.backward()
             optimizer.step()
@@ -508,6 +518,10 @@ def train_model_fast_for_self_training(
 
     return model
 
+
+
+
+
 ### change all the layers - fine-tuning the whole model
 # Load a pre-trained ShuffleNet V2 (x0.5) model with weights trained on ImageNet
 # This gives us a strong starting point instead of training from scratch
@@ -525,20 +539,22 @@ def create_model_and_optim():
     # This helps the model generalize better by preventing it from relying too much on any single neuron
     # The final layer has 256 neurons followed by a ReLU activation function, and then another dropout layer
     # Finally, the last layer outputs logits for the two classes (A and B)
-    model_ft.fc = nn.Sequential(
-        nn.Dropout(p=0.5),
-        nn.Linear(num_ftrs, 256),
-        nn.ReLU(),
-        nn.Dropout(p=0.3),
-        nn.Linear(256, 2),
-    )
+    # model_ft.fc = nn.Sequential(
+    #     nn.Dropout(p=0.5),
+    #     nn.Linear(num_ftrs, 256),
+    #     nn.ReLU(),
+    #     nn.Dropout(p=0.3),
+    #     nn.Linear(256, 2),
+    # )
+
+    model_ft.fc = nn.Linear(num_ftrs, 1, bias=False)
 
     # Move the model to the appropriate device (GPU if available, otherwise CPU)
     model_ft = model_ft.to(device)
 
     # Define the loss function: CrossEntropyLoss is standard for classification tasks
     # criterion = nn.CrossEntropyLoss()
-    criterion = nn.CrossEntropyLoss()  # For multi-class classification (A vs B)
+    criterion = nn.BCEWithLogitsLoss()  # For binary classification (A vs B)
 
     # Define the optimizer: here we're using AdamW with a small learning rate
     # This will update all model parameters during training
@@ -577,7 +593,7 @@ if __name__ == "__main__":
 
     # Save the trained model parameters to a file
     # This allows us to load the model later without retraining
-    torch.save(model_ft.state_dict(), "model_ft_0_CE.pth")
+    torch.save(model_ft.state_dict(), "model_ft_0_BCE_no_bias.pth")
 
     
     print("\nChecking saved model...\n")
