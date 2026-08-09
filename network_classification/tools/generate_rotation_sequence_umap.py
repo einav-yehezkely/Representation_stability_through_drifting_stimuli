@@ -33,7 +33,8 @@ def load_top2_filtered(csv_path="pca_top2_filtered_female.csv"):
     but also have low variance in the remaining PCA dimensions (i.e., their radius in the residual components is small).
     This ensures that proximity in 2D reflects real similarity in the full FaceNet space.
     """
-    df = pd.read_csv(csv_path, header=None)
+    # df = pd.read_csv(csv_path, header=None)
+    df = pd.read_csv(csv_path, header=0)
     names = df.iloc[:, 0].values
     x = df.iloc[:, 1].values
     y = df.iloc[:, 2].values
@@ -348,38 +349,44 @@ def plot_two_rotation_paths_fixed_color(
 
 
 # Load data
-names, points = load_top2_filtered("pca_top2_filtered_female.csv")
+# names, points = load_top2_filtered("pca_top2_filtered_female.csv")
 
-# Base and opposite points
-base_idx = 0
-base_point = points[base_idx]
-opposite_point = -base_point
+names, points = load_top2_filtered("shufflenet_umap.csv")
 
-# Compute angles (in radians) of each point from the origin
-angles = np.arctan2(points[:, 1], points[:, 0])
+# Center UMAP points around their centroid.
+# UMAP does not place the data centroid at the origin, so -base_point would
+# point to an arbitrary location rather than to the true opposite pole.
+centroid = points.mean(axis=0)
+points_c = points - centroid   # centered coordinates
 
-# Convert angles from radians to degrees, now in range [-180, 180]
-angles_deg = np.degrees(angles)
-# Shift all angles to be in the range [0, 360)
-angles_deg = (angles_deg + 360) % 360
-
-radii = np.linalg.norm(points, axis=1)
+# Compute polar coordinates in the centered space
+angles = np.arctan2(points_c[:, 1], points_c[:, 0])
+angles_deg = (np.degrees(angles) + 360) % 360
+radii = np.linalg.norm(points_c, axis=1)
 
 # Define the target angle in degrees
 target_angle = 0
 
-target_radius = 0.45
+# Auto-scale radius to the spread of this UMAP layout (50th percentile = median)
+target_radius = np.percentile(radii, 50)
 
 angle_error = np.abs(angles_deg - target_angle)
 radius_error = np.abs(radii - target_radius)
 combined_error = angle_error + radius_error * 100
 
-# Find the index of the point whose angle is closest to the target angle
+# Find the index of the point closest to the target angle and radius
 base_idx = np.argmin(combined_error)
-# Retrieve the actual 2D PCA coordinates of the selected base point
-base_point = points[base_idx]
+base_point   = points[base_idx]    # original UMAP coordinates
+base_point_c = points_c[base_idx]  # centered
 
-opposite_point = -base_point
+# Opposite: real data point closest to the antipodal direction in centered space
+opp_dists = np.linalg.norm(points_c - (-base_point_c), axis=1)
+opp_idx = np.argmin(opp_dists)
+opposite_point = points[opp_idx]
+
+print(f"Base point     (UMAP): {base_point}")
+print(f"Opposite point (UMAP): {opposite_point}")
+print(f"Distance between cluster centers: {np.linalg.norm(base_point - opposite_point):.4f}")
 
 
 # save clusters of k=1000 points around base and opposite points

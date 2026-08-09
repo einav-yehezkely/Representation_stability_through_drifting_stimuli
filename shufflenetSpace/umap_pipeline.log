@@ -1,0 +1,16 @@
+15:14:09  INFO     ============================================================
+15:14:09  INFO       PCA pre-reduce : 50 dims
+15:14:09  INFO       UMAP n_neighbors: 15
+15:14:09  INFO       UMAP min_dist   : 0.10
+15:14:09  INFO       UMAP metric     : cosine
+15:14:09  INFO     ============================================================
+15:14:09  INFO     Loading cached embeddings from shufflenet_embeddings.csv …
+15:14:22  INFO     Loaded 118165 embeddings  |  dim=1024
+15:14:27  INFO     PCA pre-reduction done  |  cumulative variance retained: 0.6364
+15:14:27  INFO     Running UMAP  |  n_neighbors=15  min_dist=0.10  metric=cosine  input_shape=(118165, 50) …
+15:16:05  INFO     UMAP done  |  output shape: (118165, 2)
+15:16:05  INFO     Saved: shufflenet_umap.csv  (118165 rows)
+15:16:06  INFO     Saved: shufflenet_umap.png
+15:16:06  INFO     ============================================================
+15:16:06  INFO     Done. Outputs in: C:\Users\einav\clone_here\Representation_stability_through_drifting_stimuli\shufflenetSpace
+15:16:06  INFO     ============================================================

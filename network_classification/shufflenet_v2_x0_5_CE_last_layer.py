@@ -516,6 +516,10 @@ def create_model_and_optim():
         weights="IMAGENET1K_V1"
     )  # model_ft = Fine-Tuned Model
 
+    # Freeze ALL pretrained layers
+    for param in model_ft.parameters():
+        param.requires_grad = False
+
     # Get the number of input features to the final (fully connected) layer
     num_ftrs = model_ft.fc.in_features
 
@@ -545,7 +549,7 @@ def create_model_and_optim():
     # AdamW helps prevent overfitting through weight decay (L2 regularization)
     # weight_decay=0.01 adds a penalty to large weights in the loss function to encourage smaller weights and better generalization
     optimizer_ft = optim.AdamW(
-        model_ft.parameters(), lr=0.005, weight_decay=0.1
+        model_ft.fc.parameters(), lr=0.005, weight_decay=0.1
     )
 
     # Define a learning rate scheduler:
@@ -577,7 +581,7 @@ if __name__ == "__main__":
 
     # Save the trained model parameters to a file
     # This allows us to load the model later without retraining
-    torch.save(model_ft.state_dict(), "model_ft_0_CE_UMA.pth")
+    torch.save(model_ft.state_dict(), "model_ft_0_CE_UMAP_last_layer.pth")
 
     
     print("\nChecking saved model...\n")
