@@ -1413,34 +1413,11 @@ def estimate_model_angle_from_predictions():
 
     return model_angle
 
-def unwrap_boundary_angles(angles_deg):
-    if len(angles_deg) == 0:
-        return np.array([])
-
-    unwrapped = [angles_deg[0]]
-
-    for angle in angles_deg[1:]:
-        prev = unwrapped[-1]
-
-        candidates = [
-            angle + 180 * k
-            for k in range(-6, 7)
-        ]
-
-        best = min(
-            candidates,
-            key=lambda x: abs(x - prev)
-        )
-
-        unwrapped.append(best)
-
-    return np.array(unwrapped)
-
 if __name__ == "__main__":
 
     UNSUPERVISED = True  # Set to True for unsupervised self-training, False for supervised training
     ROTATION_DEGS = 0.1
-    NUM_ITERATIONS = 3600
+    NUM_ITERATIONS = 10800 # 3 rounds of 360 degrees at 0.1 degree increments
     NUM_EPOCHS = 1
     PLOT_EVERY = 100
     NUM_OF_IMAGES_PER_CLUSTER = 10
@@ -1483,7 +1460,8 @@ if __name__ == "__main__":
     for i in range(
         NUM_ITERATIONS
     ): 
-        angle_deg = (i * ROTATION_DEGS) % 360
+        total_angle_deg = i * ROTATION_DEGS
+        angle_deg = total_angle_deg % 360
 
         collect_nearest_images(
             base_point, points, names, output_dir=inside_tmp("A"), k=NUM_OF_IMAGES_PER_CLUSTER
@@ -1585,7 +1563,7 @@ if __name__ == "__main__":
 
             angle_tracking_log.append({
                 "iteration": i,
-                "example_angle": angle_deg,
+                "example_angle": total_angle_deg,
                 "model_angle": model_angle,
             })
             
@@ -1648,58 +1626,93 @@ if __name__ == "__main__":
     changed_csv, summary = save_label_change_csvs(inside_output("training_log.csv"))
 
     df_angles = pd.DataFrame(angle_tracking_log)
-    df_angles.to_csv(inside_output("angle_tracking_log.csv"), index=False)
 
-    # unwrap model angle so equivalent 180°/360° representations
-    # are shown as one continuous trajectory
-    valid_angles = df_angles["model_angle"].dropna().values
-    unwrapped = unwrap_boundary_angles(valid_angles)
-
-    df_angles.loc[df_angles["model_angle"].notna(), "model_angle_unwrapped"] = unwrapped
-
-    # also unwrap the example angle across 360 -> 0
-    example_unwrapped = np.rad2deg(
-        np.unwrap(
-            np.deg2rad(df_angles["example_angle"].values)
-        )
+    # Save raw angle measurements
+    df_angles.to_csv(
+        inside_output("angle_tracking_log.csv"),
+        index=False
     )
+
+    # ------------------------------------------------------------
+    # Align model boundary angle to the equivalent representation
+    # closest to the current example angle.
+    #
+    # A decision boundary has a 180-degree ambiguity:
+    # e.g. 95° and 275° represent the same boundary orientation.
+    # ------------------------------------------------------------
+
+    example_angles = df_angles["example_angle"].values
+    model_angles = df_angles["model_angle"].values
+
+    model_aligned = []
+
+    for example_angle, model_angle in zip(
+        example_angles,
+        model_angles
+    ):
+
+        if np.isnan(model_angle):
+            model_aligned.append(np.nan)
+            continue
+
+        k = round(
+            (example_angle - model_angle) / 180
+        )
+
+        best_angle = model_angle + 180 * k
+
+        model_aligned.append(best_angle)
+
+    df_angles["model_angle_aligned"] = model_aligned
+
+    # Save also the aligned angles
+    df_angles.to_csv(
+        inside_output("angle_tracking_log.csv"),
+        index=False
+    )
+
+    # ------------------------------------------------------------
+    # Plot
+    # ------------------------------------------------------------
+
+    example_plot = df_angles["example_angle"] % 360
+    model_plot = df_angles["model_angle_aligned"] % 360
 
     plt.figure(figsize=(10, 5))
 
     plt.plot(
         df_angles["iteration"],
-        example_unwrapped,
-        label="examples"
+        example_plot,
+        label="examples",
+        linewidth=2
     )
 
     plt.plot(
         df_angles["iteration"],
-        df_angles["model_angle_unwrapped"],
-        "r",
-        label="weights / model"
+        model_plot,
+        label="weights / model",
+        linewidth=2
     )
 
     plt.xlabel("iteration")
     plt.ylabel("angle")
-    plt.legend()
+
+    plt.ylim(0, 360)
+
     plt.title(
-        f"rotation tracking, step={ROTATION_DEGS} degs/iteration"
+        f"rotation tracking, "
+        f"step={ROTATION_DEGS} degs/iteration"
     )
+
+    plt.legend()
     plt.grid(True)
     plt.tight_layout()
+
     plt.savefig(
         inside_output("angle_tracking_graph.png"),
         dpi=300
     )
-    plt.close()
 
-    plt.xlabel("iteration")
-    plt.ylabel("angle")
-    plt.legend()
-    plt.title(f"rotation tracking, step={ROTATION_DEGS} degs/iteration")
-    plt.grid(True)
-    plt.tight_layout()
-    plt.savefig(inside_output("angle_tracking_graph.png"), dpi=300)
     plt.close()
 
 
