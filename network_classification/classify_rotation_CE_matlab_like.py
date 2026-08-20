@@ -1113,7 +1113,7 @@ if __name__ == "__main__":
     NUM_ITERATIONS = 200
     NUM_EPOCHS = 1
     PLOT_EVERY = 10
-    NUM_OF_IMAGES_PER_CLUSTER = 1
+    NUM_OF_IMAGES_PER_CLUSTER = 50
     LR = 0.001
     WEIGHT_DECAY = 1e-4
     K_EVAL = 100 # number of images to evaluate cluster concentration on

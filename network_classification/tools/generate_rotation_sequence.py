@@ -370,7 +370,11 @@ target_angle = 0
 
 target_radius = 0.45
 
-angle_error = np.abs(angles_deg - target_angle)
+angle_diff = np.abs(angles_deg - target_angle)
+angle_error = np.minimum(
+    angle_diff,
+    360 - angle_diff
+)
 radius_error = np.abs(radii - target_radius)
 combined_error = angle_error + radius_error * 100
 

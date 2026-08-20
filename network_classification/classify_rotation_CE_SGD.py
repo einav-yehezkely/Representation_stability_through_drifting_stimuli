@@ -1113,8 +1113,8 @@ if __name__ == "__main__":
     NUM_ITERATIONS = 200
     NUM_EPOCHS = 1
     PLOT_EVERY = 10
-    NUM_OF_IMAGES_PER_CLUSTER = 1
-    LR = 0.001
+    NUM_OF_IMAGES_PER_CLUSTER = 50
+    LR = 0.1
     WEIGHT_DECAY = 1e-4
     K_EVAL = 100 # number of images to evaluate cluster concentration on
 
@@ -1125,10 +1125,23 @@ if __name__ == "__main__":
     self_training_model = load_model(model_path="model_ft_0_CE.pth")
     self_training_model = self_training_model.to(device)
 
-    optimizer_ft = optim.AdamW(
-        self_training_model.parameters(),
-        lr=LR,
-        weight_decay=WEIGHT_DECAY
+    # optimizer_ft = optim.AdamW(
+    #     self_training_model.parameters(),
+    #     lr=LR,
+    #     weight_decay=WEIGHT_DECAY
+    # )
+
+    # freeze all layers
+    for param in self_training_model.parameters():
+        param.requires_grad = False
+
+    # train only the final linear layer
+    for param in self_training_model.fc[-1].parameters():
+        param.requires_grad = True
+
+    optimizer_ft = optim.SGD(
+        self_training_model.fc[-1].parameters(),
+        lr=LR
     )
     # Generate rotation sequence
     rotation_seq, _ = generate_rotation_sequence(
