@@ -9,31 +9,24 @@ import shutil
 from sklearn.model_selection import train_test_split
 import torch.nn as nn
 from tqdm import tqdm
-from shufflenet_v2_x0_5_CE_last_layer import train_model, get_dataloaders, create_model_and_optim, get_dataloaders_from_lists, train_model_fast_for_self_training
+from network_classification.archive.shufflenet_v2_x0_5_CE_last_epoch import train_model, get_dataloaders, create_model_and_optim, get_dataloaders_from_lists, train_model_fast_for_self_training
 from matplotlib.patches import Circle
 import time
 import torch.optim as optim
 from torch.optim import lr_scheduler
 import sys
 
-BASE_DIR = "tmp_CE_UMAP"
+BASE_DIR = "tmp_CE"
 os.makedirs(BASE_DIR, exist_ok=True)
 
-OUTPUT_DIR = "output_CE_UMAP"
+OUTPUT_DIR = "output_CE"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 
-PCA_DF = pd.read_csv("shufflenet_umap.csv", header=0)
+PCA_DF = pd.read_csv("pca_top2_filtered_female.csv", header=None)
 PCA_DF.columns = ["filename", "x", "y"]
-_cx = PCA_DF["x"].mean()
-_cy = PCA_DF["y"].mean()
-# Angles computed from the data centroid, not the arbitrary UMAP origin
-PCA_DF["angle_deg"] = np.degrees(np.arctan2(PCA_DF["y"] - _cy, PCA_DF["x"] - _cx)) % 360
+PCA_DF["angle_deg"] = np.degrees(np.arctan2(PCA_DF["y"], PCA_DF["x"])) % 360
 ANGLE_MAP = dict(zip(PCA_DF["filename"], PCA_DF["angle_deg"]))
-
-# Percentile of centroid-relative radii used to set the cluster orbit radius.
-# 75 → outer edge of the data cloud; 50 → median; 25 → closer to the centre.
-CLUSTER_RADIUS_PERCENTILE = 50
 
 class Tee:
     def __init__(self, *files):
@@ -78,7 +71,7 @@ def load_top2_filtered(csv_path="pca_top2_filtered_female.csv"):
     but also have low variance in the remaining PCA dimensions (i.e., their radius in the residual components is small).
     This ensures that proximity in 2D reflects real similarity in the full FaceNet space.
     """
-    df = pd.read_csv(csv_path, header=0)
+    df = pd.read_csv(csv_path, header=None)
     names = df.iloc[:, 0].values
     x = df.iloc[:, 1].values
     y = df.iloc[:, 2].values
@@ -86,31 +79,35 @@ def load_top2_filtered(csv_path="pca_top2_filtered_female.csv"):
     return names, points
 
 
-def create_base_and_opposite_points(angle, csv_path="shufflenet_umap.csv"):
+def create_base_and_opposite_points(angle, csv_path="pca_top2_filtered_female.csv"):
+    # Load data
     names, points = load_top2_filtered(csv_path)
 
-    # Center around the data centroid — UMAP origin is arbitrary
-    centroid = points.mean(axis=0)
-    points_c = points - centroid
+    # Compute angles (in radians) of each point from the origin
+    angles = np.arctan2(points[:, 1], points[:, 0])
 
-    angles_deg = (np.degrees(np.arctan2(points_c[:, 1], points_c[:, 0])) + 360) % 360
-    radii = np.linalg.norm(points_c, axis=1)
+    # Convert angles from radians to degrees, now in range [-180, 180]
+    angles_deg = np.degrees(angles)
+    # Shift all angles to be in the range [0, 360)
+    angles_deg = (angles_deg + 360) % 360
 
+    radii = np.linalg.norm(points, axis=1)
+
+    # Define the target angle in degrees
     target_angle = angle
-    target_radius = np.percentile(radii, CLUSTER_RADIUS_PERCENTILE)
+
+    target_radius = 0.45
 
     angle_error = np.abs(angles_deg - target_angle)
     radius_error = np.abs(radii - target_radius)
     combined_error = angle_error + radius_error * 100
 
+    # Find the index of the point whose angle is closest to the target angle
     base_idx = np.argmin(combined_error)
+    # Retrieve the actual 2D PCA coordinates of the selected base point
     base_point = points[base_idx]
-    base_point_c = points_c[base_idx]
 
-    # Opposite: real data point closest to the antipodal direction in centered space
-    opp_dists = np.linalg.norm(points_c - (-base_point_c), axis=1)
-    opp_idx = np.argmin(opp_dists)
-    opposite_point = points[opp_idx]
+    opposite_point = -base_point
 
     return base_point, opposite_point
 
@@ -447,22 +444,20 @@ def generate_rotation_sequence(
     base_point,
     all_points,
     all_names,
-    centroid,
     num_steps=180,
     start_angle=0,
     rotation_range=180,
     used_indices=None,
 ):
     """
-    Rotate base_point around the data centroid in num_steps steps
+    Rotate base_point around the origin in num_steps steps (in degrees)
     and find the closest point from all_points at each step.
 
     Parameters:
-    - base_point: 2D numpy array representing the starting point (UMAP coords)
-    - all_points: numpy array of shape (N, 2), 2D UMAP positions of all images
+    - base_point: 2D numpy array representing the starting point
+    - all_points: numpy array of shape (N, 2), 2D positions of all images
     - all_names: list or array of N image names corresponding to all_points
-    - centroid: 2D numpy array, center of rotation (data centroid in UMAP space)
-    - num_steps: number of rotation steps
+    - num_steps: number of rotation steps (default 1000 = every 0.36 degrees)
     - start_angle: starting angle in degrees (default 0)
     - rotation_range: range of rotation in degrees (default 180)
     - used_indices: set of indices to avoid reusing across runs
@@ -476,12 +471,8 @@ def generate_rotation_sequence(
 
     for i in range(num_steps):
         angle_deg = (start_angle + (rotation_range * i / num_steps)) % 360
-        # Rotate around centroid, not around the arbitrary UMAP origin
-        rotated = centroid + rotate_vector(base_point - centroid, angle_deg)
-        # Report angle relative to centroid so it matches ANGLE_MAP
-        true_angle = np.degrees(
-            np.arctan2(rotated[1] - centroid[1], rotated[0] - centroid[0])
-        ) % 360
+        rotated = rotate_vector(base_point, angle_deg)
+        true_angle = np.degrees(np.arctan2(rotated[1], rotated[0])) % 360
         dists = np.linalg.norm(all_points - rotated, axis=1)
 
         for idx in used_indices:
@@ -505,8 +496,8 @@ def create_prediction_scatter(angle, frame_id, save_dir=SCATTER_DIR):
     opposite_angle = (angle + 180) % 360
     os.makedirs(save_dir, exist_ok=True)
 
-    # Load UMAP data
-    df = pd.read_csv("shufflenet_umap.csv", header=0)
+    # Load PCA data
+    df = pd.read_csv("pca_top2_filtered_female.csv", header=None)
     df.columns = ["name", "x", "y"]
 
     # Load predictions
@@ -544,25 +535,23 @@ def create_prediction_scatter(angle, frame_id, save_dir=SCATTER_DIR):
     )
     plt.scatter(df_b["x"], df_b["y"], s=10, alpha=0.7, color="red", label="Predicted B")
 
-    # Circle and radial lines centered on the UMAP data centroid
-    cx, cy = df["x"].mean(), df["y"].mean()
-    radius = max(np.sqrt((df["x"] - cx) ** 2 + (df["y"] - cy) ** 2)) * 1.05
+    # Add circle and lines for reference
+    radius = max(np.sqrt(df["x"] ** 2 + df["y"] ** 2)) * 1.05
     circle = Circle(
-        (cx, cy), radius, fill=False, color="black", linestyle="--", alpha=0.5
+        (0, 0), radius, fill=False, color="black", linestyle="--", alpha=0.5
     )
     plt.gca().add_patch(circle)
     for angle_circ in range(0, 360, 20):
         rad = np.deg2rad(angle_circ)
-        xe = cx + radius * np.cos(rad)
-        ye = cy + radius * np.sin(rad)
-        plt.plot([cx, xe], [cy, ye], color="gray", linewidth=0.5, alpha=0.5)
-        plt.text(cx + radius * 1.08 * np.cos(rad), cy + radius * 1.08 * np.sin(rad),
-                 f"{angle_circ}°", ha="center", va="center", fontsize=7)
+        x = radius * np.cos(rad)
+        y = radius * np.sin(rad)
+        plt.plot([0, x], [0, y], color="gray", linewidth=0.5, alpha=0.5)
+        plt.text(x * 1.05, y * 1.05, f"{angle_circ}°", ha="center", va="center")
 
-    plt.xlabel("UMAP1")
-    plt.ylabel("UMAP2")
-    plt.axhline(y=cy, color="black", linewidth=1)
-    plt.axvline(x=cx, color="black", linewidth=1)
+    plt.xlabel("PC1")
+    plt.ylabel("PC2")
+    plt.axhline(y=0, color="black", linewidth=1)
+    plt.axvline(x=0, color="black", linewidth=1)
     plt.title(
         f"images predicted as A/B, trained on {angle:.1f}° and {opposite_angle:.1f}° clusters"
     )
@@ -593,7 +582,7 @@ def create_linear_graph(angle, frame_id, save_dir=LINEAR_DIR):
 
     df = pd.concat([pred_a, pred_b], ignore_index=True)
 
-    # use precomputed centroid-relative UMAP angles
+    # use precomputed PCA angles
     df["angle_deg"] = df["filename"].map(ANGLE_MAP)
     df = df.dropna(subset=["angle_deg"])
 
@@ -877,15 +866,14 @@ def compute_angle_concentration_from_csv(
 
     df = pd.concat([pred_a, pred_b], ignore_index=True)
 
-    # --- Load UMAP coordinates for all images ---
-    df_full = pd.read_csv("shufflenet_umap.csv", header=0)
+    # --- Load PCA coordinates for all images ---
+    df_full = pd.read_csv("pca_top2_filtered_female.csv", header=None)
     df_full.columns = ["filename", "x", "y"]
 
     df = df.merge(df_full, on="filename", how="left")
 
-    # Compute angle from the data centroid in UMAP space
-    cx, cy = df_full["x"].mean(), df_full["y"].mean()
-    df["angle_deg"] = np.degrees(np.arctan2(df["y"] - cy, df["x"] - cx)) % 360
+    # Compute angle of each image in PCA space
+    df["angle_deg"] = np.degrees(np.arctan2(df["y"], df["x"])) % 360
 
     def select_window(df, center, width):
         """Select subset of df within ±width/2 around center angle."""
@@ -1094,7 +1082,6 @@ def estimate_model_angle_from_predictions():
 
     df_a = pd.DataFrame({"filename": pred_a, "pred": 0})
     df_b = pd.DataFrame({"filename": pred_b, "pred": 1})
-
     df = pd.concat([df_a, df_b], ignore_index=True)
 
     df["angle_deg"] = df["filename"].map(ANGLE_MAP)
@@ -1103,106 +1090,43 @@ def estimate_model_angle_from_predictions():
     if len(df) == 0:
         return np.nan
 
-    angles = df["angle_deg"].to_numpy()
-    preds = df["pred"].to_numpy()
+    preds = df["pred"].values
+    angles = df["angle_deg"].values
 
-    boundaries = []
-
-    # transitions between consecutive angles
     changes = np.where(preds[:-1] != preds[1:])[0]
 
-    for idx in changes:
-        a1 = angles[idx]
-        a2 = angles[idx + 1]
-
-        boundaries.append((a1 + a2) / 2.0)
-
-    # circular transition between the last point and the first point
-    if preds[-1] != preds[0]:
-        a1 = angles[-1]
-        a2 = angles[0] + 360
-
-        boundaries.append(((a1 + a2) / 2.0) % 360)
-
-    if len(boundaries) == 0:
+    if len(changes) == 0:
         return np.nan
 
-    boundaries = np.asarray(boundaries)
+    idx = changes[0]
+    boundary_angle = (angles[idx] + angles[idx + 1]) / 2
 
-    # A linear separator has two opposite boundaries.
-    # Map both onto the same 0-180 degree representation.
-    boundary_180 = boundaries % 180
-
-    # circular mean in a 180-degree space
-    doubled = np.deg2rad(boundary_180 * 2)
-
-    mean_angle = (
-        np.degrees(
-            np.arctan2(
-                np.mean(np.sin(doubled)),
-                np.mean(np.cos(doubled)),
-            )
-        )
-        / 2
-    ) % 180
-
-    # boundary is perpendicular to classifier direction
-    model_angle = (mean_angle + 90) % 180
+    model_angle = (boundary_angle - 90) % 360
 
     return model_angle
 
 
 if __name__ == "__main__":
 
-    UNSUPERVISED = True
-    # ROTATION_DEGS = 0.5
-    
+    UNSUPERVISED = False  # Set to True for unsupervised self-training, False for supervised training
+    ROTATION_DEGS = 0.5
+    NUM_ITERATIONS = 200
     NUM_EPOCHS = 1
-    PLOT_EVERY = 5
-    NUM_OF_IMAGES_PER_CLUSTER = 200
-    LR = 0.0001
-    WEIGHT_DECAY = 0.1
+    PLOT_EVERY = 10
+    NUM_OF_IMAGES_PER_CLUSTER = 50
+    LR = 0.001
+    WEIGHT_DECAY = 1e-4
     K_EVAL = 100 # number of images to evaluate cluster concentration on
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    names, points = load_top2_filtered("shufflenet_umap.csv")
-
-    # =========================
-    # Load smooth ShuffleNet trajectory
-    # =========================
-
-    SMOOTH_SEQUENCE_CSV = os.path.join(
-        "shufflenet_smooth_rotation_test",
-        "smooth_rotation_sequence.csv"
-    )
-
-    smooth_seq = pd.read_csv(SMOOTH_SEQUENCE_CSV)
-
-    print("Loaded smooth trajectory:", len(smooth_seq), "steps")
-
-    NUM_ITERATIONS = len(smooth_seq)
-
-    # filename -> UMAP coordinate
-    point_map = {
-        name: point
-        for name, point in zip(names, points)
-    }
-
-
-    centroid = points.mean(axis=0)  # needed for centroid-relative rotation
-    base_point, opposite_point = create_base_and_opposite_points(0, csv_path="shufflenet_umap.csv")
-    self_training_model = load_model(model_path="model_ft_0_CE_UMAP_last_layer.pth")
+    names, points = load_top2_filtered("pca_top2_filtered_female.csv")
+    base_point, opposite_point = create_base_and_opposite_points(0,csv_path="pca_top2_filtered_female.csv")
+    self_training_model = load_model(model_path="model_ft_0_CE.pth")
     self_training_model = self_training_model.to(device)
 
-    for param in self_training_model.parameters():
-        param.requires_grad = False
-
-    for param in self_training_model.fc.parameters():
-        param.requires_grad = True
-
     optimizer_ft = optim.AdamW(
-        self_training_model.fc.parameters(),
+        self_training_model.parameters(),
         lr=LR,
         weight_decay=WEIGHT_DECAY
     )
@@ -1211,11 +1135,10 @@ if __name__ == "__main__":
         base_point=base_point,
         all_points=points,
         all_names=names,
-        centroid=centroid,
         num_steps=360,
         start_angle=0,
         rotation_range=360,
-        used_indices=set(),
+        used_indices=set(),  # ensure we don't reuse the same images to train on in the rotation sequence, so we get 360 unique images in the sequence (one per degree)
     )
 
     df_seq = pd.DataFrame(rotation_seq, columns=["step", "angle_deg", "filename"])
@@ -1230,75 +1153,14 @@ if __name__ == "__main__":
     for i in range(
         NUM_ITERATIONS
     ): 
-        # angle_deg = (i * ROTATION_DEGS) % 360
-
-        # collect_nearest_images(
-        #     base_point, points, names, output_dir=inside_tmp("A"), k=NUM_OF_IMAGES_PER_CLUSTER
-        # )
-        # collect_nearest_images(
-        #     opposite_point, points, names, output_dir=inside_tmp("B"), k=NUM_OF_IMAGES_PER_CLUSTER
-        # )
-
-        # ==========================================
-        # Take current point from smooth trajectory
-        # ==========================================
-
-        seq_idx = i % len(smooth_seq)
-
-        current_row = smooth_seq.iloc[seq_idx]
-
-        current_filename = current_row["filename"]
-        angle_deg = float(current_row["angle"])
-
-        base_point = point_map[current_filename]
-
-
-        # ==========================================
-        # Find opposite location
-        # ==========================================
-
-        base_centered = base_point - centroid
-
-        ideal_opposite = (
-            centroid - base_centered
-        )
-
-        opp_dists = np.linalg.norm(
-            points - ideal_opposite,
-            axis=1
-        )
-
-        opposite_idx = np.argmin(opp_dists)
-        opposite_point = points[opposite_idx]
-
-
-        print(
-            f"\nIteration {i}: "
-            f"smooth image={current_filename}, "
-            f"angle={angle_deg:.2f}"
-        )
-
-
-        # ==========================================
-        # Select training images around both centers
-        # ==========================================
+        angle_deg = (i * ROTATION_DEGS) % 360
 
         collect_nearest_images(
-            base_point,
-            points,
-            names,
-            output_dir=inside_tmp("A"),
-            k=NUM_OF_IMAGES_PER_CLUSTER
+            base_point, points, names, output_dir=inside_tmp("A"), k=NUM_OF_IMAGES_PER_CLUSTER
         )
-
         collect_nearest_images(
-            opposite_point,
-            points,
-            names,
-            output_dir=inside_tmp("B"),
-            k=NUM_OF_IMAGES_PER_CLUSTER
+            opposite_point, points, names, output_dir=inside_tmp("B"), k=NUM_OF_IMAGES_PER_CLUSTER
         )
-
         # now we have two directories: A and B with 200 images each from opposite clusters
         if UNSUPERVISED:
             merge_clusters()
@@ -1417,9 +1279,8 @@ if __name__ == "__main__":
         # create a scatter plot of the predictions
         # save the scatter plot in the frames directory
         # rotate base_point and opposite_point by 5 degrees for the next iteration
-        # Rotate around the data centroid, not the arbitrary UMAP origin
-        # base_point = centroid + rotate_vector(base_point - centroid, angle_deg=ROTATION_DEGS)
-        # opposite_point = centroid + rotate_vector(opposite_point - centroid, angle_deg=ROTATION_DEGS)
+        base_point = rotate_vector(base_point, angle_deg=ROTATION_DEGS)  
+        opposite_point = rotate_vector(opposite_point, angle_deg=ROTATION_DEGS) 
         # delete csv files
         csv_files_to_delete = [
             inside_tmp("filenames_A.csv"),
@@ -1452,62 +1313,26 @@ if __name__ == "__main__":
         ),
     )
 
-    if UNSUPERVISED:
-        pd.DataFrame(training_log).to_csv(
-            inside_output("training_log.csv"),
-            index=False
-        )
+    pd.DataFrame(training_log).to_csv(inside_output("training_log.csv"), index=False)
 
-        changed_csv, summary = save_label_change_csvs(
-            inside_output("training_log.csv")
-        )
-
+    changed_csv, summary = save_label_change_csvs(inside_output("training_log.csv"))
 
     df_angles = pd.DataFrame(angle_tracking_log)
-
     df_angles.to_csv(inside_output("angle_tracking_log.csv"), index=False)
 
     plt.figure(figsize=(10, 5))
-
-    plt.plot(
-        df_angles["iteration"],
-        df_angles["example_angle"] % 180,
-        label="examples",
-    )
-
-    plt.plot(
-        df_angles["iteration"],
-        df_angles["model_angle"],
-        "r",
-        label="classifier direction",
-    )
+    plt.plot(df_angles["iteration"], df_angles["example_angle"], label="examples")
+    plt.plot(df_angles["iteration"], df_angles["model_angle"], "r", label="weights / model")
 
     plt.xlabel("iteration")
-    plt.ylabel("angle [degrees]")
+    plt.ylabel("angle")
     plt.legend()
-
-    actual_step = (
-        smooth_seq.iloc[1]["angle"]
-        - smooth_seq.iloc[0]["angle"]
-    ) % 360
-
-    plt.title(
-        f"rotation tracking, step={actual_step:.3f} degs/iteration"
-    )
-
-    plt.ylim(0, 180)
-    plt.yticks(np.arange(0, 181, 20))
-
+    plt.title(f"rotation tracking, step={ROTATION_DEGS} degs/iteration")
     plt.grid(True)
     plt.tight_layout()
-
-    plt.savefig(
-        inside_output("angle_tracking_graph.png"),
-        dpi=300,
-    )
-
+    plt.savefig(inside_output("angle_tracking_graph.png"), dpi=300)
     plt.close()
-    # plt.title(f"rotation tracking, step={ROTATION_DEGS} degs/iteration")
+
 
     torch.save(
         self_training_model.state_dict(), inside_output("model_self_trained.pth")

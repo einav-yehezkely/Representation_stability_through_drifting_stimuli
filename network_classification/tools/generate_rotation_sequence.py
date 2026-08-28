@@ -348,7 +348,7 @@ def plot_two_rotation_paths_fixed_color(
 
 
 # Load data
-names, points = load_top2_filtered("pca_top2_filtered_female.csv")
+names, points = load_top2_filtered("pca_top2_filtered_female_1.csv")
 
 # Base and opposite points
 base_idx = 0

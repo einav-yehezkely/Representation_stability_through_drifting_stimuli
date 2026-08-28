@@ -1,20 +1,9 @@
 ############################################################
-# FAST FACENET 512D + MLP CLASSIFIER
-#
-# IMPORTANT:
-#
-# PCA is NOT used as model input.
-#
-# PCA is only used elsewhere to:
-#   - choose A/B image groups
-#   - define the rotation trajectory
-#   - choose similar images along the trajectory
-#
-# This model receives ONLY the FaceNet representation:
+# FAST ARCFACE RESNET50 512D + MLP CLASSIFIER
 #
 # filename
 #    ↓
-# saved FaceNet 512D embedding
+# saved ArcFace ResNet50 512D embedding
 #    ↓
 # MLP:
 # 512 -> 64 -> 2
@@ -22,9 +11,9 @@
 # A / B
 #
 # No images are opened during training.
-# No MTCNN is run.
-# No FaceNet forward pass is run.
-# Because the FaceNet embeddings are precomputed, training is very fast.
+# No face detection or ArcFace forward pass is performed.
+# Because all ResNet50 embeddings are precomputed and saved,
+# classifier training is very fast.
 ############################################################
 
 import os
@@ -59,25 +48,25 @@ print("Using device:", device)
 # PATHS
 # ============================================================
 
-EMBEDDINGS_CSV = "female_facenet_embeddings.csv"
+EMBEDDINGS_CSV = "female_arcface_embeddings.csv"
 
 DATA_DIR = "split_data"
 
 
 # ============================================================
-# LOAD FACENET EMBEDDINGS
+# LOAD ARCFACE RESNET50 EMBEDDINGS
 #
 # CSV format:
 #
 # column 0     = filename
-# columns 1-512 = FaceNet embedding
+# columns 1-512 = ArcFace ResNet50 embedding
 #
 # CSV has NO header.
 # ============================================================
 
 print()
 print("=" * 70)
-print("LOADING FACENET EMBEDDINGS")
+print("LOADING ARCFACE RESNET50 EMBEDDINGS")
 print("=" * 70)
 
 
@@ -104,7 +93,7 @@ if embeddings_df.shape[1] != expected_columns:
 
     raise RuntimeError(
         f"Expected 513 columns "
-        f"(1 filename + 512 FaceNet values), "
+        f"(1 filename + 512 ArcFace ResNet50 values), "
         f"but found {embeddings_df.shape[1]}"
     )
 
@@ -146,6 +135,12 @@ for _, row in embeddings_df.iterrows():
     ].to_numpy(
         dtype=np.float32
     )
+
+    # L2-normalize the ArcFace embedding
+    norm = np.linalg.norm(vector)
+
+    if norm > 0:
+        vector = vector / norm
 
 
     embedding_lookup[
@@ -217,7 +212,7 @@ def get_embedding_from_filename(
 
 
     raise KeyError(
-        f"Could not find FaceNet embedding for image: "
+        f"Could not find ArcFace embedding for image: "
         f"{filename}"
     )
 
@@ -228,7 +223,7 @@ def get_embedding_from_filename(
 # Used later by rotation / self-training scripts.
 #
 # IMPORTANT:
-# It receives filenames but returns FaceNet 512D vectors.
+# It receives filenames but returns ArcFace ResNet50 512D vectors.
 # ============================================================
 
 class FilenameDataset(Dataset):
@@ -318,7 +313,7 @@ class FilenameDataset(Dataset):
 class FolderEmbeddingDataset(Dataset):
     """
     Dataset that reads images from folders A and B, but returns
-    their precomputed FaceNet embeddings instead of the images themselves.
+    their precomputed ArcFace ResNet50 embeddings instead of the images themselves.
     """
 
     def __init__(
@@ -555,7 +550,7 @@ def get_dataloaders_from_lists(
 
 
     # --------------------------------------------------------
-    # Verify all images have FaceNet embeddings
+    # Verify all images have ArcFace ResNet50 embeddings
     # --------------------------------------------------------
 
     missing = [
@@ -570,7 +565,7 @@ def get_dataloaders_from_lists(
     if missing:
 
         raise RuntimeError(
-            f"{len(missing)} filenames do not have FaceNet "
+            f"{len(missing)} filenames do not have ArcFace ResNet50 "
             f"embeddings.\n"
             f"Examples: {missing[:10]}"
         )
@@ -676,16 +671,16 @@ def get_dataloaders_from_lists(
 
 
 # ============================================================
-# FACENET MLP CLASSIFIER
+# ARCFACE RESNET50 MLP CLASSIFIER
 #
 # IMPORTANT:
 #
-# Input = 512D FaceNet representation
+# Input = 512D ArcFace ResNet50 representation
 #
 # PCA coordinates are NEVER provided to the model.
 # ============================================================
 
-class FaceNetClassifier(nn.Module):
+class ArcFaceClassifier(nn.Module):
 
     def __init__(
         self,
@@ -694,19 +689,32 @@ class FaceNetClassifier(nn.Module):
         super().__init__()
 
 
+        # self.classifier = nn.Sequential(
+
+        #     nn.Linear(
+        #         512,
+        #         64,
+        #     ),
+
+        #     nn.ReLU(),
+
+        #     nn.Linear(
+        #         64,
+        #         2,
+        #     ),
+        # )
+
+        # self.classifier = nn.Linear(512, 2) # Simple perceptron for binary classification
+
         self.classifier = nn.Sequential(
+            nn.Linear(512, 256),
+            nn.ReLU(),
+            nn.Dropout(0.2),
 
-            nn.Linear(
-                512,
-                64,
-            ),
-
+            nn.Linear(256, 128),
             nn.ReLU(),
 
-            nn.Linear(
-                64,
-                2,
-            ),
+            nn.Linear(128, 2),
         )
 
 
@@ -727,14 +735,13 @@ class FaceNetClassifier(nn.Module):
     ):
         return embeddings
 
-
 # ============================================================
 # CREATE MODEL + LOSS + OPTIMIZER
 # ============================================================
 
 def create_model_and_optim():
 
-    model_ft = FaceNetClassifier()
+    model_ft = ArcFaceClassifier()
 
 
     model_ft = model_ft.to(
@@ -745,13 +752,19 @@ def create_model_and_optim():
     criterion = nn.CrossEntropyLoss()
 
 
+    # optimizer_ft = optim.AdamW(
+
+    #     model_ft.classifier.parameters(),
+
+    #     lr=0.001,
+
+    #     weight_decay=0.0,
+    # )
+
     optimizer_ft = optim.AdamW(
-
-        model_ft.classifier.parameters(),
-
+        model_ft.parameters(),
         lr=0.001,
-
-        weight_decay=0.0,
+        weight_decay=0.01,
     )
 
 
@@ -765,7 +778,7 @@ def create_model_and_optim():
     print("=" * 70)
 
     print(
-        "Input: saved FaceNet embeddings"
+        "Input: saved ArcFace ResNet50 embeddings"
     )
 
     print(
@@ -773,7 +786,7 @@ def create_model_and_optim():
     )
 
     print(
-        "Classifier: 512 -> 64 -> ReLU -> 2"
+        "Classifier: 512 -> 256 -> ReLU -> 128 -> ReLU -> 2"
     )
 
     print(
@@ -1227,7 +1240,7 @@ def train_model(
 
 
         plt.savefig(
-            "training_progress_facenet_MLP.png",
+            "training_progress_arcface_resnet50_M.png",
             dpi=200,
         )
 
@@ -1381,7 +1394,7 @@ if __name__ == "__main__":
     #
     # A/B folders were created using PCA.
     #
-    # But the model itself receives ONLY FaceNet embeddings.
+    # But the model itself receives ONLY ArcFace ResNet50 embeddings.
     # --------------------------------------------------------
 
     (
@@ -1426,7 +1439,7 @@ if __name__ == "__main__":
     # --------------------------------------------------------
 
     MODEL_PATH = (
-        "model_ft_0_CE_FACENET.pth"
+        "model_ft_0_ARCFACE_RESNET50_M.pth"
     )
 
 
@@ -1487,20 +1500,12 @@ if __name__ == "__main__":
     print("=" * 70)
 
     print(
-        "Model input: 512D FaceNet embedding"
+        "Model input: 512D ArcFace ResNet50 embedding"
     )
 
     print(
-        "Classifier: 512 -> 64 -> ReLU -> 2"
-    )
-
-    print(
-        "PCA coordinates were NOT given to the model."
-    )
-
-    print(
-        "No image loading, MTCNN, or FaceNet forward pass "
-        "was performed during training."
+        "Classifier: 512 -> 256 -> ReLU -> "
+        "Dropout -> 128 -> ReLU -> 2"
     )
 
     print("=" * 70)

@@ -1,31 +1,112 @@
-import os
-from PIL import Image
-import torch
-from torchvision import transforms, models
-import pandas as pd
-import matplotlib.pyplot as plt
-import numpy as np
-import shutil
-from sklearn.model_selection import train_test_split
-import torch.nn as nn
-from tqdm import tqdm
-from shufflenet_v2_x0_5_CE_last_epoch import train_model, get_dataloaders, create_model_and_optim, get_dataloaders_from_lists, train_model_fast_for_self_training
-from matplotlib.patches import Circle
-import time
-import torch.optim as optim
-from torch.optim import lr_scheduler
+import os   # for file and directory operations
+import torch    # for PyTorch operations
+import pandas as pd # for data manipulation and CSV handling
+import matplotlib.pyplot as plt # for plotting
+import numpy as np  # for numerical operations
+import shutil   # for file copying
+from sklearn.model_selection import train_test_split    # for splitting datasets - used in split_and_copy_images
+import torch.nn as nn   # loss functions and neural network layers
+from tqdm import tqdm   # for progress bars
+from arcface_embeddings_training import (
+    ArcFaceClassifier,
+    train_model,
+    get_dataloaders_from_lists,
+    train_model_fast_for_self_training
+)
+from matplotlib.patches import Circle   # for drawing circles in plots
+import time # for time tracking
+import torch.optim as optim # for optimization algorithms - AdamW
+from torch.optim import lr_scheduler    # for learning rate scheduling
+import sys  # for system-specific parameters and functions
 
-BASE_DIR = "tmp_CE_4epochs_supervised"
+BASE_DIR = "tmp_CE"
 os.makedirs(BASE_DIR, exist_ok=True)
 
-OUTPUT_DIR = "output_CE_4epochs_supervised"
+OUTPUT_DIR = "output_CE"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-PCA_DF = pd.read_csv("pca_top2_filtered_female.csv", header=None)
+# ============================================================
+# LOAD PCA DATA AND COMPUTE ANGLES OF ALL IMAGES
+# ============================================================
+PCA_DF = pd.read_csv("pca_top2_filtered_female_1.csv", header=None)
 PCA_DF.columns = ["filename", "x", "y"]
 PCA_DF["angle_deg"] = np.degrees(np.arctan2(PCA_DF["y"], PCA_DF["x"])) % 360
 ANGLE_MAP = dict(zip(PCA_DF["filename"], PCA_DF["angle_deg"]))
 
+device = torch.device(
+    "cuda" if torch.cuda.is_available() else "cpu"
+)
+
+# ============================================================
+# LOAD PRECOMPUTED ARCFACE EMBEDDINGS
+# INSTEAD OF COMPUTING THEM AGAIN
+# ============================================================
+ARCFACE_EMBEDDINGS_CSV = "female_arcface_embeddings.csv"
+
+# Load the ArcFace embeddings CSV into a DataFrame
+_arcface_df = pd.read_csv(
+    ARCFACE_EMBEDDINGS_CSV,
+    header=None,
+)
+
+if _arcface_df.shape[1] != 513:
+    raise RuntimeError(
+        f"Expected 513 columns "
+        f"(filename + 512 ArcFace ResNet50 dimensions), "
+        f"found {_arcface_df.shape[1]}"
+    )
+
+ARCFACE_LOOKUP = {}
+
+for _, row in _arcface_df.iterrows():
+
+    filename = str(row.iloc[0]).strip()
+    basename = os.path.basename(filename)
+
+    embedding = row.iloc[1:513].to_numpy(
+        dtype=np.float32
+    )
+
+    # L2-normalize the ArcFace embedding
+    norm = np.linalg.norm(embedding)
+
+    if norm > 0:
+        embedding = embedding / norm
+
+    ARCFACE_LOOKUP[filename] = embedding
+    ARCFACE_LOOKUP[basename] = embedding
+
+
+def get_arcface_embedding(filename):
+
+    filename = str(filename).strip()
+    basename = os.path.basename(filename)
+
+    if basename not in ARCFACE_LOOKUP:
+        raise KeyError(
+            f"ArcFace ResNet50 embedding not found for: {filename}"
+        )
+
+    return torch.tensor(
+        ARCFACE_LOOKUP[basename],
+        dtype=torch.float32,
+    )
+
+class Tee:
+    """ 
+    class to duplicate stdout and stderr to a log file. Useful for logging console output to a file while still displaying it in the terminal.
+    """
+    def __init__(self, *files):
+        self.files = files
+
+    def write(self, obj):
+        for f in self.files:
+            f.write(obj)
+            f.flush()
+
+    def flush(self):
+        for f in self.files:
+            f.flush()
 
 def inside_tmp(*paths):
     """Return a path inside the BASE_DIR (tmp)."""
@@ -36,17 +117,22 @@ def inside_output(*paths):
     """return a path inside the OUTPUT_DIR (output)."""
     return os.path.join(OUTPUT_DIR, *paths)
 
-
+# ===========================================================
+# SETUP PLOTS DIRECTORIES AND LOGGING
+# ===========================================================
 SCATTER_DIR = inside_output("scatter_frames")
 LINEAR_DIR = inside_output("linear_frames")
 
 os.makedirs(SCATTER_DIR, exist_ok=True)
 os.makedirs(LINEAR_DIR, exist_ok=True)
 
+log_file = open(inside_output("output.txt"), "w", encoding="utf-8")
+sys.stdout = Tee(sys.stdout, log_file)
+sys.stderr = Tee(sys.stderr, log_file)
 
-def load_top2_filtered(csv_path="pca_top2_filtered_female.csv"):
+def load_top2_filtered(csv_path="pca_top2_filtered_female_1.csv"):
     """
-    Load 2D PCA coordinates of pre-filtered images from a CSV file.
+    Load 2D PCA coordinates of filtered images from a CSV file.
 
     Assumes the format: image_name, x, y
 
@@ -62,7 +148,11 @@ def load_top2_filtered(csv_path="pca_top2_filtered_female.csv"):
     return names, points
 
 
-def create_base_and_opposite_points(angle, csv_path="pca_top2_filtered_female.csv"):
+def create_base_and_opposite_points(angle, csv_path="pca_top2_filtered_female_1.csv"):
+    """
+    Given a target angle, find the base point in PCA space that is closest to that angle,
+    and compute its opposite point (180 degrees away).
+    """
     # Load data
     names, points = load_top2_filtered(csv_path)
 
@@ -81,6 +171,7 @@ def create_base_and_opposite_points(angle, csv_path="pca_top2_filtered_female.cs
 
     target_radius = 0.45
 
+    # Compute a combined error metric that considers both angle and radius differences for finding the closest point to the target angle and radius
     angle_error = np.abs(angles_deg - target_angle)
     radius_error = np.abs(radii - target_radius)
     combined_error = angle_error + radius_error * 100
@@ -125,8 +216,7 @@ def collect_nearest_images(
     image_source_dir="female_faces",
 ):
     """
-    Not anymore: Find the k nearest images to center_point and copy them to output_dir.
-    Do: Find the k nearest images to center_point and save their filenames.
+    Find the k nearest images to center_point and save their filenames.
     Also saves a CSV file with the selected filenames.
 
     Parameters:
@@ -136,11 +226,12 @@ def collect_nearest_images(
         output_dir: path to the folder where results will be saved
         k: number of images to select
         image_source_dir: directory where source images are located
+    Returns:
+        nearest_indices: indices of the selected images in all_points/all_names
     """
 
     # Compute distances
     dists = np.linalg.norm(all_points - center_point, axis=1)
-    # nearest_indices = np.argsort(dists)[:k]
 
     # Use np.argpartition for efficiency, then sort the selected indices
     nearest_indices = np.argpartition(dists, k)[:k]
@@ -163,8 +254,8 @@ def collect_nearest_images(
 
 def merge_clusters():
     """
-    Merge the two CSV files filenames_A.csv and filenames_B.csv into filenames_merged.csv in order to retrain the model
-    on both clusters.
+    Merge the two CSV files filenames_A.csv and filenames_B.csv into filenames_merged.csv in order to retrain the model on both clusters.
+    The merged CSV will contain all filenames from both clusters, shuffled randomly.
     """
     # Load both CSVs
     df_a = pd.read_csv(inside_tmp("filenames_A.csv"))
@@ -180,26 +271,27 @@ def merge_clusters():
     df_merged.to_csv(inside_tmp("filenames_merged.csv"), index=False)
 
 
-def load_model(model_path="model_ft_0_CE.pth"):
-    """
-    Load the pre-trained model for classification.
-    The model is trained on images from 135 and 315 degrees.
-    """
-    model = models.shufflenet_v2_x0_5(weights=None)
-    num_ftrs = model.fc.in_features
-    model.fc = nn.Sequential(
-        nn.Dropout(p=0.5),
-        nn.Linear(num_ftrs, 256),
-        nn.ReLU(),
-        nn.Dropout(p=0.3),
-        nn.Linear(256, 2),
+def load_model(
+    model_path="model_ft_0_ARCFACE_RESNET50.pth"
+):
+    model = ArcFaceClassifier()
+
+    state_dict = torch.load(
+        model_path,
+        map_location=device
     )
-    model.load_state_dict(torch.load(model_path, map_location=device))
+
+    model.load_state_dict(state_dict)
+    model = model.to(device)
     model.eval()
+
     return model
 
 
 def safe_read_filenames(csv_path):
+    """
+    Safely read the 'filename' column from a CSV file. If the file does not exist, is empty, or does not contain the 'filename' column, return an empty pandas Series.
+    """
     if not os.path.exists(csv_path) or os.path.getsize(csv_path) == 0:
         return pd.Series(dtype="object")
 
@@ -215,181 +307,389 @@ def safe_read_filenames(csv_path):
 
 
 def classify_images(model, csv_path, clusters=False):
+    """
+    Classify images listed in a CSV file using the provided model.
+    parameters:
+        model: The trained PyTorch model for classification.
+        csv_path: Path to the CSV file containing image filenames.
+        clusters: If True, save additional information about the predictions for clustering analysis.
+    returns:
+        If clusters is True, returns a list of dictionaries containing filename, predicted probabilities, and predicted class for each image.
+        If clusters is False, saves two CSV files: predicted_as_A.csv and predicted_as_B.csv containing the filenames classified as A and B respectively.
+    """
     model.eval()
-    # Load CSV
-    df = pd.read_csv(csv_path)
 
-    # Image transforms
-    transform = transforms.Compose(
-        [
-            transforms.Resize((224, 224)),
-            transforms.ToTensor(),
-            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
-        ]
-    )
+    df = pd.read_csv(csv_path)
 
     predicted_A = []
     predicted_B = []
+    # training_records will store the filename, predicted probabilities, and predicted class for each image if clusters is True
     training_records = []
 
-    for i, row in df.iterrows():
-        image_path = os.path.join("female_faces", row["filename"])
+    # Use torch.no_grad() to disable gradient calculations for efficiency since we are in evaluation mode
+    with torch.no_grad():
+        for _, row in df.iterrows():
 
-        if not os.path.exists(image_path):
-            print(f"Warning: {image_path} not found. Skipping.")
-            continue
-
-        image = Image.open(image_path).convert("RGB")
-        input_tensor = transform(image).unsqueeze(0).to(device)
-
-        with torch.no_grad():
-            output = model(input_tensor)
-            probs = torch.softmax(output, dim=1)
-            prob_a = probs[0, 0].item()
-            prob_b = probs[0, 1].item()
-            pred = output.argmax(dim=1).item()
-
-        # Track predictions
-        if pred == 0:
-            predicted_A.append(row)
-        else:
-            predicted_B.append(row)
-
-        if clusters:
-            training_records.append(
-                {
-                    "filename": row["filename"],
-                    "prob_A": prob_a,
-                    "pred": "A" if pred == 0 else "B",
-                }
+            filename = str(
+                row["filename"]
             )
 
-    # Save predicted CSVs safely, even if one list is empty
+            try:
+                embedding = get_arcface_embedding(
+                    filename
+                )
+            except KeyError as e:
+                print(
+                    f"Warning: {e}. Skipping."
+                )
+                continue
+
+            # 2D tensor of shape [1, 512] for a single image embedding needed for the model input
+            input_tensor = embedding.unsqueeze(
+                0
+            ).to(device)
+
+            output = model(
+                input_tensor
+            )
+
+            # Compute softmax probabilities for the two classes (A and B)
+            probs = torch.softmax(
+                output,
+                dim=1
+            )
+
+            prob_a = probs[
+                0,
+                0
+            ].item()
+
+            prob_b = probs[
+                0,
+                1
+            ].item()
+
+            # Get the predicted class (0 for A, 1 for B) by taking the argmax of the output logits
+            pred = output.argmax(
+                dim=1
+            ).item()
+
+            if pred == 0:
+                predicted_A.append(
+                    row
+                )
+            else:
+                predicted_B.append(
+                    row
+                )
+
+            if clusters:
+                training_records.append(
+                    {
+                        "filename":
+                            row["filename"],
+
+                        "prob_A":
+                            prob_a,
+
+                        "prob_B":
+                            prob_b,
+
+                        "pred":
+                            "A"
+                            if pred == 0
+                            else "B",
+                    }
+                )
+    # base_columns will be used to ensure that the output DataFrames have the same columns as the input CSV, even if some predictions are empty
     base_columns = df.columns.tolist()
 
-    df_A = pd.DataFrame(predicted_A)
-    df_B = pd.DataFrame(predicted_B)
+    df_A = pd.DataFrame(
+        predicted_A
+    )
+
+    df_B = pd.DataFrame(
+        predicted_B
+    )
 
     if df_A.empty:
-        df_A = pd.DataFrame(columns=base_columns)
+        df_A = pd.DataFrame(
+            columns=base_columns
+        )
     else:
-        df_A = df_A.reindex(columns=base_columns)
+        df_A = df_A.reindex(
+            columns=base_columns
+        )
 
     if df_B.empty:
-        df_B = pd.DataFrame(columns=base_columns)
+        df_B = pd.DataFrame(
+            columns=base_columns
+        )
     else:
-        df_B = df_B.reindex(columns=base_columns)
+        df_B = df_B.reindex(
+            columns=base_columns
+        )
 
     if clusters:
-        df_A.to_csv(inside_tmp("cluster_predicted_as_A.csv"), index=False)
-        df_B.to_csv(inside_tmp("cluster_predicted_as_B.csv"), index=False)
+
+        df_A.to_csv(
+            inside_tmp(
+                "cluster_predicted_as_A.csv"
+            ),
+            index=False
+        )
+
+        df_B.to_csv(
+            inside_tmp(
+                "cluster_predicted_as_B.csv"
+            ),
+            index=False
+        )
+
         return training_records
+
     else:
-        df_A.to_csv(inside_tmp("predicted_as_A.csv"), index=False)
-        df_B.to_csv(inside_tmp("predicted_as_B.csv"), index=False)
+
+        df_A.to_csv(
+            inside_tmp(
+                "predicted_as_A.csv"
+            ),
+            index=False
+        )
+
+        df_B.to_csv(
+            inside_tmp(
+                "predicted_as_B.csv"
+            ),
+            index=False
+        )
 
 
-def classify_images_batched(model, csv_path, clusters=False, batch_size=50):
+def classify_images_batched(
+    model,
+    csv_path,
+    clusters=False,
+    batch_size=50,
+):
+    """
+    Classify images listed in a CSV file using the provided model. 
+    Batches the classification for efficiency.
+
+    Keyword arguments:
+        model -- The trained PyTorch model for classification.
+        csv_path -- Path to the CSV file containing image filenames.
+        clusters -- If True, save additional information about the predictions for clustering analysis.
+        batch_size -- The number of images to process in each batch.
+
+    Return: 
+        If clusters is True, returns a list of dictionaries containing filename, predicted probabilities, and predicted class for each image.
+        If clusters is False, saves two CSV files: predicted_as_A.csv and predicted_as_B.csv containing the filenames classified as A and B respectively.
+    """
+    
     model.eval()
-    df = pd.read_csv(csv_path)
 
-    transform = transforms.Compose(
-        [
-            transforms.Resize((224, 224)),
-            transforms.ToTensor(),
-            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
-        ]
-    )
+    df = pd.read_csv(csv_path)
 
     predicted_A = []
     predicted_B = []
     training_records = []
 
-    batch_tensors = []
+    batch_embeddings = []
     batch_rows = []
 
     with torch.no_grad():
-        for _, row in df.iterrows():
-            image_path = os.path.join("female_faces", row["filename"])
 
-            if not os.path.exists(image_path):
-                print(f"Warning: {image_path} not found. Skipping.")
+        for _, row in df.iterrows():
+
+            filename = str(
+                row["filename"]
+            )
+
+            try:
+                embedding = get_arcface_embedding(
+                    filename
+                )
+            except KeyError as e:
+                print(
+                    f"Warning: {e}. Skipping."
+                )
                 continue
 
-            image = Image.open(image_path).convert("RGB")
-            x = transform(image)
+            batch_embeddings.append(
+                embedding
+            )
 
-            batch_tensors.append(x)
-            batch_rows.append(row)
-
-            if len(batch_tensors) == batch_size:
+            batch_rows.append(
+                row
+            )
+            # Once the batch size is reached, process the current batch of embeddings and rows. This will classify them and update the predicted_A, predicted_B, and training_records lists.
+            if len(batch_embeddings) == batch_size:
                 process_classification_batch(
-                    model, batch_tensors, batch_rows,
-                    predicted_A, predicted_B, training_records, clusters
+                    model,
+                    batch_embeddings,
+                    batch_rows,
+                    predicted_A,
+                    predicted_B,
+                    training_records,
+                    clusters,
                 )
-                batch_tensors = []
+                # Reset the batch lists for the next batch of images
+                batch_embeddings = []
                 batch_rows = []
 
-        if len(batch_tensors) > 0:
+        # After the loop, if there are any remaining embeddings that didn't fill a complete batch, process them as well.
+        if batch_embeddings:
+
             process_classification_batch(
-                model, batch_tensors, batch_rows,
-                predicted_A, predicted_B, training_records, clusters
+                model,
+                batch_embeddings,
+                batch_rows,
+                predicted_A,
+                predicted_B,
+                training_records,
+                clusters,
             )
+
 
     base_columns = df.columns.tolist()
 
-    df_A = pd.DataFrame(predicted_A)
-    df_B = pd.DataFrame(predicted_B)
+    df_A = pd.DataFrame(
+        predicted_A
+    )
+
+    df_B = pd.DataFrame(
+        predicted_B
+    )
+
 
     if df_A.empty:
-        df_A = pd.DataFrame(columns=base_columns)
+        df_A = pd.DataFrame(
+            columns=base_columns
+        )
     else:
-        df_A = df_A.reindex(columns=base_columns)
+        df_A = df_A.reindex(
+            columns=base_columns
+        )
+
 
     if df_B.empty:
-        df_B = pd.DataFrame(columns=base_columns)
+        df_B = pd.DataFrame(
+            columns=base_columns
+        )
     else:
-        df_B = df_B.reindex(columns=base_columns)
+        df_B = df_B.reindex(
+            columns=base_columns
+        )
+
 
     if clusters:
-        df_A.to_csv(inside_tmp("cluster_predicted_as_A.csv"), index=False)
-        df_B.to_csv(inside_tmp("cluster_predicted_as_B.csv"), index=False)
-        return training_records
-    else:
-        df_A.to_csv(inside_tmp("predicted_as_A.csv"), index=False)
-        df_B.to_csv(inside_tmp("predicted_as_B.csv"), index=False)
 
+        df_A.to_csv(
+            inside_tmp(
+                "cluster_predicted_as_A.csv"
+            ),
+            index=False,
+        )
+
+        df_B.to_csv(
+            inside_tmp(
+                "cluster_predicted_as_B.csv"
+            ),
+            index=False,
+        )
+
+        return training_records
+
+    else:
+
+        df_A.to_csv(
+            inside_tmp(
+                "predicted_as_A.csv"
+            ),
+            index=False,
+        )
+
+        df_B.to_csv(
+            inside_tmp(
+                "predicted_as_B.csv"
+            ),
+            index=False,
+        )
 
 def process_classification_batch(
     model,
-    batch_tensors,
+    batch_embeddings,
     batch_rows,
     predicted_A,
     predicted_B,
     training_records,
     clusters,
 ):
-    batch = torch.stack(batch_tensors).to(device)
+    """
+    Process a batch of image embeddings and classify them.
+    """
+    
+    # Shape:
+    # [batch_size, 512]
+    batch = torch.stack(
+        batch_embeddings
+    ).to(device)
 
-    outputs = model(batch)
-    probs = torch.softmax(outputs, dim=1)
-    preds = outputs.argmax(dim=1)
 
-    for row, prob, pred in zip(batch_rows, probs, preds):
+    outputs = model(
+        batch
+    )
+
+
+    probs = torch.softmax(
+        outputs,
+        dim=1
+    )
+
+    preds = outputs.argmax(
+        dim=1
+    )
+
+
+    for row, prob, pred in zip(
+        batch_rows,
+        probs,
+        preds,
+    ):
+
         prob_a = prob[0].item()
+        prob_b = prob[1].item()
+
         pred = pred.item()
 
+
         if pred == 0:
-            predicted_A.append(row)
+            predicted_A.append(
+                row
+            )
         else:
-            predicted_B.append(row)
+            predicted_B.append(
+                row
+            )
+
 
         if clusters:
+
             training_records.append(
                 {
-                    "filename": row["filename"],
-                    "prob_A": prob_a,
-                    "pred": "A" if pred == 0 else "B",
+                    "filename":
+                        row["filename"],
+
+                    "prob_A":
+                        prob_a,
+
+                    "prob_B":
+                        prob_b,
+
+                    "pred":
+                        "A"
+                        if pred == 0
+                        else "B",
                 }
             )
 
@@ -400,6 +700,9 @@ def split_and_copy_images(
     train_ratio=0.8,
     root_dir=inside_tmp("split_data"),
 ):
+    """
+    Split images listed in a CSV file into training and validation sets, and copy them to separate directories.
+    """
     # Load the CSV with predicted filenames
     df = pd.read_csv(csv_path)
     filenames = df["filename"].tolist()
@@ -440,10 +743,10 @@ def generate_rotation_sequence(
     - base_point: 2D numpy array representing the starting point
     - all_points: numpy array of shape (N, 2), 2D positions of all images
     - all_names: list or array of N image names corresponding to all_points
-    - num_steps: number of rotation steps (default 1000 = every 0.36 degrees)
+    - num_steps: number of rotation steps
     - start_angle: starting angle in degrees (default 0)
-    - rotation_range: range of rotation in degrees (default 180)
-    - used_indices: set of indices to avoid reusing across runs
+    - rotation_range: range of rotation in degrees - meaning the total rotation will be from start_angle to start_angle + rotation_range
+    - used_indices: set of indices to avoid reusing images across runs
 
     Returns:
     - List of tuples: (step_index, angle_in_degrees, closest_image_name)
@@ -453,14 +756,17 @@ def generate_rotation_sequence(
         used_indices = set()
 
     for i in range(num_steps):
+        # Calculate the current angle for this step
         angle_deg = (start_angle + (rotation_range * i / num_steps)) % 360
         rotated = rotate_vector(base_point, angle_deg)
         true_angle = np.degrees(np.arctan2(rotated[1], rotated[0])) % 360
         dists = np.linalg.norm(all_points - rotated, axis=1)
 
+        # Mark already used indices with infinite distance
         for idx in used_indices:
             dists[idx] = np.inf  # Ignore already used indices
 
+        # Find the index of the closest point to the rotated position
         idx_closest = np.argmin(dists)
         used_indices.add(idx_closest)
         results.append((i, true_angle, all_names[idx_closest]))
@@ -470,9 +776,10 @@ def generate_rotation_sequence(
 def create_prediction_scatter(angle, frame_id, save_dir=SCATTER_DIR):
     """
     Create a scatter plot showing model predictions over 2D PCA space.
-    Saves the result as an image in the specified folder (default: 'frames').
+    Saves the result as an image in the specified folder.
 
     Args:
+        angle (float): The angle used for training the model.
         frame_id (int): Frame number for the filename.
         save_dir (str): Directory to save the image.
     """
@@ -480,7 +787,7 @@ def create_prediction_scatter(angle, frame_id, save_dir=SCATTER_DIR):
     os.makedirs(save_dir, exist_ok=True)
 
     # Load PCA data
-    df = pd.read_csv("pca_top2_filtered_female.csv", header=None)
+    df = pd.read_csv("pca_top2_filtered_female_1.csv", header=None)
     df.columns = ["name", "x", "y"]
 
     # Load predictions
@@ -490,6 +797,7 @@ def create_prediction_scatter(angle, frame_id, save_dir=SCATTER_DIR):
     predicted_cluster_a = safe_read_filenames(inside_tmp("cluster_predicted_as_A.csv"))
     predicted_cluster_b = safe_read_filenames(inside_tmp("cluster_predicted_as_B.csv"))
 
+    # Filter the DataFrame to only include points that were predicted as A or B
     df_a = df[df["name"].isin(pred_a)]
     df_b = df[df["name"].isin(pred_b)]
     df_predicted_cluster_a = df[df["name"].isin(predicted_cluster_a)]
@@ -550,6 +858,13 @@ def create_prediction_scatter(angle, frame_id, save_dir=SCATTER_DIR):
 
 
 def create_linear_graph(angle, frame_id, save_dir=LINEAR_DIR):
+    """
+    Creates a linear graph showing the prediction percentages across different angles.
+    Parameters:
+        angle (float): The angle used for training the model.
+        frame_id (int): Frame number for the filename.
+        save_dir (str): Directory to save the image.
+    """
     opposite_angle = (angle + 180) % 360
     os.makedirs(save_dir, exist_ok=True)
 
@@ -572,6 +887,7 @@ def create_linear_graph(angle, frame_id, save_dir=LINEAR_DIR):
     window_size = 20
     results = []
 
+    # Calculate the percentage of images predicted as A and B for each angle window.
     for step_angle in range(0, 360, 1):
         end = (step_angle + window_size) % 360
 
@@ -637,6 +953,7 @@ def take_k_closest_to_angle(filenames, center_angle_deg, k, pca_df=PCA_DF):
     filenames: iterable of image filenames
     center_angle_deg: angle in [0,360)
     returns: list of k filenames closest in ANGLE to center_angle_deg (circular distance)
+    Not using Euclidean distance in PCA space, but rather the angular distance in degrees.
     """
     df = pca_df[pca_df["filename"].isin(filenames)].copy()
     if df.empty:
@@ -649,42 +966,68 @@ def take_k_closest_to_angle(filenames, center_angle_deg, k, pca_df=PCA_DF):
 
 
 def percent_predicted_as_filenames(
-    model, filenames, target_pred, image_source_dir="female_faces"
+    model,
+    filenames,
+    target_pred,
+    image_source_dir="female_faces",
 ):
     """
-    target_pred: 0 for A, 1 for B
-    Returns: (percent, n_used)
+    Compute the percentage of images in filenames that are predicted as target_pred by the model.
     """
-    model.eval()
 
-    transform = transforms.Compose(
-        [
-            transforms.Resize((224, 224)),
-            transforms.ToTensor(),
-            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
-        ]
-    )
+    model.eval()
 
     count_target = 0
     total = 0
 
-    for fname in filenames:
-        img_path = os.path.join(image_source_dir, fname)
-        if not os.path.exists(img_path):
-            continue
 
-        img = Image.open(img_path).convert("RGB")
-        x = transform(img).unsqueeze(0).to(device)
+    with torch.no_grad():
 
-        with torch.no_grad():
-            output = model(x)
-            pred = output.argmax(dim=1).item()
+        for fname in filenames:
 
-        count_target += int(pred == target_pred)
-        total += 1
+            try:
 
-    percent = (100 * count_target / total) if total > 0 else 0
-    return percent, total
+                embedding = get_arcface_embedding(
+                    fname
+                )
+
+            except KeyError:
+
+                continue
+
+            x = embedding.unsqueeze(
+                0
+            ).to(device)
+
+
+            output = model(
+                x
+            )
+
+
+            pred = output.argmax(
+                dim=1
+            ).item()
+
+
+            count_target += int(
+                pred == target_pred
+            )
+
+            total += 1
+
+
+    percent = (
+        100 * count_target / total
+        if total > 0
+        else 0
+    )
+
+
+    return (
+        percent,
+        total,
+    )
 
 def percent_predicted_as_filenames_batched(
     model,
@@ -693,52 +1036,106 @@ def percent_predicted_as_filenames_batched(
     image_source_dir="female_faces",
     batch_size=50,
 ):
-    model.eval()
+    """
+    Compute the percentage of images in filenames that are predicted as target_pred by the model, processing in batches for efficiency.
+    """
 
-    transform = transforms.Compose(
-        [
-            transforms.Resize((224, 224)),
-            transforms.ToTensor(),
-            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
-        ]
-    )
+    model.eval()
 
     count_target = 0
     total = 0
-    batch_tensors = []
+
+    batch_embeddings = []
+
 
     with torch.no_grad():
+
         for fname in filenames:
-            img_path = os.path.join(image_source_dir, fname)
-            if not os.path.exists(img_path):
+
+            try:
+
+                embedding = get_arcface_embedding(
+                    fname
+                )
+
+            except KeyError:
+
                 continue
 
-            img = Image.open(img_path).convert("RGB")
-            x = transform(img)
-            batch_tensors.append(x)
 
-            if len(batch_tensors) == batch_size:
-                batch = torch.stack(batch_tensors).to(device)
+            batch_embeddings.append(
+                embedding
+            )
 
-                outputs = model(batch)
-                preds = outputs.argmax(dim=1)
 
-                count_target += (preds == target_pred).sum().item()
-                total += len(batch_tensors)
+            if len(batch_embeddings) == batch_size:
 
-                batch_tensors = []
+                batch = torch.stack(
+                    batch_embeddings
+                ).to(device)
 
-        if len(batch_tensors) > 0:
-            batch = torch.stack(batch_tensors).to(device)
 
-            outputs = model(batch)
-            preds = outputs.argmax(dim=1)
+                outputs = model(
+                    batch
+                )
 
-            count_target += (preds == target_pred).sum().item()
-            total += len(batch_tensors)
 
-    percent = (100 * count_target / total) if total > 0 else 0
-    return percent, total
+                preds = outputs.argmax(
+                    dim=1
+                )
+
+
+                count_target += (
+                    preds == target_pred
+                ).sum().item()
+
+
+                total += len(
+                    batch_embeddings
+                )
+
+
+                batch_embeddings = []
+
+
+        if batch_embeddings:
+
+            batch = torch.stack(
+                batch_embeddings
+            ).to(device)
+
+
+            outputs = model(
+                batch
+            )
+
+
+            preds = outputs.argmax(
+                dim=1
+            )
+
+
+            count_target += (
+                preds == target_pred
+            ).sum().item()
+
+
+            total += len(
+                batch_embeddings
+            )
+
+
+    percent = (
+        100 * count_target / total
+        if total > 0
+        else 0
+    )
+
+
+    return (
+        percent,
+        total,
+    )
 
 def compute_cluster_concentration(
     angle, iteration, cluster_concentration=None, k_eval=100
@@ -748,19 +1145,15 @@ def compute_cluster_concentration(
 
     Measures:
       - Among the k_eval images closest to the current A angle,
-        what percentage is classified as A by the final sigmoid classifier.
+        what percentage is classified as A by the final classifier.
       - Among the k_eval images closest to the opposite B angle,
-        what percentage is classified as B by the final sigmoid classifier.
-
-    Note:
-    The model was trained using clustering-based pseudo-labels,
-    but this function evaluates the final binary classifier output.
+        what percentage is classified as B by the final classifier.
     """
     if cluster_concentration is None:
         cluster_concentration = []
 
-    a_csv = inside_tmp("filenames_A.csv")  # 1000
-    b_csv = inside_tmp("filenames_B.csv")  # 1000
+    a_csv = inside_tmp("filenames_A.csv")
+    b_csv = inside_tmp("filenames_B.csv")
 
     if not (os.path.exists(a_csv) and os.path.exists(b_csv)):
         print("Warning: filenames_A/B.csv not found. Skipping.")
@@ -771,12 +1164,13 @@ def compute_cluster_concentration(
 
     opposite_angle = (angle + 180) % 360
 
-    # pick only k_eval closest-by-angle within each 1000 cluster
+    # pick only k_eval closest-by-angle within each cluster. Because the clusters are not perfectly circular, we don't want to take all images in the cluster, just the ones closest to the training angle.
     eval_A_filenames = take_k_closest_to_angle(dfA["filename"].tolist(), angle, k_eval)
     eval_B_filenames = take_k_closest_to_angle(
         dfB["filename"].tolist(), opposite_angle, k_eval
     )
 
+    # Evaluate the percentage of images predicted as A in cluster A and as B in cluster B using the trained model.
     pct_A_in_A, nA = percent_predicted_as_filenames_batched(
         self_training_model, eval_A_filenames, target_pred=0
     )
@@ -808,93 +1202,6 @@ def compute_cluster_concentration(
     return cluster_concentration
 
 
-def compute_angle_concentration_from_csv(
-    angle, iteration, window_size=20, sequence_concentration=None
-):
-    """
-    Compute percentage of images predicted as A/B around their respective training angles,
-
-    Parameters
-    ----------
-    angle : float
-        Training angle in degrees (0-360).
-    iteration : int
-        The current rotation iteration index.
-    window_size : float, optional
-        Angular window size in degrees (default = 20°, i.e., ±10° around the center).
-    sequence_concentration : list, optional
-        List to which results will be appended (creates a new one if None).
-
-    Returns
-    -------
-    sequence_concentration : list of dicts
-        Updated list containing concentration data for this iteration.
-    """
-
-    if sequence_concentration is None:
-        sequence_concentration = []
-
-    # --- Load prediction results ---
-    pred_a_path = inside_tmp("predicted_as_A.csv")
-    pred_b_path = inside_tmp("predicted_as_B.csv")
-    if not (os.path.exists(pred_a_path) and os.path.exists(pred_b_path)):
-        print("Warning: prediction CSVs not found, skipping concentration measurement.")
-        return sequence_concentration
-
-    pred_a = pd.read_csv(pred_a_path)
-    pred_b = pd.read_csv(pred_b_path)
-
-    pred_a["pred"] = "A"
-    pred_b["pred"] = "B"
-
-    df = pd.concat([pred_a, pred_b], ignore_index=True)
-
-    # --- Load PCA coordinates for all images ---
-    df_full = pd.read_csv("pca_top2_filtered_female.csv", header=None)
-    df_full.columns = ["filename", "x", "y"]
-
-    df = df.merge(df_full, on="filename", how="left")
-
-    # Compute angle of each image in PCA space
-    df["angle_deg"] = np.degrees(np.arctan2(df["y"], df["x"])) % 360
-
-    def select_window(df, center, width):
-        """Select subset of df within ±width/2 around center angle."""
-        start = (center - width / 2) % 360
-        end = (center + width / 2) % 360
-        if start < end:
-            return df[(df["angle_deg"] >= start) & (df["angle_deg"] < end)]
-        else:
-            return df[(df["angle_deg"] >= start) | (df["angle_deg"] < end)]
-
-    # --- Compute A/B concentration around respective angles ---
-    opposite_angle = (angle + 180) % 360
-    window_train = select_window(df, angle, window_size)
-    window_opposite = select_window(df, opposite_angle, window_size)
-
-    percent_A = 0
-    percent_B = 0
-    if len(window_train) > 0:
-        percent_A = (window_train["pred"] == "A").sum() * 100 / len(window_train)
-    if len(window_opposite) > 0:
-        percent_B = (window_opposite["pred"] == "B").sum() * 100 / len(window_opposite)
-
-    sequence_concentration.append(
-        {
-            "iteration": iteration,
-            "angle": angle,
-            "A_percent_near_train_angle": percent_A,
-            "B_percent_near_opposite_angle": percent_B,
-        }
-    )
-
-    print(
-        f"Iteration {iteration}: {percent_A:.1f}% A near {angle:.1f}°, {percent_B:.1f}% B near {opposite_angle:.1f}°\n"
-    )
-
-    return sequence_concentration
-
-
 def plot_cluster_concentration(
     cluster_concentration,
     save_path="cluster_concentration_over_rotations.png",
@@ -902,8 +1209,8 @@ def plot_cluster_concentration(
 ):
     """
     Plot:
-      - % predicted as A in cluster A (1000 images around base angle)
-      - % predicted as B in cluster B (1000 images around opposite angle)
+      - % predicted as A in cluster A in every rotation step.
+      - % predicted as B in cluster B in every rotation step.
 
     X-axis stays in rotation order, but tick labels show: base_angle/opposite_angle
     """
@@ -955,6 +1262,11 @@ def plot_cluster_concentration(
 
 
 def save_label_change_csvs(training_log_path="training_log.csv"):
+    """
+    Analysis of the training log to find images that changed cluster labels between consecutive iterations. Saves two CSV files:
+    1. changed_images_between_consecutive_iterations.csv: Contains details of images that changed labels
+    2. changed_images_summary_per_iteration.csv: Summary of the number of images that changed labels per iteration
+    """
     df = pd.read_csv(training_log_path)
 
     df = df.sort_values(["filename", "iteration"]).reset_index(drop=True)
@@ -1018,66 +1330,68 @@ def save_label_change_csvs(training_log_path="training_log.csv"):
     return changed_csv, summary
 
 
-def compute_cluster_classification_errors(model, iteration, angle):
+def estimate_model_angle_from_predictions():
     """
-    Counts how many images in each 200-image cluster
-    are classified incorrectly BEFORE retraining.
+    Estimate the model's decision boundary angle based on the predictions of images classified as A and B.
+    Returns:
+        model_angle (float): Estimated angle of the model's decision boundary in degrees.ד
     """
+    pred_a = safe_read_filenames(inside_tmp("predicted_as_A.csv"))
+    pred_b = safe_read_filenames(inside_tmp("predicted_as_B.csv"))
 
-    model.eval()
+    df_a = pd.DataFrame({"filename": pred_a, "pred": 0})
+    df_b = pd.DataFrame({"filename": pred_b, "pred": 1})
+    df = pd.concat([df_a, df_b], ignore_index=True)
 
-    dfA = pd.read_csv(inside_tmp("filenames_A.csv"))
-    dfB = pd.read_csv(inside_tmp("filenames_B.csv"))
+    # Map filenames to their corresponding angles using the precomputed ANGLE_MAP and sort by angle.
+    df["angle_deg"] = df["filename"].map(ANGLE_MAP)
+    df = df.dropna(subset=["angle_deg"]).sort_values("angle_deg")
 
-    filenames_A = dfA["filename"].tolist()
-    filenames_B = dfB["filename"].tolist()
+    if len(df) == 0:
+        return np.nan
 
-    correct_A, nA = percent_predicted_as_filenames(
-        model,
-        filenames_A,
-        target_pred=0,
-    )
+    preds = df["pred"].values
+    angles = df["angle_deg"].values
 
-    correct_B, nB = percent_predicted_as_filenames(
-        model,
-        filenames_B,
-        target_pred=1,
-    )
+    # Find the indices where the predictions change from A to B or B to A. This indicates a potential decision boundary.
+    changes = np.where(preds[:-1] != preds[1:])[0]
 
-    correct_A_count = round(correct_A * nA / 100)
-    correct_B_count = round(correct_B * nB / 100)
+    if len(changes) == 0:
+        return np.nan
 
-    wrong_A_count = nA - correct_A_count
-    wrong_B_count = nB - correct_B_count
+    # Take the first change as the decision boundary.
+    idx = changes[0]
+    # Compute the angle of the decision boundary as the average of the two angles where the prediction changes.
+    boundary_angle = (angles[idx] + angles[idx + 1]) / 2
 
-    return {
-        "iteration": iteration,
-        "angle": angle,
-        "wrong_A_count": wrong_A_count,
-        "wrong_B_count": wrong_B_count,
-        "correct_A_count": correct_A_count,
-        "correct_B_count": correct_B_count,
-    }
+    # The model's decision boundary is perpendicular to the line connecting the two clusters, so we subtract 90 degrees to get the model's angle.
+    model_angle = (boundary_angle - 90) % 360
 
+    return model_angle
 
 if __name__ == "__main__":
 
-    UNSUPERVISED = False  # Set to True for unsupervised self-training, False for supervised training
-    ROTATION_DEGS = 0.5
-    NUM_ITERATIONS = 720
-    NUM_EPOCHS = 4
-    PLOT_EVERY = 10
+    UNSUPERVISED = True  # Set to True for unsupervised self-training, False for supervised training
+    ROTATION_DEGS = 0.1
+    NUM_ITERATIONS = 3600 #10800 # 3 rounds of 360 degrees at 0.1 degree increments
+    NUM_EPOCHS = 1
+    PLOT_EVERY = 100
+    NUM_OF_IMAGES_PER_CLUSTER = 10
+    LR = 0.001
+    WEIGHT_DECAY = 1
+    K_EVAL = 100 # number of images to evaluate cluster concentration on
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    names, points = load_top2_filtered("pca_top2_filtered_female.csv")
-    base_point, opposite_point = create_base_and_opposite_points(0,csv_path="pca_top2_filtered_female.csv")
-    self_training_model = load_model(model_path="model_ft_0_CE.pth")
+    names, points = load_top2_filtered("pca_top2_filtered_female_1.csv")
+    base_point, opposite_point = create_base_and_opposite_points(0,csv_path="pca_top2_filtered_female_1.csv")
+    self_training_model = load_model(
+        model_path="model_ft_0_ARCFACE_RESNET50_M.pth"
+    )
     self_training_model = self_training_model.to(device)
 
-    optimizer_ft = optim.Adam(
-        self_training_model.parameters(),
-        lr=0.0001,
+    optimizer_ft = optim.AdamW(
+        self_training_model.classifier.parameters(), # only train the classifier layer
+        lr=LR,
+        weight_decay=WEIGHT_DECAY
     )
     # Generate rotation sequence
     rotation_seq, _ = generate_rotation_sequence(
@@ -1096,35 +1410,37 @@ if __name__ == "__main__":
 
     cluster_concentration = []
     training_log = []
-    # classification_error_log = []
+    angle_tracking_log = []
 
     start = time.time()
     for i in range(
         NUM_ITERATIONS
     ): 
-        angle_deg = (i * ROTATION_DEGS) % 360
-        
-        collect_nearest_images(
-            base_point, points, names, output_dir=inside_tmp("A"), k=200
-        )
-        collect_nearest_images(
-            opposite_point, points, names, output_dir=inside_tmp("B"), k=200
-        )
+        total_angle_deg = i * ROTATION_DEGS # total rotation angle in degrees
+        angle_deg = total_angle_deg % 360   # current angle in degrees for this iteration
 
-        # now we have two directories: A and B with 200 images each from opposite clusters
+        # Collect nearest images to the base and opposite points for training
+        collect_nearest_images(
+            base_point, points, names, output_dir=inside_tmp("A"), k=NUM_OF_IMAGES_PER_CLUSTER
+        )
+        collect_nearest_images(
+            opposite_point, points, names, output_dir=inside_tmp("B"), k=NUM_OF_IMAGES_PER_CLUSTER
+        )
+        # now we have two directories: A and B with NUM_OF_IMAGES_PER_CLUSTER images each from opposite clusters
+
         if UNSUPERVISED:
-            merge_clusters()
+            merge_clusters()    # merge A and B into a single CSV for classification
             t = time.time()
             training_records = classify_images_batched(
                 self_training_model,
                 inside_tmp("filenames_merged.csv"),
                 clusters=True,
                 batch_size=50,
-            )
+            )   # classify images in the merged cluster and return training records for logging
 
             print("Classified images in clusters A and B.")
-            print(f"classify_images time: {time.time() - t:.2f}s")
-
+            print(f"classify_images_batched time: {time.time() - t:.2f}s")
+            
             for rec in training_records:
                 image_angle = ANGLE_MAP.get(rec["filename"], np.nan)
 
@@ -1139,18 +1455,22 @@ if __name__ == "__main__":
                     }
                 )
 
+            # All images that the model predicted as A or B are saved in cluster_predicted_as_A.csv and cluster_predicted_as_B.csv respectively. We read those files to get the filenames for training.
             df_A = pd.read_csv(inside_tmp("cluster_predicted_as_A.csv"))
             df_B = pd.read_csv(inside_tmp("cluster_predicted_as_B.csv"))
         else:
-
+            # In supervised mode, use the original cluster membership as the true labels:
+            # images selected near the A point are labeled A, and images selected near
+            # the opposite B point are labeled B. No pseudo-labeling by the model is performed.
             df_A = pd.read_csv(inside_tmp("filenames_A.csv"))
             df_B = pd.read_csv(inside_tmp("filenames_B.csv"))
-            # now we have a split_data/train/A and split_data/val/A
 
         print(f"Pseudo-label split: A={len(df_A)}, B={len(df_B)}")
+        # Combine the filenames and labels for training
         filenames = df_A["filename"].tolist() + df_B["filename"].tolist()
         labels = [0] * len(df_A) + [1] * len(df_B)
 
+        # Create dataloaders for training the model on the selected images
         dataloaders, dataset_sizes, class_names = get_dataloaders_from_lists(
             filenames,
             labels,
@@ -1161,7 +1481,7 @@ if __name__ == "__main__":
         criterion = nn.CrossEntropyLoss()
         exp_lr_scheduler = lr_scheduler.StepLR(
             optimizer_ft, step_size=5, gamma=1
-        )  # gamma=0.1, right now no LR decay
+        )  # right now no LR decay
         ################
         if UNSUPERVISED == True:
             self_training_model = train_model_fast_for_self_training(
@@ -1185,7 +1505,7 @@ if __name__ == "__main__":
                 plots = False
             )
 
-        # # now we have a trained model - self trained on it's own predictions
+        # now we have a trained model - self trained on it's own predictions
 
         # Plotting and evaluation every PLOT_EVERY iterations
         if i % PLOT_EVERY == 0:
@@ -1200,6 +1520,14 @@ if __name__ == "__main__":
 
             print("Classified rotation sequence.")
             print(f"rotation sequence classification time: {time.time()-t:.2f}s")
+
+            model_angle = estimate_model_angle_from_predictions()
+
+            angle_tracking_log.append({
+                "iteration": i,
+                "example_angle": total_angle_deg,
+                "model_angle": model_angle,
+            })
             
 
             if UNSUPERVISED:
@@ -1214,12 +1542,12 @@ if __name__ == "__main__":
             angle=angle_deg,
             iteration=i,
             cluster_concentration=cluster_concentration,
+            k_eval=K_EVAL
         )
 
         print(f"Concentration time: {time.time()-t:.2f}s")
-        # create a scatter plot of the predictions
-        # save the scatter plot in the frames directory
-        # rotate base_point and opposite_point by 5 degrees for the next iteration
+        
+        # rotate base_point and opposite_point by ROTATION_DEGS degrees for the next iteration
         base_point = rotate_vector(base_point, angle_deg=ROTATION_DEGS)  
         opposite_point = rotate_vector(opposite_point, angle_deg=ROTATION_DEGS) 
         # delete csv files
@@ -1258,6 +1586,101 @@ if __name__ == "__main__":
 
     changed_csv, summary = save_label_change_csvs(inside_output("training_log.csv"))
 
+    df_angles = pd.DataFrame(angle_tracking_log)
+
+    # Save raw angle measurements
+    df_angles.to_csv(
+        inside_output("angle_tracking_log.csv"),
+        index=False
+    )
+
+    # Align the model angle with the continuously rotating example angle.
+    # The model's decision-boundary orientation has a 180° ambiguity, meaning that
+    # angles separated by 180° represent the same boundary orientation.
+    # In addition, the measured model angle is restricted to [0°, 360°), while the
+    # example angle continues increasing across multiple rotations (e.g., 360°, 720°).
+    # Therefore, for each measurement, choose the equivalent model angle
+    # (model_angle + k*180°) that is closest to the current example angle.
+    # This does not modify the model or its predictions; it only creates a continuous
+    # representation of the model angle that can be meaningfully compared with the
+    # rotating examples across multiple full rotations.
+    example_angles = df_angles["example_angle"].values
+    model_angles = df_angles["model_angle"].values
+
+    model_aligned = []
+
+    for example_angle, model_angle in zip(
+        example_angles,
+        model_angles
+    ):
+
+        if np.isnan(model_angle):
+            model_aligned.append(np.nan)
+            continue
+
+        k = round(
+            (example_angle - model_angle) / 180
+        )
+
+        best_angle = model_angle + 180 * k
+
+        model_aligned.append(best_angle)
+
+    df_angles["model_angle_aligned"] = model_aligned
+
+    # Save also the aligned angles
+    df_angles.to_csv(
+        inside_output("angle_tracking_log.csv"),
+        index=False
+    )
+
+    # ------------------------------------------------------------
+    # Plot
+    # ------------------------------------------------------------
+
+    example_plot = df_angles["example_angle"] % 360
+    model_plot = df_angles["model_angle_aligned"] % 360
+
+    plt.figure(figsize=(10, 5))
+
+    plt.plot(
+        df_angles["iteration"],
+        example_plot,
+        label="examples",
+        linewidth=2
+    )
+
+    plt.plot(
+        df_angles["iteration"],
+        model_plot,
+        label="weights / model",
+        linewidth=2
+    )
+
+    plt.xlabel("iteration")
+    plt.ylabel("angle")
+
+    plt.ylim(0, 360)
+
+    plt.title(
+        f"rotation tracking, "
+        f"step={ROTATION_DEGS} degs/iteration"
+    )
+
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+
+    plt.savefig(
+        inside_output("angle_tracking_graph.png"),
+        dpi=300
+    )
+
+    plt.close()
+
+
     torch.save(
         self_training_model.state_dict(), inside_output("model_self_trained.pth")
     )
+
+    log_file.close()

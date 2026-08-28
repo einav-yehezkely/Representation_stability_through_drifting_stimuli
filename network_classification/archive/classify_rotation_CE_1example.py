@@ -9,7 +9,7 @@ import shutil
 from sklearn.model_selection import train_test_split
 import torch.nn as nn
 from tqdm import tqdm
-from shufflenet_v2_x0_5_CE_linear import train_model, get_dataloaders, create_model_and_optim, get_dataloaders_from_lists, train_model_fast_for_self_training
+from network_classification.archive.shufflenet_v2_x0_5_CE_linear import train_model, get_dataloaders, create_model_and_optim, get_dataloaders_from_lists, train_model_fast_for_self_training
 from matplotlib.patches import Circle
 import time
 import torch.optim as optim

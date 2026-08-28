@@ -9,7 +9,7 @@ import shutil
 from sklearn.model_selection import train_test_split
 import torch.nn as nn
 from tqdm import tqdm
-from shufflenet_v2_x0_5_CE_last_epoch import train_model, get_dataloaders, create_model_and_optim, get_dataloaders_from_lists, train_model_fast_for_self_training
+from network_classification.archive.shufflenet_v2_x0_5_CE_last_epoch import train_model, get_dataloaders, create_model_and_optim, get_dataloaders_from_lists, train_model_fast_for_self_training
 from matplotlib.patches import Circle
 import time
 import torch.optim as optim
@@ -1114,7 +1114,7 @@ if __name__ == "__main__":
     NUM_EPOCHS = 1
     PLOT_EVERY = 10
     NUM_OF_IMAGES_PER_CLUSTER = 50
-    LR = 0.001
+    LR = 0.1
     WEIGHT_DECAY = 1e-4
     K_EVAL = 100 # number of images to evaluate cluster concentration on
 
@@ -1125,10 +1125,23 @@ if __name__ == "__main__":
     self_training_model = load_model(model_path="model_ft_0_CE.pth")
     self_training_model = self_training_model.to(device)
 
-    optimizer_ft = optim.AdamW(
-        self_training_model.parameters(),
-        lr=LR,
-        weight_decay=WEIGHT_DECAY
+    # optimizer_ft = optim.AdamW(
+    #     self_training_model.parameters(),
+    #     lr=LR,
+    #     weight_decay=WEIGHT_DECAY
+    # )
+
+    # freeze all layers
+    for param in self_training_model.parameters():
+        param.requires_grad = False
+
+    # train only the final linear layer
+    for param in self_training_model.fc[-1].parameters():
+        param.requires_grad = True
+
+    optimizer_ft = optim.SGD(
+        self_training_model.fc[-1].parameters(),
+        lr=LR
     )
     # Generate rotation sequence
     rotation_seq, _ = generate_rotation_sequence(
