@@ -707,22 +707,22 @@ class ArcFaceClassifier(nn.Module):
         super().__init__()
 
 
-        # self.classifier = nn.Sequential(
+        self.classifier = nn.Sequential(
 
-        #     nn.Linear(
-        #         512,
-        #         64,
-        #     ),
+            nn.Linear(
+                512,
+                64,
+            ),
 
-        #     nn.ReLU(),
+            nn.ReLU(),
 
-        #     nn.Linear(
-        #         64,
-        #         2,
-        #     ),
-        # )
+            nn.Linear(
+                64,
+                2,
+            ),
+        )
 
-        self.classifier = nn.Linear(512, 2) # Simple perceptron for binary classification
+        # self.classifier = nn.Linear(512, 2) # Simple perceptron for binary classification
 
         # self.classifier = nn.Sequential(
         #     nn.Linear(512, 128),
@@ -771,7 +771,8 @@ def create_model_and_optim():
 
 
 
-    criterion = nn.MSELoss(reduction='sum')
+    # criterion = nn.MSELoss(reduction='sum')
+    criterion = nn.CrossEntropyLoss()
 
 
     # optimizer_ft = optim.AdamW(
@@ -894,20 +895,20 @@ def evaluate(
         )
 
 
-        # loss = criterion(
-        #     outputs,
-        #     labels
-        # )
-
-        labels_one_hot = F.one_hot(
-            labels,
-            num_classes=2
-        ).float()
-
         loss = criterion(
             outputs,
-            labels_one_hot
+            labels
         )
+
+        # labels_one_hot = F.one_hot(
+        #     labels,
+        #     num_classes=2
+        # ).float()
+
+        # loss = criterion(
+        #     outputs,
+        #     labels_one_hot
+        # )
 
 
         _, preds = torch.max(
@@ -1065,20 +1066,20 @@ def train_model(
             )
 
 
-            # loss = criterion(
-            #     outputs,
-            #     labels
-            # )
-
-            labels_one_hot = F.one_hot(
-                labels,
-                num_classes=2
-            ).float()
-
             loss = criterion(
                 outputs,
-                labels_one_hot
+                labels
             )
+
+            # labels_one_hot = F.one_hot(
+            #     labels,
+            #     num_classes=2
+            # ).float()
+
+            # loss = criterion(
+            #     outputs,
+            #     labels_one_hot
+            # )
 
             _, preds = torch.max(
                 outputs,
@@ -1534,7 +1535,7 @@ if __name__ == "__main__":
     # --------------------------------------------------------
 
     MODEL_PATH = (
-        "model_ft_0_ARCFACE_RESNET50_M.pth"
+        "model_ft_0_ARCFACE_RESNET50_C.pth"
     )
 
 

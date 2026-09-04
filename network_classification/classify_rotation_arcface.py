@@ -875,6 +875,7 @@ def create_linear_graph(angle, frame_id, save_dir=LINEAR_DIR):
 
     df_results = pd.DataFrame(results, columns=["angle", "percent_A", "percent_B"])
 
+
     angle0 = df_results[df_results["angle"] == 0]
     angle360 = angle0.copy()
     angle360["angle"] = 360
@@ -888,6 +889,7 @@ def create_linear_graph(angle, frame_id, save_dir=LINEAR_DIR):
     plt.plot(
         df_results["angle"], df_results["percent_B"], label="Predicted B", color="red"
     )
+
 
     plt.xlabel("Angle")
     plt.ylabel("%")
@@ -1486,20 +1488,20 @@ def estimate_model_angle_from_predictions(
 
 if __name__ == "__main__":
 
-    UNSUPERVISED = True  # Set to True for unsupervised self-training, False for supervised training
+    UNSUPERVISED = False  # Set to True for unsupervised self-training, False for supervised training
     ROTATION_DEGS = 0.1
     NUM_ITERATIONS = 3600 #10800 # 3 rounds of 360 degrees at 0.1 degree increments
     NUM_EPOCHS = 1
     PLOT_EVERY = 100
     NUM_OF_IMAGES_PER_CLUSTER = 300
     LR = 0.001
-    WEIGHT_DECAY = 0.5
+    WEIGHT_DECAY = 1
     K_EVAL = 100 # number of images to evaluate cluster concentration on
 
     names, points = load_top2_filtered("pca_top2_filtered_female_1.csv")
     base_point, opposite_point = create_base_and_opposite_points(0,csv_path="pca_top2_filtered_female_1.csv")
     self_training_model = load_model(
-        model_path="model_ft_0_ARCFACE_RESNET50_M.pth"
+        model_path="model_ft_0_ARCFACE_RESNET50_C.pth"
     )
     self_training_model = self_training_model.to(device)
 
@@ -1509,7 +1511,7 @@ if __name__ == "__main__":
         weight_decay=WEIGHT_DECAY
     )
     exp_lr_scheduler = lr_scheduler.StepLR(
-                optimizer_ft, step_size=600, gamma=0.5
+                optimizer_ft, step_size=600, gamma=1
             )
     # Generate rotation sequence
 
@@ -1645,12 +1647,12 @@ if __name__ == "__main__":
             batch_size=100,
         )
         ################
-        # criterion = nn.CrossEntropyLoss()
+        criterion = nn.CrossEntropyLoss()
         # exp_lr_scheduler = lr_scheduler.StepLR(
         #     optimizer_ft, step_size=5, gamma=1
         # )  # right now no LR decay
         ################
-        criterion = nn.MSELoss(reduction="sum")
+        # criterion = nn.MSELoss(reduction="sum")
 
         # exp_lr_scheduler = lr_scheduler.StepLR(
         #     optimizer_ft, step_size=1800, gamma=0.5
