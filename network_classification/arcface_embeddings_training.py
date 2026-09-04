@@ -32,6 +32,9 @@ import matplotlib.pyplot as plt
 
 from sklearn.model_selection import train_test_split
 
+import copy
+
+import torch.nn.functional as F
 
 # ============================================================
 # DEVICE
@@ -136,7 +139,7 @@ for _, row in embeddings_df.iterrows():
         dtype=np.float32
     )
 
-    # L2-normalize the ArcFace embedding
+    # L2-anormlize the ArcFace embedding
     norm = np.linalg.norm(vector)
 
     if norm > 0:
@@ -704,18 +707,21 @@ class ArcFaceClassifier(nn.Module):
         #     ),
         # )
 
-        # self.classifier = nn.Linear(512, 2) # Simple perceptron for binary classification
+        self.classifier = nn.Linear(512, 2) # Simple perceptron for binary classification
 
-        self.classifier = nn.Sequential(
-            nn.Linear(512, 256),
-            nn.ReLU(),
-            nn.Dropout(0.2),
+        # self.classifier = nn.Sequential(
+        #     nn.Linear(512, 128),
+        #     nn.Tanh(),
+        #     nn.Linear(128, 2),
+        # )
 
-            nn.Linear(256, 128),
-            nn.ReLU(),
-
-            nn.Linear(128, 2),
-        )
+        # self.classifier = nn.Sequential(
+        #     nn.Linear(512, 256),
+        #     nn.ReLU(),
+        #     nn.Linear(256, 128),
+        #     nn.ReLU(),
+        #     nn.Linear(128, 2),
+        # )
 
 
     def forward(
@@ -749,7 +755,8 @@ def create_model_and_optim():
     )
 
 
-    criterion = nn.CrossEntropyLoss()
+
+    criterion = nn.MSELoss(reduction='sum')
 
 
     # optimizer_ft = optim.AdamW(
@@ -761,15 +768,26 @@ def create_model_and_optim():
     #     weight_decay=0.0,
     # )
 
+    # optimizer_ft = optim.AdamW(
+    #     model_ft.parameters(),
+    #     lr=0.001,
+    #     weight_decay=0.01,
+    # )
+
     optimizer_ft = optim.AdamW(
         model_ft.parameters(),
-        lr=0.001,
-        weight_decay=0.01,
+        lr=0.1,
+        weight_decay=1,
     )
 
 
-    # No scheduler for now.
-    exp_lr_scheduler = None
+    exp_lr_scheduler = optim.lr_scheduler.StepLR(
+        optimizer_ft,
+
+        step_size=10,
+
+        gamma=0.1,
+    )
 
 
     print()
@@ -786,7 +804,7 @@ def create_model_and_optim():
     )
 
     print(
-        "Classifier: 512 -> 256 -> ReLU -> 128 -> ReLU -> 2"
+        "Classifier: 512 -> 64 -> ReLU -> 2"
     )
 
     print(
@@ -861,9 +879,19 @@ def evaluate(
         )
 
 
+        # loss = criterion(
+        #     outputs,
+        #     labels
+        # )
+
+        labels_one_hot = F.one_hot(
+            labels,
+            num_classes=2
+        ).float()
+
         loss = criterion(
             outputs,
-            labels
+            labels_one_hot
         )
 
 
@@ -878,10 +906,12 @@ def evaluate(
         )
 
 
-        running_loss += (
-            loss.item()
-            * batch_size
-        )
+        # running_loss += (
+        #     loss.item()
+        #     * batch_size
+        # )
+
+        running_loss += loss.item()
 
 
         running_corrects += (
@@ -914,6 +944,11 @@ def train_model(
 ):
 
     since = time.time()
+
+
+    best_val_acc = 0.0
+    best_model_wts = copy.deepcopy(model.state_dict())
+    best_epoch = 0
 
 
     # --------------------------------------------------------
@@ -1015,11 +1050,20 @@ def train_model(
             )
 
 
+            # loss = criterion(
+            #     outputs,
+            #     labels
+            # )
+
+            labels_one_hot = F.one_hot(
+                labels,
+                num_classes=2
+            ).float()
+
             loss = criterion(
                 outputs,
-                labels
+                labels_one_hot
             )
-
 
             _, preds = torch.max(
                 outputs,
@@ -1037,10 +1081,12 @@ def train_model(
             )
 
 
-            running_loss += (
-                loss.item()
-                * batch_size
-            )
+            # running_loss += (
+            #     loss.item()
+            #     * batch_size
+            # )
+
+            running_loss += loss.item()
 
 
             running_corrects += (
@@ -1093,6 +1139,17 @@ def train_model(
             criterion,
             device,
         )
+
+        if val_acc > best_val_acc:
+            best_val_acc = val_acc
+            best_epoch = epoch + 1
+            best_model_wts = copy.deepcopy(model.state_dict())
+
+            print(
+                f"*** NEW BEST MODEL: "
+                f"epoch={best_epoch}, "
+                f"val_acc={best_val_acc:.4f}"
+            )
 
 
         val_losses.append(
@@ -1247,6 +1304,17 @@ def train_model(
 
         plt.close()
 
+    # Load the best model weights
+    model.load_state_dict(best_model_wts)
+
+    print()
+    print("=" * 70)
+    print(
+        f"BEST VALIDATION ACCURACY: "
+        f"{best_val_acc * 100:.2f}% "
+        f"(epoch {best_epoch})"
+    )
+    print("=" * 70)
 
     return model
 
@@ -1306,9 +1374,19 @@ def train_model_fast_for_self_training(
             )
 
 
+            # loss = criterion(
+            #     outputs,
+            #     labels
+            # )
+
+            labels_one_hot = F.one_hot(
+                labels,
+                num_classes=2
+            ).float()
+
             loss = criterion(
                 outputs,
-                labels
+                labels_one_hot
             )
 
 
@@ -1328,10 +1406,12 @@ def train_model_fast_for_self_training(
             )
 
 
-            running_loss += (
-                loss.item()
-                * batch_size
-            )
+            # running_loss += (
+            #     loss.item()
+            #     * batch_size
+            # )
+
+            running_loss += loss.item()
 
 
             running_corrects += (

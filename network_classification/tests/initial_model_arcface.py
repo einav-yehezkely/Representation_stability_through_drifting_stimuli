@@ -395,22 +395,318 @@ plt.savefig(
 
 plt.close()
 
+# # ============================================================
+# # SORT BY PCA ANGLE
+# # ============================================================
 
-# ============================================================
-# SAVE RAW CLASSIFICATIONS
-# ============================================================
+# df = df.sort_values(
+#     "angle_deg"
+# ).reset_index(
+#     drop=True
+# )
 
-df.to_csv(
-    "initial_arcface_predictions_perceptron.csv",
-    index=False
-)
 
-print(
-    "Saved graph:",
-    OUTPUT_PATH
-)
+# # ============================================================
+# # PLOT RAW SOFTMAX PROBABILITIES
+# # ============================================================
 
-print(
-    "Saved predictions:",
-    "initial_arcface_predictions_perceptron.csv"
-)
+# plt.figure(
+#     figsize=(12, 6)
+# )
+
+# plt.plot(
+#     df["angle_deg"],
+#     df["prob_A"] * 100,
+#     label="P(A)",
+#     linewidth=1.5
+# )
+
+# plt.plot(
+#     df["angle_deg"],
+#     df["prob_B"] * 100,
+#     label="P(B)",
+#     linewidth=1.5
+# )
+
+# # decision boundary
+# plt.axhline(
+#     y=50,
+#     linestyle="--",
+#     alpha=0.6
+# )
+
+# plt.xlabel(
+#     "Angle in FaceNet PCA space"
+# )
+
+# plt.ylabel(
+#     "Classifier probability (%)"
+# )
+
+# plt.title(
+#     "Initial ArcFace Classifier Probability Before Self-Training"
+# )
+
+# plt.ylim(
+#     0,
+#     100
+# )
+
+# plt.xlim(
+#     0,
+#     360
+# )
+
+# plt.grid(
+#     True,
+#     alpha=0.3
+# )
+
+# plt.legend()
+
+# plt.tight_layout()
+
+# plt.savefig(
+#     os.path.join(
+#         ROOT_DIR,
+#         "initial_arcface_probabilities.png"
+#     ),
+#     dpi=300
+# )
+
+# plt.close()
+
+# plt.figure(
+#     figsize=(12, 6)
+# )
+
+# plt.scatter(
+#     df["angle_deg"],
+#     df["prob_A"],
+#     s=15
+# )
+
+# plt.plot(
+#     df["angle_deg"],
+#     df["prob_A"],
+#     linewidth=1
+# )
+
+# plt.axhline(
+#     y=0.5,
+#     linestyle="--",
+#     label="Decision boundary"
+# )
+
+# plt.xlabel(
+#     "Angle in FaceNet PCA space"
+# )
+
+# plt.ylabel(
+#     "P(A)"
+# )
+
+# plt.title(
+#     "ArcFace Classifier P(A) Along FaceNet Rotation"
+# )
+
+# plt.xlim(
+#     0,
+#     360
+# )
+
+# plt.ylim(
+#     0,
+#     1
+# )
+
+# plt.grid(
+#     True,
+#     alpha=0.3
+# )
+
+# plt.legend()
+
+# plt.tight_layout()
+
+# plt.savefig(
+#     os.path.join(
+#         ROOT_DIR,
+#         "arcface_probA_raw.png"
+#     ),
+#     dpi=300
+# )
+
+# plt.close()
+# # ============================================================
+# # SAVE RAW CLASSIFICATIONS
+# # ============================================================
+
+# df.to_csv(
+#     "initial_arcface_predictions_perceptron.csv",
+#     index=False
+# )
+
+# print(
+#     "Saved graph:",
+#     OUTPUT_PATH
+# )
+
+# print(
+#     "Saved predictions:",
+#     "initial_arcface_predictions_perceptron.csv"
+# )
+
+# # ============================================================
+# # COMPUTE MEAN SOFTMAX PROBABILITY IN 20° WINDOWS
+# # ============================================================
+
+# window_size = 20
+
+# results = []
+
+# for step_angle in range(0, 360):
+
+#     end = (step_angle + window_size) % 360
+
+#     if step_angle < end:
+
+#         window_data = df[
+#             (df["angle_deg"] >= step_angle)
+#             &
+#             (df["angle_deg"] < end)
+#         ]
+
+#     else:
+
+#         window_data = df[
+#             (df["angle_deg"] >= step_angle)
+#             |
+#             (df["angle_deg"] < end)
+#         ]
+
+#     if len(window_data) > 0:
+
+#         mean_prob_a = window_data[
+#             "prob_A"
+#         ].mean()
+
+#         mean_prob_b = window_data[
+#             "prob_B"
+#         ].mean()
+
+#     else:
+
+#         mean_prob_a = np.nan
+#         mean_prob_b = np.nan
+
+#     center_angle = (
+#         step_angle
+#         + window_size / 2
+#     ) % 360
+
+#     results.append(
+#         (
+#             center_angle,
+#             mean_prob_a,
+#             mean_prob_b
+#         )
+#     )
+
+
+# results_df = pd.DataFrame(
+#     results,
+#     columns=[
+#         "angle",
+#         "mean_prob_A",
+#         "mean_prob_B"
+#     ]
+# )
+
+# results_df = results_df.sort_values(
+#     "angle"
+# )
+
+
+# # ============================================================
+# # PLOT MEAN PROBABILITIES
+# # ============================================================
+
+# plt.figure(
+#     figsize=(12, 6)
+# )
+
+# plt.plot(
+#     results_df["angle"],
+#     results_df["mean_prob_A"] * 100,
+#     label="Mean P(A)",
+#     linewidth=2
+# )
+
+# plt.plot(
+#     results_df["angle"],
+#     results_df["mean_prob_B"] * 100,
+#     label="Mean P(B)",
+#     linewidth=2
+# )
+
+# plt.axhline(
+#     y=50,
+#     linestyle="--",
+#     alpha=0.6,
+#     label="Decision boundary"
+# )
+
+# plt.xlabel(
+#     "Angle in FaceNet PCA space"
+# )
+
+# plt.ylabel(
+#     "Mean classifier probability (%)"
+# )
+
+# plt.title(
+#     "ArcFace Mean Classification Probability in 20° Windows"
+# )
+
+# plt.xlim(
+#     0,
+#     360
+# )
+
+# plt.ylim(
+#     0,
+#     100
+# )
+
+# plt.grid(
+#     True,
+#     alpha=0.3
+# )
+
+# plt.legend()
+
+# plt.tight_layout()
+
+# plt.savefig(
+#     os.path.join(
+#         ROOT_DIR,
+#         "arcface_mean_probability_20deg.png"
+#     ),
+#     dpi=300
+# )
+
+# plt.close()
+
+
+# # ============================================================
+# # SAVE WINDOW RESULTS
+# # ============================================================
+
+# results_df.to_csv(
+#     os.path.join(
+#         ROOT_DIR,
+#         "arcface_mean_probability_20deg.csv"
+#     ),
+#     index=False
+# )
