@@ -20,6 +20,21 @@ from torch.optim import lr_scheduler    # for learning rate scheduling
 import sys  # for system-specific parameters and functions
 import torch.nn.functional as F
 
+import random
+
+SEED = 42
+
+random.seed(SEED)
+np.random.seed(SEED)
+torch.manual_seed(SEED)
+
+if torch.cuda.is_available():
+    torch.cuda.manual_seed(SEED)
+    torch.cuda.manual_seed_all(SEED)
+
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
+
 BASE_DIR = "tmp_CE"
 os.makedirs(BASE_DIR, exist_ok=True)
 
@@ -1477,7 +1492,7 @@ if __name__ == "__main__":
     NUM_EPOCHS = 1
     PLOT_EVERY = 100
     NUM_OF_IMAGES_PER_CLUSTER = 300
-    LR = 0.0005
+    LR = 0.001
     WEIGHT_DECAY = 0.5
     K_EVAL = 100 # number of images to evaluate cluster concentration on
 
@@ -1494,7 +1509,7 @@ if __name__ == "__main__":
         weight_decay=WEIGHT_DECAY
     )
     exp_lr_scheduler = lr_scheduler.StepLR(
-                optimizer_ft, step_size=800, gamma=1
+                optimizer_ft, step_size=600, gamma=0.5
             )
     # Generate rotation sequence
 

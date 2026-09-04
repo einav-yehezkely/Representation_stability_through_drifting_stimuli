@@ -1,0 +1,1829 @@
+Generated rotation sequence with unique images at each step.
+
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.02s
+Pseudo-label split: A=301, B=299
+[Train fast] Loss: 0.0878 Acc: 1.0000 | Total: 0.1991s
+Fast training completed in 0.1991s
+Classified rotation sequence.
+rotation sequence classification time: 0.22s
+
+Scatter Frame 0 completed.
+
+
+Linear Frame 0 completed.
+
+Iteration 0 | LR = 0.001
+Iter 0: classifier predicts A for 99.0% of 100 images near 0.0° (n=100), and predicts B for 100.0% of 100 images near 180.0° (n=100)
+Concentration time: 0.04s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=301, B=299
+[Train fast] Loss: 0.0817 Acc: 1.0000 | Total: 0.0410s
+Fast training completed in 0.0420s
+Iter 1: classifier predicts A for 100.0% of 100 images near 0.1° (n=100), and predicts B for 100.0% of 100 images near 180.1° (n=100)
+Concentration time: 0.02s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.02s
+Pseudo-label split: A=301, B=299
+[Train fast] Loss: 0.0794 Acc: 1.0000 | Total: 0.1401s
+Fast training completed in 0.1401s
+Iter 2: classifier predicts A for 100.0% of 100 images near 0.2° (n=100), and predicts B for 100.0% of 100 images near 180.2° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.02s
+Pseudo-label split: A=300, B=300
+[Train fast] Loss: 0.0767 Acc: 1.0000 | Total: 0.1155s
+Fast training completed in 0.1165s
+Iter 3: classifier predicts A for 100.0% of 100 images near 0.3° (n=100), and predicts B for 100.0% of 100 images near 180.3° (n=100)
+Concentration time: 0.02s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.02s
+Pseudo-label split: A=300, B=300
+[Train fast] Loss: 0.0770 Acc: 1.0000 | Total: 0.0955s
+Fast training completed in 0.0955s
+Iter 4: classifier predicts A for 100.0% of 100 images near 0.4° (n=100), and predicts B for 100.0% of 100 images near 180.4° (n=100)
+Concentration time: 0.08s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.05s
+Pseudo-label split: A=300, B=300
+[Train fast] Loss: 0.0728 Acc: 1.0000 | Total: 0.1327s
+Fast training completed in 0.1367s
+Iter 5: classifier predicts A for 100.0% of 100 images near 0.5° (n=100), and predicts B for 100.0% of 100 images near 180.5° (n=100)
+Concentration time: 0.04s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.05s
+Pseudo-label split: A=301, B=299
+[Train fast] Loss: 0.0774 Acc: 1.0000 | Total: 0.0785s
+Fast training completed in 0.0785s
+Iter 6: classifier predicts A for 100.0% of 100 images near 0.6° (n=100), and predicts B for 100.0% of 100 images near 180.6° (n=100)
+Concentration time: 0.04s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 1.43s
+Pseudo-label split: A=300, B=300
+[Train fast] Loss: 0.0719 Acc: 1.0000 | Total: 3.9451s
+Fast training completed in 3.9451s
+Iter 7: classifier predicts A for 100.0% of 100 images near 0.7° (n=100), and predicts B for 100.0% of 100 images near 180.7° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.02s
+Pseudo-label split: A=300, B=300
+[Train fast] Loss: 0.0658 Acc: 1.0000 | Total: 0.0403s
+Fast training completed in 0.0403s
+Iter 8: classifier predicts A for 100.0% of 100 images near 0.8° (n=100), and predicts B for 100.0% of 100 images near 180.8° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=300, B=300
+[Train fast] Loss: 0.0671 Acc: 1.0000 | Total: 0.0425s
+Fast training completed in 0.0425s
+Iter 9: classifier predicts A for 100.0% of 100 images near 0.9° (n=100), and predicts B for 100.0% of 100 images near 180.9° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=300, B=300
+[Train fast] Loss: 0.0673 Acc: 1.0000 | Total: 0.0453s
+Fast training completed in 0.0453s
+Iter 10: classifier predicts A for 100.0% of 100 images near 1.0° (n=100), and predicts B for 100.0% of 100 images near 181.0° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=300, B=300
+[Train fast] Loss: 0.0680 Acc: 1.0000 | Total: 0.0390s
+Fast training completed in 0.0390s
+Iter 11: classifier predicts A for 100.0% of 100 images near 1.1° (n=100), and predicts B for 100.0% of 100 images near 181.1° (n=100)
+Concentration time: 0.15s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.02s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0665 Acc: 1.0000 | Total: 0.0535s
+Fast training completed in 0.0545s
+Iter 12: classifier predicts A for 99.0% of 100 images near 1.2° (n=100), and predicts B for 100.0% of 100 images near 181.2° (n=100)
+Concentration time: 0.02s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0656 Acc: 1.0000 | Total: 0.1075s
+Fast training completed in 0.1085s
+Iter 13: classifier predicts A for 99.0% of 100 images near 1.3° (n=100), and predicts B for 100.0% of 100 images near 181.3° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0648 Acc: 1.0000 | Total: 0.0410s
+Fast training completed in 0.0410s
+Iter 14: classifier predicts A for 99.0% of 100 images near 1.4° (n=100), and predicts B for 100.0% of 100 images near 181.4° (n=100)
+Concentration time: 0.02s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0632 Acc: 1.0000 | Total: 0.0376s
+Fast training completed in 0.0385s
+Iter 15: classifier predicts A for 99.0% of 100 images near 1.5° (n=100), and predicts B for 100.0% of 100 images near 181.5° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0638 Acc: 1.0000 | Total: 0.0390s
+Fast training completed in 0.0390s
+Iter 16: classifier predicts A for 99.0% of 100 images near 1.6° (n=100), and predicts B for 100.0% of 100 images near 181.6° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0639 Acc: 1.0000 | Total: 0.0410s
+Fast training completed in 0.0410s
+Iter 17: classifier predicts A for 99.0% of 100 images near 1.7° (n=100), and predicts B for 100.0% of 100 images near 181.7° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0618 Acc: 1.0000 | Total: 0.0370s
+Fast training completed in 0.0380s
+Iter 18: classifier predicts A for 99.0% of 100 images near 1.8° (n=100), and predicts B for 100.0% of 100 images near 181.8° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0629 Acc: 1.0000 | Total: 0.0405s
+Fast training completed in 0.0405s
+Iter 19: classifier predicts A for 99.0% of 100 images near 1.9° (n=100), and predicts B for 99.0% of 100 images near 181.9° (n=100)
+Concentration time: 0.02s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0615 Acc: 1.0000 | Total: 0.0376s
+Fast training completed in 0.0376s
+Iter 20: classifier predicts A for 99.0% of 100 images near 2.0° (n=100), and predicts B for 99.0% of 100 images near 182.0° (n=100)
+Concentration time: 0.02s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0574 Acc: 1.0000 | Total: 0.0360s
+Fast training completed in 0.0360s
+Iter 21: classifier predicts A for 99.0% of 100 images near 2.1° (n=100), and predicts B for 99.0% of 100 images near 182.1° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0563 Acc: 1.0000 | Total: 0.0380s
+Fast training completed in 0.0380s
+Iter 22: classifier predicts A for 99.0% of 100 images near 2.2° (n=100), and predicts B for 99.0% of 100 images near 182.2° (n=100)
+Concentration time: 0.02s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=297, B=303
+[Train fast] Loss: 0.0601 Acc: 1.0000 | Total: 0.0365s
+Fast training completed in 0.0365s
+Iter 23: classifier predicts A for 99.0% of 100 images near 2.3° (n=100), and predicts B for 99.0% of 100 images near 182.3° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=297, B=303
+[Train fast] Loss: 0.0595 Acc: 1.0000 | Total: 0.0860s
+Fast training completed in 0.0860s
+Iter 24: classifier predicts A for 99.0% of 100 images near 2.4° (n=100), and predicts B for 99.0% of 100 images near 182.4° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=297, B=303
+[Train fast] Loss: 0.0594 Acc: 1.0000 | Total: 0.0807s
+Fast training completed in 0.0817s
+Iter 25: classifier predicts A for 99.0% of 100 images near 2.5° (n=100), and predicts B for 99.0% of 100 images near 182.5° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=297, B=303
+[Train fast] Loss: 0.0589 Acc: 1.0000 | Total: 0.0405s
+Fast training completed in 0.0405s
+Iter 26: classifier predicts A for 99.0% of 100 images near 2.6° (n=100), and predicts B for 98.0% of 100 images near 182.6° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0579 Acc: 0.9979 | Total: 0.0400s
+Fast training completed in 0.0410s
+Iter 27: classifier predicts A for 99.0% of 100 images near 2.7° (n=100), and predicts B for 97.0% of 100 images near 182.7° (n=100)
+Concentration time: 0.02s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=299, B=301
+[Train fast] Loss: 0.0569 Acc: 0.9979 | Total: 0.0470s
+Fast training completed in 0.0470s
+Iter 28: classifier predicts A for 99.0% of 100 images near 2.8° (n=100), and predicts B for 97.0% of 100 images near 182.8° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=299, B=301
+[Train fast] Loss: 0.0583 Acc: 1.0000 | Total: 0.0492s
+Fast training completed in 0.0492s
+Iter 29: classifier predicts A for 99.0% of 100 images near 2.9° (n=100), and predicts B for 97.0% of 100 images near 182.9° (n=100)
+Concentration time: 0.02s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=299, B=301
+[Train fast] Loss: 0.0569 Acc: 1.0000 | Total: 0.0400s
+Fast training completed in 0.0400s
+Iter 30: classifier predicts A for 99.0% of 100 images near 3.0° (n=100), and predicts B for 97.0% of 100 images near 183.0° (n=100)
+Concentration time: 0.02s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=299, B=301
+[Train fast] Loss: 0.0568 Acc: 1.0000 | Total: 0.0440s
+Fast training completed in 0.0440s
+Iter 31: classifier predicts A for 99.0% of 100 images near 3.1° (n=100), and predicts B for 97.0% of 100 images near 183.1° (n=100)
+Concentration time: 0.02s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=299, B=301
+[Train fast] Loss: 0.0558 Acc: 1.0000 | Total: 0.0360s
+Fast training completed in 0.0370s
+Iter 32: classifier predicts A for 99.0% of 100 images near 3.2° (n=100), and predicts B for 97.0% of 100 images near 183.2° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=299, B=301
+[Train fast] Loss: 0.0576 Acc: 1.0000 | Total: 0.0435s
+Fast training completed in 0.0435s
+Iter 33: classifier predicts A for 99.0% of 100 images near 3.3° (n=100), and predicts B for 97.0% of 100 images near 183.3° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0589 Acc: 1.0000 | Total: 0.0400s
+Fast training completed in 0.0400s
+Iter 34: classifier predicts A for 99.0% of 100 images near 3.4° (n=100), and predicts B for 97.0% of 100 images near 183.4° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.02s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0547 Acc: 1.0000 | Total: 0.0640s
+Fast training completed in 0.0650s
+Iter 35: classifier predicts A for 99.0% of 100 images near 3.5° (n=100), and predicts B for 97.0% of 100 images near 183.5° (n=100)
+Concentration time: 0.04s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.02s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0572 Acc: 1.0000 | Total: 0.0505s
+Fast training completed in 0.0505s
+Iter 36: classifier predicts A for 99.0% of 100 images near 3.6° (n=100), and predicts B for 97.0% of 100 images near 183.6° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0578 Acc: 1.0000 | Total: 0.0430s
+Fast training completed in 0.0440s
+Iter 37: classifier predicts A for 99.0% of 100 images near 3.7° (n=100), and predicts B for 97.0% of 100 images near 183.7° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0574 Acc: 1.0000 | Total: 0.0470s
+Fast training completed in 0.0480s
+Iter 38: classifier predicts A for 99.0% of 100 images near 3.8° (n=100), and predicts B for 97.0% of 100 images near 183.8° (n=100)
+Concentration time: 0.02s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0549 Acc: 1.0000 | Total: 0.0440s
+Fast training completed in 0.0450s
+Iter 39: classifier predicts A for 99.0% of 100 images near 3.9° (n=100), and predicts B for 97.0% of 100 images near 183.9° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0521 Acc: 1.0000 | Total: 0.0380s
+Fast training completed in 0.0380s
+Iter 40: classifier predicts A for 99.0% of 100 images near 4.0° (n=100), and predicts B for 97.0% of 100 images near 184.0° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0545 Acc: 1.0000 | Total: 0.0345s
+Fast training completed in 0.0345s
+Iter 41: classifier predicts A for 99.0% of 100 images near 4.1° (n=100), and predicts B for 96.0% of 100 images near 184.1° (n=100)
+Concentration time: 0.02s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0538 Acc: 1.0000 | Total: 0.0465s
+Fast training completed in 0.0465s
+Iter 42: classifier predicts A for 99.0% of 100 images near 4.2° (n=100), and predicts B for 96.0% of 100 images near 184.2° (n=100)
+Concentration time: 0.02s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0530 Acc: 1.0000 | Total: 0.0400s
+Fast training completed in 0.0400s
+Iter 43: classifier predicts A for 99.0% of 100 images near 4.3° (n=100), and predicts B for 96.0% of 100 images near 184.3° (n=100)
+Concentration time: 0.02s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0567 Acc: 1.0000 | Total: 0.0370s
+Fast training completed in 0.0380s
+Iter 44: classifier predicts A for 99.0% of 100 images near 4.4° (n=100), and predicts B for 96.0% of 100 images near 184.4° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0519 Acc: 1.0000 | Total: 0.0405s
+Fast training completed in 0.0405s
+Iter 45: classifier predicts A for 99.0% of 100 images near 4.5° (n=100), and predicts B for 96.0% of 100 images near 184.5° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=297, B=303
+[Train fast] Loss: 0.0529 Acc: 1.0000 | Total: 0.0905s
+Fast training completed in 0.0915s
+Iter 46: classifier predicts A for 99.0% of 100 images near 4.6° (n=100), and predicts B for 96.0% of 100 images near 184.6° (n=100)
+Concentration time: 0.02s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=297, B=303
+[Train fast] Loss: 0.0516 Acc: 1.0000 | Total: 0.0410s
+Fast training completed in 0.0410s
+Iter 47: classifier predicts A for 99.0% of 100 images near 4.7° (n=100), and predicts B for 96.0% of 100 images near 184.7° (n=100)
+Concentration time: 0.02s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=297, B=303
+[Train fast] Loss: 0.0516 Acc: 1.0000 | Total: 0.0385s
+Fast training completed in 0.0395s
+Iter 48: classifier predicts A for 98.0% of 100 images near 4.8° (n=100), and predicts B for 96.0% of 100 images near 184.8° (n=100)
+Concentration time: 0.02s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=296, B=304
+[Train fast] Loss: 0.0549 Acc: 1.0000 | Total: 0.0415s
+Fast training completed in 0.0425s
+Iter 49: classifier predicts A for 98.0% of 100 images near 4.9° (n=100), and predicts B for 96.0% of 100 images near 184.9° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=296, B=304
+[Train fast] Loss: 0.0536 Acc: 1.0000 | Total: 0.0510s
+Fast training completed in 0.0520s
+Iter 50: classifier predicts A for 98.0% of 100 images near 5.0° (n=100), and predicts B for 96.0% of 100 images near 185.0° (n=100)
+Concentration time: 0.02s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=296, B=304
+[Train fast] Loss: 0.0540 Acc: 1.0000 | Total: 0.0446s
+Fast training completed in 0.0446s
+Iter 51: classifier predicts A for 98.0% of 100 images near 5.1° (n=100), and predicts B for 96.0% of 100 images near 185.1° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=296, B=304
+[Train fast] Loss: 0.0528 Acc: 1.0000 | Total: 0.0489s
+Fast training completed in 0.0489s
+Iter 52: classifier predicts A for 98.0% of 100 images near 5.2° (n=100), and predicts B for 96.0% of 100 images near 185.2° (n=100)
+Concentration time: 0.02s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=296, B=304
+[Train fast] Loss: 0.0538 Acc: 1.0000 | Total: 0.0476s
+Fast training completed in 0.0486s
+Iter 53: classifier predicts A for 98.0% of 100 images near 5.3° (n=100), and predicts B for 96.0% of 100 images near 185.3° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=296, B=304
+[Train fast] Loss: 0.0552 Acc: 1.0000 | Total: 0.0401s
+Fast training completed in 0.0411s
+Iter 54: classifier predicts A for 98.0% of 100 images near 5.4° (n=100), and predicts B for 96.0% of 100 images near 185.4° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=296, B=304
+[Train fast] Loss: 0.0548 Acc: 1.0000 | Total: 0.0410s
+Fast training completed in 0.0420s
+Iter 55: classifier predicts A for 98.0% of 100 images near 5.5° (n=100), and predicts B for 96.0% of 100 images near 185.5° (n=100)
+Concentration time: 0.02s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=296, B=304
+[Train fast] Loss: 0.0555 Acc: 1.0000 | Total: 0.0415s
+Fast training completed in 0.0425s
+Iter 56: classifier predicts A for 97.0% of 100 images near 5.6° (n=100), and predicts B for 97.0% of 100 images near 185.6° (n=100)
+Concentration time: 0.02s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=296, B=304
+[Train fast] Loss: 0.0552 Acc: 1.0000 | Total: 0.0335s
+Fast training completed in 0.0335s
+Iter 57: classifier predicts A for 97.0% of 100 images near 5.7° (n=100), and predicts B for 97.0% of 100 images near 185.7° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=296, B=304
+[Train fast] Loss: 0.0538 Acc: 1.0000 | Total: 0.0380s
+Fast training completed in 0.0380s
+Iter 58: classifier predicts A for 97.0% of 100 images near 5.8° (n=100), and predicts B for 98.0% of 100 images near 185.8° (n=100)
+Concentration time: 0.02s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.02s
+Pseudo-label split: A=296, B=304
+[Train fast] Loss: 0.0551 Acc: 1.0000 | Total: 0.0585s
+Fast training completed in 0.0605s
+Iter 59: classifier predicts A for 97.0% of 100 images near 5.9° (n=100), and predicts B for 98.0% of 100 images near 185.9° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.03s
+Pseudo-label split: A=296, B=304
+[Train fast] Loss: 0.0552 Acc: 1.0000 | Total: 0.0365s
+Fast training completed in 0.0375s
+Iter 60: classifier predicts A for 97.0% of 100 images near 6.0° (n=100), and predicts B for 98.0% of 100 images near 186.0° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=296, B=304
+[Train fast] Loss: 0.0546 Acc: 1.0000 | Total: 0.0395s
+Fast training completed in 0.0405s
+Iter 61: classifier predicts A for 97.0% of 100 images near 6.1° (n=100), and predicts B for 98.0% of 100 images near 186.1° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=296, B=304
+[Train fast] Loss: 0.0516 Acc: 1.0000 | Total: 0.0410s
+Fast training completed in 0.0420s
+Iter 62: classifier predicts A for 97.0% of 100 images near 6.2° (n=100), and predicts B for 98.0% of 100 images near 186.2° (n=100)
+Concentration time: 0.02s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=296, B=304
+[Train fast] Loss: 0.0495 Acc: 1.0000 | Total: 0.0460s
+Fast training completed in 0.0470s
+Iter 63: classifier predicts A for 97.0% of 100 images near 6.3° (n=100), and predicts B for 99.0% of 100 images near 186.3° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.09s
+Pseudo-label split: A=296, B=304
+[Train fast] Loss: 0.0516 Acc: 1.0000 | Total: 0.0345s
+Fast training completed in 0.0345s
+Iter 64: classifier predicts A for 97.0% of 100 images near 6.4° (n=100), and predicts B for 99.0% of 100 images near 186.4° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=296, B=304
+[Train fast] Loss: 0.0524 Acc: 1.0000 | Total: 0.0380s
+Fast training completed in 0.0380s
+Iter 65: classifier predicts A for 97.0% of 100 images near 6.5° (n=100), and predicts B for 99.0% of 100 images near 186.5° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=296, B=304
+[Train fast] Loss: 0.0510 Acc: 1.0000 | Total: 0.0390s
+Fast training completed in 0.0390s
+Iter 66: classifier predicts A for 97.0% of 100 images near 6.6° (n=100), and predicts B for 99.0% of 100 images near 186.6° (n=100)
+Concentration time: 0.02s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=296, B=304
+[Train fast] Loss: 0.0499 Acc: 1.0000 | Total: 0.0400s
+Fast training completed in 0.0410s
+Iter 67: classifier predicts A for 97.0% of 100 images near 6.7° (n=100), and predicts B for 99.0% of 100 images near 186.7° (n=100)
+Concentration time: 0.02s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=296, B=304
+[Train fast] Loss: 0.0507 Acc: 1.0000 | Total: 0.0370s
+Fast training completed in 0.0370s
+Iter 68: classifier predicts A for 97.0% of 100 images near 6.8° (n=100), and predicts B for 99.0% of 100 images near 186.8° (n=100)
+Concentration time: 0.02s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=296, B=304
+[Train fast] Loss: 0.0501 Acc: 1.0000 | Total: 0.0375s
+Fast training completed in 0.0375s
+Iter 69: classifier predicts A for 97.0% of 100 images near 6.9° (n=100), and predicts B for 99.0% of 100 images near 186.9° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=296, B=304
+[Train fast] Loss: 0.0480 Acc: 1.0000 | Total: 0.0410s
+Fast training completed in 0.0410s
+Iter 70: classifier predicts A for 97.0% of 100 images near 7.0° (n=100), and predicts B for 99.0% of 100 images near 187.0° (n=100)
+Concentration time: 0.04s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=296, B=304
+[Train fast] Loss: 0.0513 Acc: 1.0000 | Total: 0.0535s
+Fast training completed in 0.0535s
+Iter 71: classifier predicts A for 97.0% of 100 images near 7.1° (n=100), and predicts B for 99.0% of 100 images near 187.1° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=296, B=304
+[Train fast] Loss: 0.0493 Acc: 1.0000 | Total: 0.0370s
+Fast training completed in 0.0370s
+Iter 72: classifier predicts A for 97.0% of 100 images near 7.2° (n=100), and predicts B for 99.0% of 100 images near 187.2° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=296, B=304
+[Train fast] Loss: 0.0506 Acc: 1.0000 | Total: 0.0360s
+Fast training completed in 0.0370s
+Iter 73: classifier predicts A for 97.0% of 100 images near 7.3° (n=100), and predicts B for 99.0% of 100 images near 187.3° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=297, B=303
+[Train fast] Loss: 0.0503 Acc: 1.0000 | Total: 0.0375s
+Fast training completed in 0.0375s
+Iter 74: classifier predicts A for 97.0% of 100 images near 7.4° (n=100), and predicts B for 99.0% of 100 images near 187.4° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=296, B=304
+[Train fast] Loss: 0.0532 Acc: 1.0000 | Total: 0.0380s
+Fast training completed in 0.0380s
+Iter 75: classifier predicts A for 97.0% of 100 images near 7.5° (n=100), and predicts B for 99.0% of 100 images near 187.5° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=296, B=304
+[Train fast] Loss: 0.0525 Acc: 1.0000 | Total: 0.0400s
+Fast training completed in 0.0400s
+Iter 76: classifier predicts A for 97.0% of 100 images near 7.6° (n=100), and predicts B for 99.0% of 100 images near 187.6° (n=100)
+Concentration time: 0.02s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=296, B=304
+[Train fast] Loss: 0.0521 Acc: 1.0000 | Total: 0.0445s
+Fast training completed in 0.0455s
+Iter 77: classifier predicts A for 97.0% of 100 images near 7.7° (n=100), and predicts B for 99.0% of 100 images near 187.7° (n=100)
+Concentration time: 0.02s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.05s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0513 Acc: 1.0000 | Total: 0.0380s
+Fast training completed in 0.0380s
+Iter 78: classifier predicts A for 97.0% of 100 images near 7.8° (n=100), and predicts B for 100.0% of 100 images near 187.8° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0527 Acc: 1.0000 | Total: 0.0390s
+Fast training completed in 0.0390s
+Iter 79: classifier predicts A for 97.0% of 100 images near 7.9° (n=100), and predicts B for 100.0% of 100 images near 187.9° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0517 Acc: 1.0000 | Total: 0.0365s
+Fast training completed in 0.0365s
+Iter 80: classifier predicts A for 97.0% of 100 images near 8.0° (n=100), and predicts B for 100.0% of 100 images near 188.0° (n=100)
+Concentration time: 0.02s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0458 Acc: 1.0000 | Total: 0.0995s
+Fast training completed in 0.0995s
+Iter 81: classifier predicts A for 97.0% of 100 images near 8.1° (n=100), and predicts B for 100.0% of 100 images near 188.1° (n=100)
+Concentration time: 0.02s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0508 Acc: 1.0000 | Total: 0.0370s
+Fast training completed in 0.0370s
+Iter 82: classifier predicts A for 97.0% of 100 images near 8.2° (n=100), and predicts B for 100.0% of 100 images near 188.2° (n=100)
+Concentration time: 0.02s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0516 Acc: 1.0000 | Total: 0.0451s
+Fast training completed in 0.0461s
+Iter 83: classifier predicts A for 97.0% of 100 images near 8.3° (n=100), and predicts B for 100.0% of 100 images near 188.3° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.02s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0505 Acc: 1.0000 | Total: 0.0365s
+Fast training completed in 0.0375s
+Iter 84: classifier predicts A for 97.0% of 100 images near 8.4° (n=100), and predicts B for 100.0% of 100 images near 188.4° (n=100)
+Concentration time: 0.02s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0451 Acc: 1.0000 | Total: 0.0415s
+Fast training completed in 0.0415s
+Iter 85: classifier predicts A for 97.0% of 100 images near 8.5° (n=100), and predicts B for 100.0% of 100 images near 188.5° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0505 Acc: 1.0000 | Total: 0.0430s
+Fast training completed in 0.0430s
+Iter 86: classifier predicts A for 97.0% of 100 images near 8.6° (n=100), and predicts B for 100.0% of 100 images near 188.6° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0475 Acc: 1.0000 | Total: 0.0400s
+Fast training completed in 0.0400s
+Iter 87: classifier predicts A for 97.0% of 100 images near 8.7° (n=100), and predicts B for 100.0% of 100 images near 188.7° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0504 Acc: 1.0000 | Total: 0.0430s
+Fast training completed in 0.0430s
+Iter 88: classifier predicts A for 97.0% of 100 images near 8.8° (n=100), and predicts B for 100.0% of 100 images near 188.8° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0471 Acc: 1.0000 | Total: 0.0385s
+Fast training completed in 0.0385s
+Iter 89: classifier predicts A for 97.0% of 100 images near 8.9° (n=100), and predicts B for 100.0% of 100 images near 188.9° (n=100)
+Concentration time: 0.02s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0509 Acc: 1.0000 | Total: 0.1005s
+Fast training completed in 0.1015s
+Iter 90: classifier predicts A for 97.0% of 100 images near 9.0° (n=100), and predicts B for 100.0% of 100 images near 189.0° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0518 Acc: 1.0000 | Total: 0.0490s
+Fast training completed in 0.0490s
+Iter 91: classifier predicts A for 97.0% of 100 images near 9.1° (n=100), and predicts B for 100.0% of 100 images near 189.1° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0505 Acc: 1.0000 | Total: 0.0492s
+Fast training completed in 0.0502s
+Iter 92: classifier predicts A for 97.0% of 100 images near 9.2° (n=100), and predicts B for 100.0% of 100 images near 189.2° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0507 Acc: 1.0000 | Total: 0.0381s
+Fast training completed in 0.0381s
+Iter 93: classifier predicts A for 97.0% of 100 images near 9.3° (n=100), and predicts B for 100.0% of 100 images near 189.3° (n=100)
+Concentration time: 0.04s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0489 Acc: 1.0000 | Total: 0.0440s
+Fast training completed in 0.0450s
+Iter 94: classifier predicts A for 97.0% of 100 images near 9.4° (n=100), and predicts B for 100.0% of 100 images near 189.4° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.02s
+Pseudo-label split: A=299, B=301
+[Train fast] Loss: 0.0489 Acc: 1.0000 | Total: 0.0464s
+Fast training completed in 0.0474s
+Iter 95: classifier predicts A for 97.0% of 100 images near 9.5° (n=100), and predicts B for 100.0% of 100 images near 189.5° (n=100)
+Concentration time: 0.04s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=299, B=301
+[Train fast] Loss: 0.0504 Acc: 1.0000 | Total: 0.0411s
+Fast training completed in 0.0411s
+Iter 96: classifier predicts A for 97.0% of 100 images near 9.6° (n=100), and predicts B for 100.0% of 100 images near 189.6° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=299, B=301
+[Train fast] Loss: 0.0492 Acc: 1.0000 | Total: 0.0416s
+Fast training completed in 0.0416s
+Iter 97: classifier predicts A for 97.0% of 100 images near 9.7° (n=100), and predicts B for 100.0% of 100 images near 189.7° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=299, B=301
+[Train fast] Loss: 0.0510 Acc: 1.0000 | Total: 0.0435s
+Fast training completed in 0.0435s
+Iter 98: classifier predicts A for 97.0% of 100 images near 9.8° (n=100), and predicts B for 100.0% of 100 images near 189.8° (n=100)
+Concentration time: 0.04s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=299, B=301
+[Train fast] Loss: 0.0497 Acc: 1.0000 | Total: 0.0465s
+Fast training completed in 0.0475s
+Iter 99: classifier predicts A for 97.0% of 100 images near 9.9° (n=100), and predicts B for 100.0% of 100 images near 189.9° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=299, B=301
+[Train fast] Loss: 0.0517 Acc: 1.0000 | Total: 0.0545s
+Fast training completed in 0.0545s
+Classified rotation sequence.
+rotation sequence classification time: 0.01s
+
+Scatter Frame 100 completed.
+
+
+Linear Frame 100 completed.
+
+Iteration 100 | LR = 0.001
+Iter 100: classifier predicts A for 97.0% of 100 images near 10.0° (n=100), and predicts B for 100.0% of 100 images near 190.0° (n=100)
+Concentration time: 0.02s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=299, B=301
+[Train fast] Loss: 0.0504 Acc: 1.0000 | Total: 0.0420s
+Fast training completed in 0.0430s
+Iter 101: classifier predicts A for 97.0% of 100 images near 10.1° (n=100), and predicts B for 100.0% of 100 images near 190.1° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=299, B=301
+[Train fast] Loss: 0.0515 Acc: 1.0000 | Total: 0.0422s
+Fast training completed in 0.0422s
+Iter 102: classifier predicts A for 97.0% of 100 images near 10.2° (n=100), and predicts B for 100.0% of 100 images near 190.2° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=299, B=301
+[Train fast] Loss: 0.0490 Acc: 1.0000 | Total: 0.0468s
+Fast training completed in 0.0468s
+Iter 103: classifier predicts A for 97.0% of 100 images near 10.3° (n=100), and predicts B for 100.0% of 100 images near 190.3° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=300, B=300
+[Train fast] Loss: 0.0481 Acc: 1.0000 | Total: 0.0639s
+Fast training completed in 0.0650s
+Iter 104: classifier predicts A for 97.0% of 100 images near 10.4° (n=100), and predicts B for 100.0% of 100 images near 190.4° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=300, B=300
+[Train fast] Loss: 0.0493 Acc: 1.0000 | Total: 0.0602s
+Fast training completed in 0.0615s
+Iter 105: classifier predicts A for 97.0% of 100 images near 10.5° (n=100), and predicts B for 100.0% of 100 images near 190.5° (n=100)
+Concentration time: 0.02s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=300, B=300
+[Train fast] Loss: 0.0505 Acc: 1.0000 | Total: 0.0486s
+Fast training completed in 0.0486s
+Iter 106: classifier predicts A for 97.0% of 100 images near 10.6° (n=100), and predicts B for 100.0% of 100 images near 190.6° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0492 Acc: 1.0000 | Total: 0.0487s
+Fast training completed in 0.0497s
+Iter 107: classifier predicts A for 97.0% of 100 images near 10.7° (n=100), and predicts B for 99.0% of 100 images near 190.7° (n=100)
+Concentration time: 0.02s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0499 Acc: 1.0000 | Total: 0.0979s
+Fast training completed in 0.0979s
+Iter 108: classifier predicts A for 97.0% of 100 images near 10.8° (n=100), and predicts B for 99.0% of 100 images near 190.8° (n=100)
+Concentration time: 0.02s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0520 Acc: 1.0000 | Total: 0.0435s
+Fast training completed in 0.0445s
+Iter 109: classifier predicts A for 97.0% of 100 images near 10.9° (n=100), and predicts B for 99.0% of 100 images near 190.9° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.02s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0521 Acc: 1.0000 | Total: 0.0456s
+Fast training completed in 0.0456s
+Iter 110: classifier predicts A for 97.0% of 100 images near 11.0° (n=100), and predicts B for 99.0% of 100 images near 191.0° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0490 Acc: 1.0000 | Total: 0.0453s
+Fast training completed in 0.0453s
+Iter 111: classifier predicts A for 97.0% of 100 images near 11.1° (n=100), and predicts B for 99.0% of 100 images near 191.1° (n=100)
+Concentration time: 0.02s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0512 Acc: 1.0000 | Total: 0.0499s
+Fast training completed in 0.0499s
+Iter 112: classifier predicts A for 97.0% of 100 images near 11.2° (n=100), and predicts B for 98.0% of 100 images near 191.2° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0494 Acc: 1.0000 | Total: 0.0460s
+Fast training completed in 0.0470s
+Iter 113: classifier predicts A for 97.0% of 100 images near 11.3° (n=100), and predicts B for 98.0% of 100 images near 191.3° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0522 Acc: 1.0000 | Total: 0.0545s
+Fast training completed in 0.0555s
+Iter 114: classifier predicts A for 97.0% of 100 images near 11.4° (n=100), and predicts B for 98.0% of 100 images near 191.4° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0525 Acc: 1.0000 | Total: 0.0460s
+Fast training completed in 0.0460s
+Iter 115: classifier predicts A for 98.0% of 100 images near 11.5° (n=100), and predicts B for 98.0% of 100 images near 191.5° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0499 Acc: 1.0000 | Total: 0.0520s
+Fast training completed in 0.0530s
+Iter 116: classifier predicts A for 98.0% of 100 images near 11.6° (n=100), and predicts B for 98.0% of 100 images near 191.6° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.02s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0537 Acc: 1.0000 | Total: 0.0493s
+Fast training completed in 0.0493s
+Iter 117: classifier predicts A for 98.0% of 100 images near 11.7° (n=100), and predicts B for 98.0% of 100 images near 191.7° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=298, B=302
+[Train fast] Loss: 0.0478 Acc: 1.0000 | Total: 0.0491s
+Fast training completed in 0.0491s
+Iter 118: classifier predicts A for 98.0% of 100 images near 11.8° (n=100), and predicts B for 98.0% of 100 images near 191.8° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=299, B=301
+[Train fast] Loss: 0.0494 Acc: 1.0000 | Total: 0.0684s
+Fast training completed in 0.0684s
+Iter 119: classifier predicts A for 98.0% of 100 images near 11.9° (n=100), and predicts B for 97.0% of 100 images near 191.9° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=299, B=301
+[Train fast] Loss: 0.0496 Acc: 1.0000 | Total: 0.0489s
+Fast training completed in 0.0489s
+Iter 120: classifier predicts A for 98.0% of 100 images near 12.0° (n=100), and predicts B for 97.0% of 100 images near 192.0° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=299, B=301
+[Train fast] Loss: 0.0490 Acc: 1.0000 | Total: 0.0527s
+Fast training completed in 0.0527s
+Iter 121: classifier predicts A for 98.0% of 100 images near 12.1° (n=100), and predicts B for 97.0% of 100 images near 192.1° (n=100)
+Concentration time: 0.04s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.02s
+Pseudo-label split: A=299, B=301
+[Train fast] Loss: 0.0485 Acc: 1.0000 | Total: 0.0529s
+Fast training completed in 0.0529s
+Iter 122: classifier predicts A for 98.0% of 100 images near 12.2° (n=100), and predicts B for 97.0% of 100 images near 192.2° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=299, B=301
+[Train fast] Loss: 0.0456 Acc: 1.0000 | Total: 0.1018s
+Fast training completed in 0.1018s
+Iter 123: classifier predicts A for 98.0% of 100 images near 12.3° (n=100), and predicts B for 97.0% of 100 images near 192.3° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=300, B=300
+[Train fast] Loss: 0.0476 Acc: 1.0000 | Total: 0.0575s
+Fast training completed in 0.0575s
+Iter 124: classifier predicts A for 98.0% of 100 images near 12.4° (n=100), and predicts B for 97.0% of 100 images near 192.4° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=301, B=299
+[Train fast] Loss: 0.0480 Acc: 1.0000 | Total: 0.0430s
+Fast training completed in 0.0430s
+Iter 125: classifier predicts A for 98.0% of 100 images near 12.5° (n=100), and predicts B for 97.0% of 100 images near 192.5° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=301, B=299
+[Train fast] Loss: 0.0475 Acc: 1.0000 | Total: 0.0525s
+Fast training completed in 0.0535s
+Iter 126: classifier predicts A for 97.0% of 100 images near 12.6° (n=100), and predicts B for 97.0% of 100 images near 192.6° (n=100)
+Concentration time: 0.04s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=301, B=299
+[Train fast] Loss: 0.0467 Acc: 1.0000 | Total: 0.0560s
+Fast training completed in 0.0570s
+Iter 127: classifier predicts A for 97.0% of 100 images near 12.7° (n=100), and predicts B for 97.0% of 100 images near 192.7° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=300, B=300
+[Train fast] Loss: 0.0492 Acc: 1.0000 | Total: 0.0510s
+Fast training completed in 0.0510s
+Iter 128: classifier predicts A for 97.0% of 100 images near 12.8° (n=100), and predicts B for 97.0% of 100 images near 192.8° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=301, B=299
+[Train fast] Loss: 0.0492 Acc: 1.0000 | Total: 0.0589s
+Fast training completed in 0.0589s
+Iter 129: classifier predicts A for 96.0% of 100 images near 12.9° (n=100), and predicts B for 97.0% of 100 images near 192.9° (n=100)
+Concentration time: 0.02s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.02s
+Pseudo-label split: A=301, B=299
+[Train fast] Loss: 0.0470 Acc: 1.0000 | Total: 0.0494s
+Fast training completed in 0.0494s
+Iter 130: classifier predicts A for 96.0% of 100 images near 13.0° (n=100), and predicts B for 97.0% of 100 images near 193.0° (n=100)
+Concentration time: 0.02s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=301, B=299
+[Train fast] Loss: 0.0472 Acc: 1.0000 | Total: 0.0506s
+Fast training completed in 0.0506s
+Iter 131: classifier predicts A for 96.0% of 100 images near 13.1° (n=100), and predicts B for 97.0% of 100 images near 193.1° (n=100)
+Concentration time: 0.04s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=302, B=298
+[Train fast] Loss: 0.0475 Acc: 1.0000 | Total: 0.0625s
+Fast training completed in 0.0625s
+Iter 132: classifier predicts A for 96.0% of 100 images near 13.2° (n=100), and predicts B for 97.0% of 100 images near 193.2° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=303, B=297
+[Train fast] Loss: 0.0508 Acc: 1.0000 | Total: 0.0506s
+Fast training completed in 0.0506s
+Iter 133: classifier predicts A for 96.0% of 100 images near 13.3° (n=100), and predicts B for 97.0% of 100 images near 193.3° (n=100)
+Concentration time: 0.05s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=303, B=297
+[Train fast] Loss: 0.0495 Acc: 1.0000 | Total: 0.1415s
+Fast training completed in 0.1415s
+Iter 134: classifier predicts A for 96.0% of 100 images near 13.4° (n=100), and predicts B for 97.0% of 100 images near 193.4° (n=100)
+Concentration time: 0.04s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=304, B=296
+[Train fast] Loss: 0.0503 Acc: 1.0000 | Total: 0.0463s
+Fast training completed in 0.0473s
+Iter 135: classifier predicts A for 96.0% of 100 images near 13.5° (n=100), and predicts B for 95.0% of 100 images near 193.5° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.02s
+Pseudo-label split: A=304, B=296
+[Train fast] Loss: 0.0498 Acc: 1.0000 | Total: 0.0775s
+Fast training completed in 0.0775s
+Iter 136: classifier predicts A for 96.0% of 100 images near 13.6° (n=100), and predicts B for 95.0% of 100 images near 193.6° (n=100)
+Concentration time: 0.02s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=304, B=296
+[Train fast] Loss: 0.0509 Acc: 1.0000 | Total: 0.0515s
+Fast training completed in 0.0515s
+Iter 137: classifier predicts A for 95.0% of 100 images near 13.7° (n=100), and predicts B for 95.0% of 100 images near 193.7° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=304, B=296
+[Train fast] Loss: 0.0488 Acc: 1.0000 | Total: 0.0464s
+Fast training completed in 0.0476s
+Iter 138: classifier predicts A for 95.0% of 100 images near 13.8° (n=100), and predicts B for 95.0% of 100 images near 193.8° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=304, B=296
+[Train fast] Loss: 0.0461 Acc: 1.0000 | Total: 0.0578s
+Fast training completed in 0.0578s
+Iter 139: classifier predicts A for 95.0% of 100 images near 13.9° (n=100), and predicts B for 95.0% of 100 images near 193.9° (n=100)
+Concentration time: 0.04s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=304, B=296
+[Train fast] Loss: 0.0495 Acc: 1.0000 | Total: 0.0469s
+Fast training completed in 0.0469s
+Iter 140: classifier predicts A for 95.0% of 100 images near 14.0° (n=100), and predicts B for 95.0% of 100 images near 194.0° (n=100)
+Concentration time: 0.06s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=304, B=296
+[Train fast] Loss: 0.0494 Acc: 1.0000 | Total: 0.0487s
+Fast training completed in 0.0487s
+Iter 141: classifier predicts A for 95.0% of 100 images near 14.1° (n=100), and predicts B for 95.0% of 100 images near 194.1° (n=100)
+Concentration time: 0.04s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.02s
+Pseudo-label split: A=304, B=296
+[Train fast] Loss: 0.0464 Acc: 1.0000 | Total: 0.0468s
+Fast training completed in 0.0468s
+Iter 142: classifier predicts A for 95.0% of 100 images near 14.2° (n=100), and predicts B for 94.0% of 100 images near 194.2° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=304, B=296
+[Train fast] Loss: 0.0503 Acc: 1.0000 | Total: 0.0455s
+Fast training completed in 0.0455s
+Iter 143: classifier predicts A for 95.0% of 100 images near 14.3° (n=100), and predicts B for 95.0% of 100 images near 194.3° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=304, B=296
+[Train fast] Loss: 0.0452 Acc: 1.0000 | Total: 0.0562s
+Fast training completed in 0.0562s
+Iter 144: classifier predicts A for 95.0% of 100 images near 14.4° (n=100), and predicts B for 95.0% of 100 images near 194.4° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=305, B=295
+[Train fast] Loss: 0.0429 Acc: 1.0000 | Total: 0.0426s
+Fast training completed in 0.0436s
+Iter 145: classifier predicts A for 95.0% of 100 images near 14.5° (n=100), and predicts B for 95.0% of 100 images near 194.5° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.02s
+Pseudo-label split: A=305, B=295
+[Train fast] Loss: 0.0472 Acc: 1.0000 | Total: 0.0478s
+Fast training completed in 0.0478s
+Iter 146: classifier predicts A for 95.0% of 100 images near 14.6° (n=100), and predicts B for 95.0% of 100 images near 194.6° (n=100)
+Concentration time: 0.10s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=305, B=295
+[Train fast] Loss: 0.0483 Acc: 1.0000 | Total: 0.0440s
+Fast training completed in 0.0440s
+Iter 147: classifier predicts A for 95.0% of 100 images near 14.7° (n=100), and predicts B for 95.0% of 100 images near 194.7° (n=100)
+Concentration time: 0.04s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=305, B=295
+[Train fast] Loss: 0.0481 Acc: 1.0000 | Total: 0.0482s
+Fast training completed in 0.0482s
+Iter 148: classifier predicts A for 95.0% of 100 images near 14.8° (n=100), and predicts B for 95.0% of 100 images near 194.8° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=305, B=295
+[Train fast] Loss: 0.0475 Acc: 1.0000 | Total: 0.0479s
+Fast training completed in 0.0479s
+Iter 149: classifier predicts A for 95.0% of 100 images near 14.9° (n=100), and predicts B for 95.0% of 100 images near 194.9° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=305, B=295
+[Train fast] Loss: 0.0476 Acc: 1.0000 | Total: 0.0505s
+Fast training completed in 0.0515s
+Iter 150: classifier predicts A for 94.0% of 100 images near 15.0° (n=100), and predicts B for 95.0% of 100 images near 195.0° (n=100)
+Concentration time: 0.02s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=305, B=295
+[Train fast] Loss: 0.0492 Acc: 1.0000 | Total: 0.0485s
+Fast training completed in 0.0495s
+Iter 151: classifier predicts A for 94.0% of 100 images near 15.1° (n=100), and predicts B for 95.0% of 100 images near 195.1° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=305, B=295
+[Train fast] Loss: 0.0486 Acc: 1.0000 | Total: 0.0555s
+Fast training completed in 0.0565s
+Iter 152: classifier predicts A for 94.0% of 100 images near 15.2° (n=100), and predicts B for 95.0% of 100 images near 195.2° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=305, B=295
+[Train fast] Loss: 0.0474 Acc: 1.0000 | Total: 0.0465s
+Fast training completed in 0.0465s
+Iter 153: classifier predicts A for 94.0% of 100 images near 15.3° (n=100), and predicts B for 95.0% of 100 images near 195.3° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=306, B=294
+[Train fast] Loss: 0.0476 Acc: 1.0000 | Total: 0.0475s
+Fast training completed in 0.0485s
+Iter 154: classifier predicts A for 94.0% of 100 images near 15.4° (n=100), and predicts B for 95.0% of 100 images near 195.4° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=306, B=294
+[Train fast] Loss: 0.0488 Acc: 1.0000 | Total: 0.0435s
+Fast training completed in 0.0435s
+Iter 155: classifier predicts A for 94.0% of 100 images near 15.5° (n=100), and predicts B for 95.0% of 100 images near 195.5° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=305, B=295
+[Train fast] Loss: 0.0471 Acc: 1.0000 | Total: 0.0455s
+Fast training completed in 0.0455s
+Iter 156: classifier predicts A for 94.0% of 100 images near 15.6° (n=100), and predicts B for 95.0% of 100 images near 195.6° (n=100)
+Concentration time: 0.02s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=305, B=295
+[Train fast] Loss: 0.0450 Acc: 1.0000 | Total: 0.0435s
+Fast training completed in 0.0445s
+Iter 157: classifier predicts A for 94.0% of 100 images near 15.7° (n=100), and predicts B for 95.0% of 100 images near 195.7° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=305, B=295
+[Train fast] Loss: 0.0484 Acc: 1.0000 | Total: 0.0490s
+Fast training completed in 0.0500s
+Iter 158: classifier predicts A for 94.0% of 100 images near 15.8° (n=100), and predicts B for 94.0% of 100 images near 195.8° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=305, B=295
+[Train fast] Loss: 0.0480 Acc: 1.0000 | Total: 0.0550s
+Fast training completed in 0.0560s
+Iter 159: classifier predicts A for 94.0% of 100 images near 15.9° (n=100), and predicts B for 93.0% of 100 images near 195.9° (n=100)
+Concentration time: 0.04s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=305, B=295
+[Train fast] Loss: 0.0465 Acc: 1.0000 | Total: 0.0485s
+Fast training completed in 0.0495s
+Iter 160: classifier predicts A for 94.0% of 100 images near 16.0° (n=100), and predicts B for 93.0% of 100 images near 196.0° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=305, B=295
+[Train fast] Loss: 0.0477 Acc: 1.0000 | Total: 0.0925s
+Fast training completed in 0.0935s
+Iter 161: classifier predicts A for 94.0% of 100 images near 16.1° (n=100), and predicts B for 93.0% of 100 images near 196.1° (n=100)
+Concentration time: 0.02s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=305, B=295
+[Train fast] Loss: 0.0495 Acc: 1.0000 | Total: 0.0475s
+Fast training completed in 0.0485s
+Iter 162: classifier predicts A for 94.0% of 100 images near 16.2° (n=100), and predicts B for 93.0% of 100 images near 196.2° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=305, B=295
+[Train fast] Loss: 0.0473 Acc: 1.0000 | Total: 0.0505s
+Fast training completed in 0.0505s
+Iter 163: classifier predicts A for 94.0% of 100 images near 16.3° (n=100), and predicts B for 92.0% of 100 images near 196.3° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=305, B=295
+[Train fast] Loss: 0.0504 Acc: 1.0000 | Total: 0.0485s
+Fast training completed in 0.0485s
+Iter 164: classifier predicts A for 94.0% of 100 images near 16.4° (n=100), and predicts B for 92.0% of 100 images near 196.4° (n=100)
+Concentration time: 0.02s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=305, B=295
+[Train fast] Loss: 0.0500 Acc: 1.0000 | Total: 0.0465s
+Fast training completed in 0.0465s
+Iter 165: classifier predicts A for 94.0% of 100 images near 16.5° (n=100), and predicts B for 92.0% of 100 images near 196.5° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=305, B=295
+[Train fast] Loss: 0.0510 Acc: 1.0000 | Total: 0.1505s
+Fast training completed in 0.1505s
+Iter 166: classifier predicts A for 95.0% of 100 images near 16.6° (n=100), and predicts B for 92.0% of 100 images near 196.6° (n=100)
+Concentration time: 0.04s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=305, B=295
+[Train fast] Loss: 0.0482 Acc: 1.0000 | Total: 0.0555s
+Fast training completed in 0.0555s
+Iter 167: classifier predicts A for 95.0% of 100 images near 16.7° (n=100), and predicts B for 92.0% of 100 images near 196.7° (n=100)
+Concentration time: 0.02s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=305, B=295
+[Train fast] Loss: 0.0476 Acc: 1.0000 | Total: 0.0470s
+Fast training completed in 0.0480s
+Iter 168: classifier predicts A for 95.0% of 100 images near 16.8° (n=100), and predicts B for 92.0% of 100 images near 196.8° (n=100)
+Concentration time: 0.04s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.02s
+Pseudo-label split: A=305, B=295
+[Train fast] Loss: 0.0491 Acc: 1.0000 | Total: 0.0525s
+Fast training completed in 0.0525s
+Iter 169: classifier predicts A for 95.0% of 100 images near 16.9° (n=100), and predicts B for 92.0% of 100 images near 196.9° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=305, B=295
+[Train fast] Loss: 0.0471 Acc: 1.0000 | Total: 0.0515s
+Fast training completed in 0.0515s
+Iter 170: classifier predicts A for 95.0% of 100 images near 17.0° (n=100), and predicts B for 93.0% of 100 images near 197.0° (n=100)
+Concentration time: 0.04s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=305, B=295
+[Train fast] Loss: 0.0476 Acc: 1.0000 | Total: 0.0505s
+Fast training completed in 0.0515s
+Iter 171: classifier predicts A for 95.0% of 100 images near 17.1° (n=100), and predicts B for 93.0% of 100 images near 197.1° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=306, B=294
+[Train fast] Loss: 0.0505 Acc: 1.0000 | Total: 0.0485s
+Fast training completed in 0.0495s
+Iter 172: classifier predicts A for 95.0% of 100 images near 17.2° (n=100), and predicts B for 93.0% of 100 images near 197.2° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=306, B=294
+[Train fast] Loss: 0.0490 Acc: 1.0000 | Total: 0.0510s
+Fast training completed in 0.0510s
+Iter 173: classifier predicts A for 95.0% of 100 images near 17.3° (n=100), and predicts B for 93.0% of 100 images near 197.3° (n=100)
+Concentration time: 0.05s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.03s
+Pseudo-label split: A=305, B=295
+[Train fast] Loss: 0.0473 Acc: 1.0000 | Total: 0.0590s
+Fast training completed in 0.0600s
+Iter 174: classifier predicts A for 95.0% of 100 images near 17.4° (n=100), and predicts B for 93.0% of 100 images near 197.4° (n=100)
+Concentration time: 0.04s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=306, B=294
+[Train fast] Loss: 0.0499 Acc: 1.0000 | Total: 0.0495s
+Fast training completed in 0.0495s
+Iter 175: classifier predicts A for 95.0% of 100 images near 17.5° (n=100), and predicts B for 93.0% of 100 images near 197.5° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=306, B=294
+[Train fast] Loss: 0.0480 Acc: 1.0000 | Total: 0.0479s
+Fast training completed in 0.0489s
+Iter 176: classifier predicts A for 96.0% of 100 images near 17.6° (n=100), and predicts B for 93.0% of 100 images near 197.6° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=306, B=294
+[Train fast] Loss: 0.0487 Acc: 1.0000 | Total: 0.0495s
+Fast training completed in 0.0505s
+Iter 177: classifier predicts A for 96.0% of 100 images near 17.7° (n=100), and predicts B for 94.0% of 100 images near 197.7° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=306, B=294
+[Train fast] Loss: 0.0471 Acc: 1.0000 | Total: 0.0476s
+Fast training completed in 0.0476s
+Iter 178: classifier predicts A for 96.0% of 100 images near 17.8° (n=100), and predicts B for 94.0% of 100 images near 197.8° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=307, B=293
+[Train fast] Loss: 0.0477 Acc: 1.0000 | Total: 0.0580s
+Fast training completed in 0.0580s
+Iter 179: classifier predicts A for 96.0% of 100 images near 17.9° (n=100), and predicts B for 94.0% of 100 images near 197.9° (n=100)
+Concentration time: 0.02s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=307, B=293
+[Train fast] Loss: 0.0499 Acc: 1.0000 | Total: 0.0494s
+Fast training completed in 0.0494s
+Iter 180: classifier predicts A for 96.0% of 100 images near 18.0° (n=100), and predicts B for 94.0% of 100 images near 198.0° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=307, B=293
+[Train fast] Loss: 0.0489 Acc: 1.0000 | Total: 0.0559s
+Fast training completed in 0.0559s
+Iter 181: classifier predicts A for 96.0% of 100 images near 18.1° (n=100), and predicts B for 95.0% of 100 images near 198.1° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.02s
+Pseudo-label split: A=306, B=294
+[Train fast] Loss: 0.0468 Acc: 1.0000 | Total: 0.0581s
+Fast training completed in 0.0581s
+Iter 182: classifier predicts A for 96.0% of 100 images near 18.2° (n=100), and predicts B for 94.0% of 100 images near 198.2° (n=100)
+Concentration time: 0.02s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=306, B=294
+[Train fast] Loss: 0.0469 Acc: 1.0000 | Total: 0.0468s
+Fast training completed in 0.0478s
+Iter 183: classifier predicts A for 96.0% of 100 images near 18.3° (n=100), and predicts B for 93.0% of 100 images near 198.3° (n=100)
+Concentration time: 0.02s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.13s
+Pseudo-label split: A=306, B=294
+[Train fast] Loss: 0.0465 Acc: 1.0000 | Total: 0.0528s
+Fast training completed in 0.0538s
+Iter 184: classifier predicts A for 96.0% of 100 images near 18.4° (n=100), and predicts B for 93.0% of 100 images near 198.4° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=306, B=294
+[Train fast] Loss: 0.0495 Acc: 1.0000 | Total: 0.0460s
+Fast training completed in 0.0460s
+Iter 185: classifier predicts A for 96.0% of 100 images near 18.5° (n=100), and predicts B for 93.0% of 100 images near 198.5° (n=100)
+Concentration time: 0.02s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.02s
+Pseudo-label split: A=307, B=293
+[Train fast] Loss: 0.0489 Acc: 1.0000 | Total: 0.0535s
+Fast training completed in 0.0545s
+Iter 186: classifier predicts A for 96.0% of 100 images near 18.6° (n=100), and predicts B for 92.0% of 100 images near 198.6° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=308, B=292
+[Train fast] Loss: 0.0499 Acc: 1.0000 | Total: 0.0514s
+Fast training completed in 0.0514s
+Iter 187: classifier predicts A for 96.0% of 100 images near 18.7° (n=100), and predicts B for 92.0% of 100 images near 198.7° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=308, B=292
+[Train fast] Loss: 0.0493 Acc: 1.0000 | Total: 0.0434s
+Fast training completed in 0.0434s
+Iter 188: classifier predicts A for 96.0% of 100 images near 18.8° (n=100), and predicts B for 92.0% of 100 images near 198.8° (n=100)
+Concentration time: 0.04s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=308, B=292
+[Train fast] Loss: 0.0475 Acc: 1.0000 | Total: 0.0454s
+Fast training completed in 0.0454s
+Iter 189: classifier predicts A for 96.0% of 100 images near 18.9° (n=100), and predicts B for 92.0% of 100 images near 198.9° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=311, B=289
+[Train fast] Loss: 0.0505 Acc: 1.0000 | Total: 0.0443s
+Fast training completed in 0.0443s
+Iter 190: classifier predicts A for 96.0% of 100 images near 19.0° (n=100), and predicts B for 93.0% of 100 images near 199.0° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=312, B=288
+[Train fast] Loss: 0.0504 Acc: 1.0000 | Total: 0.0467s
+Fast training completed in 0.0467s
+Iter 191: classifier predicts A for 96.0% of 100 images near 19.1° (n=100), and predicts B for 92.0% of 100 images near 199.1° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=313, B=287
+[Train fast] Loss: 0.0532 Acc: 1.0000 | Total: 0.0486s
+Fast training completed in 0.0496s
+Iter 192: classifier predicts A for 96.0% of 100 images near 19.2° (n=100), and predicts B for 92.0% of 100 images near 199.2° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=314, B=286
+[Train fast] Loss: 0.0533 Acc: 1.0000 | Total: 0.0459s
+Fast training completed in 0.0459s
+Iter 193: classifier predicts A for 96.0% of 100 images near 19.3° (n=100), and predicts B for 93.0% of 100 images near 199.3° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=314, B=286
+[Train fast] Loss: 0.0490 Acc: 1.0000 | Total: 0.0471s
+Fast training completed in 0.0471s
+Iter 194: classifier predicts A for 96.0% of 100 images near 19.4° (n=100), and predicts B for 94.0% of 100 images near 199.4° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.02s
+Pseudo-label split: A=313, B=287
+[Train fast] Loss: 0.0489 Acc: 1.0000 | Total: 0.0585s
+Fast training completed in 0.0585s
+Iter 195: classifier predicts A for 96.0% of 100 images near 19.5° (n=100), and predicts B for 93.0% of 100 images near 199.5° (n=100)
+Concentration time: 0.07s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=313, B=287
+[Train fast] Loss: 0.0514 Acc: 1.0000 | Total: 0.0423s
+Fast training completed in 0.0423s
+Iter 196: classifier predicts A for 96.0% of 100 images near 19.6° (n=100), and predicts B for 94.0% of 100 images near 199.6° (n=100)
+Concentration time: 0.02s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=313, B=287
+[Train fast] Loss: 0.0525 Acc: 1.0000 | Total: 0.0421s
+Fast training completed in 0.0421s
+Iter 197: classifier predicts A for 96.0% of 100 images near 19.7° (n=100), and predicts B for 94.0% of 100 images near 199.7° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.08s
+Pseudo-label split: A=314, B=286
+[Train fast] Loss: 0.0535 Acc: 1.0000 | Total: 0.0657s
+Fast training completed in 0.0667s
+Iter 198: classifier predicts A for 96.0% of 100 images near 19.8° (n=100), and predicts B for 94.0% of 100 images near 199.8° (n=100)
+Concentration time: 0.01s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=314, B=286
+[Train fast] Loss: 0.0549 Acc: 0.9979 | Total: 0.0418s
+Fast training completed in 0.0418s
+Iter 199: classifier predicts A for 96.0% of 100 images near 19.9° (n=100), and predicts B for 94.0% of 100 images near 199.9° (n=100)
+Concentration time: 0.03s
+Saved 300 image names to tmp_CE\filenames_A.csv
+Saved 300 image names to tmp_CE\filenames_B.csv
+Classified images in clusters A and B.
+classification time: 0.01s
+Pseudo-label split: A=313, B=287
+[Train fast] Loss: 0.0504 Acc: 1.0000 | Total: 0.0460s
+Fast training completed in 0.0460s
+Classified rotation sequence.
+rotation sequence classification time: 0.01s
