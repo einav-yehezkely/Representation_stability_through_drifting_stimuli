@@ -1480,7 +1480,7 @@ if __name__ == "__main__":
     names, points = load_top2_filtered(PCA_CSV)
     base_point, opposite_point = create_base_and_opposite_points(0,csv_path=PCA_CSV)
     self_training_model = load_model(
-        model_path="model_ft_0_RESNET50_VGGFACE2_MLP.pth"
+        model_path="model_ft_0_RESNET50_VGGFACE2_PERCEPTRON.pth"
     )
     self_training_model = self_training_model.to(device)
 
@@ -1829,7 +1829,33 @@ if __name__ == "__main__":
         index=False
     )
 
-    # Save also the aligned angles
+    # Align model angle with the continuously rotating example angle.
+    # The decision-boundary orientation has a 180-degree ambiguity.
+
+    example_angles = df_angles["example_angle"].values
+    model_angles = df_angles["model_angle"].values
+
+    model_aligned = []
+
+    for example_angle, model_angle in zip(
+        example_angles,
+        model_angles
+    ):
+
+        if np.isnan(model_angle):
+            model_aligned.append(np.nan)
+            continue
+
+        k = round(
+            (example_angle - model_angle) / 180
+        )
+
+        best_angle = model_angle + 180 * k
+
+        model_aligned.append(best_angle)
+
+    df_angles["model_angle_aligned"] = model_aligned
+
     df_angles.to_csv(
         inside_output("angle_tracking_log.csv"),
         index=False
@@ -1844,7 +1870,7 @@ if __name__ == "__main__":
     ] % 360
 
     model_plot = df_angles[
-        "model_angle"
+        "model_angle_aligned"
     ] % 360
 
     # plt.figure(figsize=(10, 5))

@@ -8,3 +8,7 @@
 *.pth
 
 extract_embeddings/resnet50_scratch_weight.pkl
+
+__pycache__/
+*.pyc
+output_CE/
