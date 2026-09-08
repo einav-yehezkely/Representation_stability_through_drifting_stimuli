@@ -1011,11 +1011,35 @@ def create_model_and_optim():
 
         model_ft.parameters(),
 
-        lr=0.001,
+        lr=0.00001,
 
         weight_decay=0.001,
 
     )
+
+    print("\n===== OPTIMIZER DEBUG =====")
+
+    model_params = list(model_ft.parameters())
+    optimizer_params = [
+        p
+        for group in optimizer_ft.param_groups
+        for p in group["params"]
+    ]
+
+    print("Model parameter tensors:", len(model_params))
+    print("Optimizer parameter tensors:", len(optimizer_params))
+
+    print(
+        "Same first parameter:",
+        model_params[0] is optimizer_params[0]
+    )
+
+    print(
+        "First weight mean before training:",
+        model_params[0].detach().mean().item()
+    )
+
+    print("===========================\n")
 
 
     # exp_lr_scheduler = optim.lr_scheduler.StepLR(
@@ -1964,6 +1988,32 @@ if __name__ == "__main__":
     # Initial supervised training
     # --------------------------------------------------------
 
+    from collections import Counter
+
+    print("\n===== TRAIN DATA DEBUG =====")
+
+    train_labels = [
+        int(dataloaders["train"].dataset[i][1])
+        for i in range(len(dataloaders["train"].dataset))
+    ]
+
+    val_labels = [
+        int(dataloaders["val"].dataset[i][1])
+        for i in range(len(dataloaders["val"].dataset))
+    ]
+
+    print("Train labels:", Counter(train_labels))
+    print("Val labels:", Counter(val_labels))
+
+    x, y = next(iter(dataloaders["train"]))
+
+    print("Batch shape:", x.shape)
+    print("Batch labels:", torch.bincount(y))
+    print("Batch embedding mean:", x.mean().item())
+    print("Batch embedding std:", x.std().item())
+
+    print("============================\n")
+
     model_ft = train_model(
 
         model_ft,
@@ -1988,7 +2038,7 @@ if __name__ == "__main__":
     # --------------------------------------------------------
 
     MODEL_PATH = (
-        "model_ft_0_RESNET50_VGGFACE2.pth"
+        "model_ft_0_RESNET50_VGGFACE2_MLP.pth"
     )
 
 

@@ -1480,7 +1480,7 @@ if __name__ == "__main__":
     names, points = load_top2_filtered(PCA_CSV)
     base_point, opposite_point = create_base_and_opposite_points(0,csv_path=PCA_CSV)
     self_training_model = load_model(
-        model_path="model_ft_0_RESNET50_VGGFACE2.pth"
+        model_path="model_ft_0_RESNET50_VGGFACE2_MLP.pth"
     )
     self_training_model = self_training_model.to(device)
 
