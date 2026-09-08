@@ -1,5 +1,8 @@
 # Representation stability through a drifting stimuli
 
+### CelebA dataset is from
+https://mmlab.ie.cuhk.edu.hk/projects/CelebA.html
+
 ### ResNet50 model
 
 Download the resnet model from:
