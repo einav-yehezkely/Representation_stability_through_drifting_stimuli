@@ -1,14 +1,14 @@
 ############################################################
-# FILTER PCA DATA BY AVAILABLE ARCFACE EMBEDDINGS
+# FILTER PCA DATA BY AVAILABLE RESNET50 EMBEDDINGS
 #
 # Takes:
-#   pca_top2_filtered_female.csv
+#   pca_top2_filtered_female_vgg.csv
 #
 # Keeps only images that exist in:
-#   female_arcface_embeddings.csv
+#   female_resnet50_vggface2_embeddings.csv
 #
 # Creates:
-#   pca_top2_filtered_female_arcface_1.csv
+#   pca_top2_filtered_female_vgg_1.csv
 ############################################################
 
 import os
@@ -19,10 +19,10 @@ import pandas as pd
 # PATHS
 # ============================================================
 
-PCA_CSV = "pca_top2_filtered_female.csv"
-ARCFACE_CSV = "female_arcface_embeddings.csv"
+PCA_CSV = "pca_top2_filtered_female_vgg.csv"
+RESNET50_CSV = "female_resnet50_vggface2_embeddings.csv"
 
-OUTPUT_CSV = "pca_top2_filtered_female_1.csv"
+OUTPUT_CSV = "pca_top2_filtered_female_vgg_1.csv"
 
 
 # ============================================================
@@ -40,30 +40,29 @@ print("Images in original PCA file:", len(pca_df))
 
 
 # ============================================================
-# LOAD ARCFACE EMBEDDINGS
+# LOAD RESNET50 EMBEDDINGS
 # ============================================================
 
-print("Loading ArcFace embeddings...")
+print("Loading ResNet50 embeddings...")
 
-arcface_df = pd.read_csv(
-    ARCFACE_CSV,
+resnet50_df = pd.read_csv(
+    RESNET50_CSV,
     header=None
 )
 
-print("Images with ArcFace embeddings:", len(arcface_df))
+print("Images with ResNet50 embeddings:", len(resnet50_df))
 
 
 # ============================================================
-# CREATE SET OF VALID ARCFACE FILENAMES
+# CREATE SET OF VALID RESNET50 FILENAMES
 # ============================================================
 
-arcface_names = set(
-    arcface_df.iloc[:, 0]
+resnet50_names = set(
+    resnet50_df.iloc[:, 0]
     .astype(str)
     .apply(os.path.basename)
     .str.strip()
 )
-
 
 # ============================================================
 # NORMALIZE PCA FILENAMES
@@ -78,10 +77,10 @@ pca_names = (
 
 
 # ============================================================
-# FIND WHICH PCA IMAGES HAVE AN ARCFACE EMBEDDING
+# FIND WHICH PCA IMAGES HAVE AN RESNET50 EMBEDDING
 # ============================================================
 
-valid_mask = pca_names.isin(arcface_names)
+valid_mask = pca_names.isin(resnet50_names)
 
 filtered_df = pca_df[valid_mask].copy()
 

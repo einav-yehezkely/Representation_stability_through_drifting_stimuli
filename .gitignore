@@ -6,3 +6,5 @@
 *.csv
 *.png
 *.pth
+
+extract_embeddings/resnet50_scratch_weight.pkl

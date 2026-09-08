@@ -1336,166 +1336,92 @@ def save_label_change_csvs(training_log_path="training_log.csv"):
 #     return model_angle
 
 
-def estimate_model_angle_from_predictions(
-    model,
-    csv_path=None,
-    batch_size=100,
-):
+def estimate_model_angle_from_predictions():
     """
-    Estimate the direction of class A using ALL points around the circle.
-
-    Each point contributes according to:
-        P(A) - P(B)
-
-    Points strongly predicted as A pull toward their angle.
-    Points strongly predicted as B pull in the opposite direction.
+    Estimate the model's decision boundary angle based on the predictions
+    of images classified as A and B.
 
     Returns:
-        angle in [0, 360)
+        model_angle (float): Estimated angle of the model's direction in degrees.
     """
 
-    if csv_path is None:
-        csv_path = inside_tmp("rotation_sequence_all.csv")
+    pred_a = safe_read_filenames(
+        inside_tmp("predicted_as_A.csv")
+    )
 
-    df = pd.read_csv(csv_path)
+    pred_b = safe_read_filenames(
+        inside_tmp("predicted_as_B.csv")
+    )
 
-    angles = []
-    scores = []
+    df_a = pd.DataFrame(
+        {
+            "filename": pred_a,
+            "pred": 0
+        }
+    )
 
-    batch_embeddings = []
-    batch_angles = []
+    df_b = pd.DataFrame(
+        {
+            "filename": pred_b,
+            "pred": 1
+        }
+    )
 
-    model.eval()
+    df = pd.concat(
+        [df_a, df_b],
+        ignore_index=True
+    )
 
-    def process_batch():
+    # Map filenames to PCA angles
+    df["angle_deg"] = df["filename"].map(
+        ANGLE_MAP
+    )
 
-        if len(batch_embeddings) == 0:
-            return
+    df = (
+        df
+        .dropna(subset=["angle_deg"])
+        .sort_values("angle_deg")
+    )
 
-        batch = torch.stack(
-            batch_embeddings
-        ).to(device)
-
-        outputs = model(batch)
-
-        probs = torch.softmax(
-            outputs,
-            dim=1
-        )
-
-        # positive -> A
-        # negative -> B
-        batch_scores = (
-            probs[:, 0] - probs[:, 1]
-        ).cpu().tolist()
-
-        scores.extend(
-            batch_scores
-        )
-
-        angles.extend(
-            batch_angles
-        )
-
-    with torch.no_grad():
-
-        for _, row in df.iterrows():
-
-            filename = str(
-                row["filename"]
-            )
-
-            try:
-                embedding = get_arcface_embedding(
-                    filename
-                )
-            except KeyError:
-                continue
-
-            # IMPORTANT:
-            # use the REAL PCA angle of the selected image
-            real_angle = ANGLE_MAP.get(
-                filename,
-                np.nan
-            )
-
-            if np.isnan(real_angle):
-                continue
-
-            batch_embeddings.append(
-                embedding
-            )
-
-            batch_angles.append(
-                real_angle
-            )
-
-            if len(batch_embeddings) >= batch_size:
-
-                process_batch()
-
-                batch_embeddings = []
-                batch_angles = []
-
-        process_batch()
-
-    if len(angles) == 0:
+    if len(df) == 0:
         return np.nan
 
-    angles = np.asarray(
-        angles,
-        dtype=float
-    )
+    preds = df["pred"].values
+    angles = df["angle_deg"].values
 
-    scores = np.asarray(
-        scores,
-        dtype=float
-    )
+    # Find places where prediction changes A <-> B
+    changes = np.where(
+        preds[:-1] != preds[1:]
+    )[0]
 
-    theta = np.deg2rad(
-        angles
-    )
-
-    # First circular harmonic.
-    #
-    # A points contribute toward their location.
-    # B points have negative scores and therefore
-    # contribute toward the opposite direction.
-    x = np.sum(
-        scores * np.cos(theta)
-    )
-
-    y = np.sum(
-        scores * np.sin(theta)
-    )
-
-    magnitude = np.hypot(
-        x,
-        y
-    )
-
-    if magnitude < 1e-8:
+    if len(changes) == 0:
         return np.nan
 
+    # Take the first crossing
+    idx = changes[0]
+
+    boundary_angle = (
+        angles[idx]
+        + angles[idx + 1]
+    ) / 2
+
+    # Convert boundary orientation to model/class direction
     model_angle = (
-        np.degrees(
-            np.arctan2(y, x)
-        )
-        % 360
-    )
+        boundary_angle - 90
+    ) % 360
 
     return model_angle
 
 if __name__ == "__main__":
 
-    UNSUPERVISED = False  # Set to True for unsupervised self-training, False for supervised training
+    UNSUPERVISED = True  # Set to True for unsupervised self-training, False for supervised training
     ROTATION_DEGS = 0.1
     NUM_ITERATIONS = 3600 #10800 # 3 rounds of 360 degrees at 0.1 degree increments
     NUM_EPOCHS = 1
     PLOT_EVERY = 100
     NUM_OF_IMAGES_PER_CLUSTER = 300
     LR = 0.001
-    WEIGHT_DECAY = 1
+    WEIGHT_DECAY = 2
     K_EVAL = 100 # number of images to evaluate cluster concentration on
 
     names, points = load_top2_filtered("pca_top2_filtered_female_1.csv")
@@ -1558,6 +1484,7 @@ if __name__ == "__main__":
             output_dir=inside_tmp("B"),
             k=NUM_OF_IMAGES_PER_CLUSTER
         )
+        
         # now we have two directories: A and B with NUM_OF_IMAGES_PER_CLUSTER images each from opposite clusters
 
         if UNSUPERVISED:
@@ -1590,10 +1517,18 @@ if __name__ == "__main__":
             print(f"classification time: {time.time() - t:.2f}s")
 
             for rec in training_records:
+
                 image_angle = ANGLE_MAP.get(
                     rec["filename"],
                     np.nan
                 )
+
+                if rec["filename"] in filenames_A:
+                    source_cluster = "A"
+                elif rec["filename"] in filenames_B:
+                    source_cluster = "B"
+                else:
+                    source_cluster = "unknown"
 
                 training_log.append(
                     {
@@ -1601,8 +1536,16 @@ if __name__ == "__main__":
                         "cluster_angle": angle_deg,
                         "filename": rec["filename"],
                         "image_angle": image_angle,
+
+                        "source_cluster": source_cluster,
+
                         "cluster_label": rec["pred"],
+
                         "prob_A": rec["prob_A"],
+                        "prob_B": rec["prob_B"],
+
+                        "correct_pseudo_label":
+                            source_cluster == rec["pred"],
                     }
                 )
 
@@ -1610,6 +1553,28 @@ if __name__ == "__main__":
                 f"Pseudo-label split: "
                 f"A={len(filenames_pred_A)}, "
                 f"B={len(filenames_pred_B)}"
+            )
+
+            n_A_correct = sum(
+                rec["pred"] == "A"
+                for rec in training_records
+                if rec["filename"] in filenames_A
+            )
+
+            n_B_correct = sum(
+                rec["pred"] == "B"
+                for rec in training_records
+                if rec["filename"] in filenames_B
+            )
+
+            print(
+                f"Cluster A -> predicted A: "
+                f"{100 * n_A_correct / len(filenames_A):.1f}%"
+            )
+
+            print(
+                f"Cluster B -> predicted B: "
+                f"{100 * n_B_correct / len(filenames_B):.1f}%"
             )
 
             filenames = (
@@ -1725,11 +1690,7 @@ if __name__ == "__main__":
                 f"{time.time() - t:.2f}s"
             )
 
-            model_angle = estimate_model_angle_from_predictions(
-                self_training_model,
-                csv_path=inside_tmp("rotation_sequence_all.csv"),
-                batch_size=100,
-            )
+            model_angle = estimate_model_angle_from_predictions()
 
             angle_tracking_log.append({
                 "iteration": i,
