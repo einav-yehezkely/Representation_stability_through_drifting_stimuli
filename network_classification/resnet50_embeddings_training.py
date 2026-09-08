@@ -942,21 +942,27 @@ class ResNet50Classifier(
 
         super().__init__()
 
-        # TODO: a perceptron
-        self.classifier = nn.Sequential(
+        # ### MLP
+        # self.classifier = nn.Sequential(
 
-            nn.Linear(
-                EMBEDDING_DIM,
-                64,
-            ),
+        #     nn.Linear(
+        #         EMBEDDING_DIM,
+        #         64,
+        #     ),
 
-            nn.ReLU(),
+        #     nn.ReLU(),
 
-            nn.Linear(
-                64,
-                2,
-            ),
+        #     nn.Linear(
+        #         64,
+        #         2,
+        #     ),
 
+        # )
+
+        ### Perceptron
+        self.classifier = nn.Linear(
+            EMBEDDING_DIM,
+            2,
         )
 
 
@@ -2038,7 +2044,7 @@ if __name__ == "__main__":
     # --------------------------------------------------------
 
     MODEL_PATH = (
-        "model_ft_0_RESNET50_VGGFACE2_MLP.pth"
+        "model_ft_0_RESNET50_VGGFACE2_PERCEPTRON.pth"
     )
 
 

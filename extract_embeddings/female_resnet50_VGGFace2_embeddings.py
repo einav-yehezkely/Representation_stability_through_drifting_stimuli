@@ -40,7 +40,6 @@ img_dir = os.path.abspath(
     os.path.join(
         script_dir,
         "..",
-        "..",
         "female_faces"
     )
 )
