@@ -2034,7 +2034,7 @@ if __name__ == "__main__":
 
         exp_lr_scheduler,
 
-        num_epochs=15,
+        num_epochs=100,
 
     )
 

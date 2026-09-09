@@ -63,6 +63,9 @@ device = torch.device(
     "cuda" if torch.cuda.is_available() else "cpu"
 )
 
+if torch.cuda.is_available():
+    print("GPU:", torch.cuda.get_device_name(0))
+
 # ============================================================
 # LOAD PRECOMPUTED VGGFACE2 RESNET50 EMBEDDINGS
 #
@@ -136,7 +139,8 @@ for _, row in _resnet50_df.iterrows():
 
     embedding = torch.tensor(
         embedding,
-        dtype=torch.float32
+        dtype=torch.float32,
+        device=device
     )
 
 
@@ -349,12 +353,6 @@ def collect_nearest_images(
     for idx in nearest_indices:
         name = all_names[idx]
         selected_names.append(name)
-
-    # Save filenames to CSV
-    csv_name = f"filenames_{os.path.basename(output_dir)}.csv"
-    csv_path = inside_tmp(csv_name)
-    pd.DataFrame(selected_names, columns=["filename"]).to_csv(csv_path, index=False)
-    print(f"Saved {len(selected_names)} image names to {csv_path}")
 
     return nearest_indices, selected_names
 
@@ -604,7 +602,7 @@ def classify_filenames_batched(
 
             if len(batch_embeddings) == batch_size:
 
-                batch = torch.stack(batch_embeddings).to(device)
+                batch = torch.stack(batch_embeddings)
 
                 outputs = model(batch)
                 probs = torch.softmax(outputs, dim=1)
@@ -629,7 +627,7 @@ def classify_filenames_batched(
 
         if batch_embeddings:
 
-            batch = torch.stack(batch_embeddings).to(device)
+            batch = torch.stack(batch_embeddings)
 
             outputs = model(batch)
             probs = torch.softmax(outputs, dim=1)
@@ -666,9 +664,7 @@ def process_classification_batch(
     
     # Shape:
     # [batch_size, 2048]
-    batch = torch.stack(
-        batch_embeddings
-    ).to(device)
+    batch = torch.stack(batch_embeddings)
 
 
     outputs = model(
@@ -1051,9 +1047,7 @@ def percent_predicted_as_filenames(
 
                 continue
 
-            x = embedding.unsqueeze(
-                0
-            ).to(device)
+            x = embedding.unsqueeze(0)
 
 
             output = model(
@@ -1090,7 +1084,7 @@ def percent_predicted_as_filenames_batched(
     filenames,
     target_pred,
     image_source_dir="female_faces",
-    batch_size=50,
+    batch_size=100,
 ):
     """
     Compute the percentage of images in filenames that are predicted as target_pred by the model, processing in batches for efficiency.
@@ -1126,9 +1120,7 @@ def percent_predicted_as_filenames_batched(
 
             if len(batch_embeddings) == batch_size:
 
-                batch = torch.stack(
-                    batch_embeddings
-                ).to(device)
+                batch = torch.stack(batch_embeddings)
 
 
                 outputs = model(
@@ -1156,9 +1148,7 @@ def percent_predicted_as_filenames_batched(
 
         if batch_embeddings:
 
-            batch = torch.stack(
-                batch_embeddings
-            ).to(device)
+            batch = torch.stack(batch_embeddings)
 
 
             outputs = model(
@@ -1194,7 +1184,12 @@ def percent_predicted_as_filenames_batched(
     )
 
 def compute_cluster_concentration(
-    angle, iteration, cluster_concentration=None, k_eval=100
+    angle,
+    iteration,
+    filenames_A,
+    filenames_B,
+    cluster_concentration=None,
+    k_eval=100,
 ):
     """
     Evaluate the current trained classifier after clustering-based training.
@@ -1208,22 +1203,19 @@ def compute_cluster_concentration(
     if cluster_concentration is None:
         cluster_concentration = []
 
-    a_csv = inside_tmp("filenames_A.csv")
-    b_csv = inside_tmp("filenames_B.csv")
-
-    if not (os.path.exists(a_csv) and os.path.exists(b_csv)):
-        print("Warning: filenames_A/B.csv not found. Skipping.")
-        return cluster_concentration
-
-    dfA = pd.read_csv(a_csv)
-    dfB = pd.read_csv(b_csv)
-
     opposite_angle = (angle + 180) % 360
 
     # pick only k_eval closest-by-angle within each cluster. Because the clusters are not perfectly circular, we don't want to take all images in the cluster, just the ones closest to the training angle.
-    eval_A_filenames = take_k_closest_to_angle(dfA["filename"].tolist(), angle, k_eval)
+    eval_A_filenames = take_k_closest_to_angle(
+        filenames_A,
+        angle,
+        k_eval
+    )
+
     eval_B_filenames = take_k_closest_to_angle(
-        dfB["filename"].tolist(), opposite_angle, k_eval
+        filenames_B,
+        opposite_angle,
+        k_eval
     )
 
     # Evaluate the percentage of images predicted as A in cluster A and as B in cluster B using the trained model.
@@ -1708,7 +1700,7 @@ if __name__ == "__main__":
             rotation_records = classify_filenames_batched(
                 self_training_model,
                 rotation_filenames,
-                batch_size=100,
+                batch_size=360,
             )
 
             rotation_pred_A = [
@@ -1773,12 +1765,15 @@ if __name__ == "__main__":
 
         t = time.time()
 
-        cluster_concentration = compute_cluster_concentration(
-            angle=angle_deg,
-            iteration=i,
-            cluster_concentration=cluster_concentration,
-            k_eval=K_EVAL
-        )
+        if i % 10 == 0:
+            cluster_concentration = compute_cluster_concentration(
+                angle=angle_deg,
+                iteration=i,
+                filenames_A=filenames_A,
+                filenames_B=filenames_B,
+                cluster_concentration=cluster_concentration,
+                k_eval=K_EVAL
+            )
 
         print(f"Concentration time: {time.time()-t:.2f}s")
         
@@ -1787,8 +1782,6 @@ if __name__ == "__main__":
         opposite_point = rotate_vector(opposite_point, angle_deg=ROTATION_DEGS) 
         # delete csv files
         csv_files_to_delete = [
-            inside_tmp("filenames_A.csv"),
-            inside_tmp("filenames_B.csv"),
             inside_tmp("predicted_as_A.csv"),
             inside_tmp("predicted_as_B.csv"),
         ]
