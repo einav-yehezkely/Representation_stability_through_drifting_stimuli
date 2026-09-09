@@ -1464,7 +1464,7 @@ if __name__ == "__main__":
     NUM_ITERATIONS = 10800 #10800 # 3 rounds of 360 degrees at 0.1 degree increments
     NUM_EPOCHS = 1
     PLOT_EVERY = 100
-    NUM_OF_IMAGES_PER_CLUSTER = 300
+    NUM_OF_IMAGES_PER_CLUSTER = 100
     LR = 0.001
     WEIGHT_DECAY = 1
     K_EVAL = 100 # number of images to evaluate cluster concentration on
@@ -1775,7 +1775,7 @@ if __name__ == "__main__":
                 k_eval=K_EVAL
             )
 
-        print(f"Concentration time: {time.time()-t:.2f}s")
+            print(f"Concentration time: {time.time()-t:.2f}s")
         
         # rotate base_point and opposite_point by ROTATION_DEGS degrees for the next iteration
         base_point = rotate_vector(base_point, angle_deg=ROTATION_DEGS)  
@@ -1916,7 +1916,7 @@ if __name__ == "__main__":
     plt.plot(
         df_angles["iteration"],
         model_plot,
-        label="weights / model",
+        label="estimated model orientation",
         linewidth=2,
     )
 
@@ -1930,9 +1930,14 @@ if __name__ == "__main__":
 
     plt.ylim(0, 360)
 
+    type_of_learning=(
+                "Unsupervised Learning" if UNSUPERVISED else "Supervised Learning"
+            )
+
     plt.title(
         f"rotation tracking, "
-        f"step={ROTATION_DEGS} degs/iteration"
+        f"step={ROTATION_DEGS} degs/iteration\n"
+        f"-- {type_of_learning} --"
     )
 
     plt.legend()
