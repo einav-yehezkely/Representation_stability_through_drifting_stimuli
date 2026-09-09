@@ -1017,9 +1017,9 @@ def create_model_and_optim():
 
         model_ft.parameters(),
 
-        lr=0.00001,
+        lr=0.001,
 
-        weight_decay=0.001,
+        weight_decay=1,
 
     )
 

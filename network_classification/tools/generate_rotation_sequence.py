@@ -350,11 +350,6 @@ def plot_two_rotation_paths_fixed_color(
 # Load data
 names, points = load_top2_filtered("pca_top2_filtered_female_vgg_1.csv")
 
-# Base and opposite points
-base_idx = 0
-base_point = points[base_idx]
-opposite_point = -base_point
-
 # Compute angles (in radians) of each point from the origin
 angles = np.arctan2(points[:, 1], points[:, 0])
 
@@ -366,22 +361,15 @@ angles_deg = (angles_deg + 360) % 360
 radii = np.linalg.norm(points, axis=1)
 
 # Define the target angle in degrees
-target_angle = 0
-
+target_angle = 90
 target_radius = 0.45
 
-angle_diff = np.abs(angles_deg - target_angle)
-angle_error = np.minimum(
-    angle_diff,
-    360 - angle_diff
-)
-radius_error = np.abs(radii - target_radius)
-combined_error = angle_error + radius_error * 100
+angle_rad = np.deg2rad(target_angle)
 
-# Find the index of the point whose angle is closest to the target angle
-base_idx = np.argmin(combined_error)
-# Retrieve the actual 2D PCA coordinates of the selected base point
-base_point = points[base_idx]
+base_point = np.array([
+    target_radius * np.cos(angle_rad),
+    target_radius * np.sin(angle_rad)
+])
 
 opposite_point = -base_point
 

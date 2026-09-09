@@ -72,7 +72,7 @@ if torch.cuda.is_available():
 # IMPORTANT:
 #
 # PCA / stimulus geometry:
-#     FaceNet VGGFace2
+#     InceptionResnetV1 VGGFace2
 #
 # Classifier representation:
 #     ResNet50 trained from scratch on VGGFace2
@@ -1464,7 +1464,7 @@ if __name__ == "__main__":
     NUM_ITERATIONS = 10800 #10800 # 3 rounds of 360 degrees at 0.1 degree increments
     NUM_EPOCHS = 1
     PLOT_EVERY = 100
-    NUM_OF_IMAGES_PER_CLUSTER = 100
+    NUM_OF_IMAGES_PER_CLUSTER = 65
     LR = 0.001
     WEIGHT_DECAY = 1
     K_EVAL = 100 # number of images to evaluate cluster concentration on

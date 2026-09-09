@@ -14,7 +14,7 @@ from matplotlib.animation import FuncAnimation
 
 
 # Load vectors
-df = pd.read_csv("pca_top2_filtered.csv", header=None)
+df = pd.read_csv("pca_top2_filtered_vgg_1.csv", header=None)
 names = df.iloc[:, 0].to_numpy()
 x = df.iloc[:, 1].to_numpy()
 y = df.iloc[:, 2].to_numpy()
