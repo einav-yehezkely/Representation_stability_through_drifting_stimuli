@@ -134,7 +134,7 @@ def project_data(X, eigenvectors, start=0, end=None):
 
 # Project the centered data onto the top k_95 principal components
 # This reduces the dimensionality of the original 512D vectors to k_95D while preserving ~95% of the variance
-X_projected = project_data(X_prepared, sorted_eigenvectors, k_95)
+X_projected = project_data(X_prepared, sorted_eigenvectors, 0, k_95)
 print("shape (X_projected):", X_projected.shape)
 # Project the centered data onto the top 2 principal components
 X_projected_top2 = project_data(X_prepared, sorted_eigenvectors, 0, 2)
@@ -174,8 +174,18 @@ eigenvalues_df = pd.DataFrame(
 # compute squared radius for the rest of the components
 squared_radius_rest = np.sum(X_projected_rest**2, axis=1)
 # Select 10% of vectors with smallest squared radius — most similar in non-dominant components
+
 threshold_sq = np.percentile(squared_radius_rest, 10)
 mask_sq = squared_radius_rest <= threshold_sq
+
+# threshold_10 = np.percentile(squared_radius_rest, 80)
+# threshold_20 = np.percentile(squared_radius_rest, 90)
+
+# mask_sq = (
+#     (squared_radius_rest > threshold_10)
+#     & (squared_radius_rest <= threshold_20)
+# )
+
 # Apply the mask to get only the 10% most similar vectors in the residual space
 similar_vectors_rest = X_projected_rest[mask_sq]
 
@@ -188,7 +198,7 @@ df_similar_vectors.insert(0, "filename", np.array(names)[mask_sq])
 # )
 
 df_top2_filtered = df_top2[mask_sq]
-df_top2_filtered.to_csv("pca_top2_filtered_female_vgg_1.csv", index=False, header=False)
+df_top2_filtered.to_csv("pca_top2_filtered_female_vgg.csv", index=False, header=False)
 print(
     "Saved filtered projection (PC1, PC2) of 10% most similar images to pca_top2_filtered_female_vgg_1.csv"
 )

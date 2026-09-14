@@ -233,7 +233,7 @@ log_file = open(inside_output("output.txt"), "w", encoding="utf-8")
 sys.stdout = Tee(sys.stdout, log_file)
 sys.stderr = Tee(sys.stderr, log_file)
 
-def load_top2_filtered(csv_path="pca_top2_filtered_female_vgg_1.csv"):
+def load_top2_filtered(csv_path=PCA_CSV):
     """
     Load 2D PCA coordinates of filtered images from a CSV file.
 
@@ -252,7 +252,7 @@ def load_top2_filtered(csv_path="pca_top2_filtered_female_vgg_1.csv"):
 
 
 
-def create_base_and_opposite_points(angle, csv_path="pca_top2_filtered_female_vgg_1.csv"):
+def create_base_and_opposite_points(angle, csv_path=PCA_CSV):
     """
     Given a target angle, find the base point in PCA space that is closest to that angle,
     and compute its opposite point (180 degrees away).
@@ -1461,18 +1461,20 @@ if __name__ == "__main__":
 
     UNSUPERVISED = True  # Set to True for unsupervised self-training, False for supervised training
     ROTATION_DEGS = 0.1
-    NUM_ITERATIONS = 10800 #10800 # 3 rounds of 360 degrees at 0.1 degree increments
+    NUM_ITERATIONS = 10800 # 3 rounds of 360 degrees at 0.1 degree increments
     NUM_EPOCHS = 1
-    PLOT_EVERY = 100
-    NUM_OF_IMAGES_PER_CLUSTER = 65
+    PLOT_EVERY = 500 #100
+    NUM_OF_IMAGES_PER_CLUSTER = 64
     LR = 0.001
     WEIGHT_DECAY = 1
     K_EVAL = 100 # number of images to evaluate cluster concentration on
 
+    MODEL_PATH = "model_ft_0_RESNET50_VGGFACE2_PERCEPTRON.pth"
+
     names, points = load_top2_filtered(PCA_CSV)
     base_point, opposite_point = create_base_and_opposite_points(0,csv_path=PCA_CSV)
     self_training_model = load_model(
-        model_path="model_ft_0_RESNET50_VGGFACE2_PERCEPTRON.pth"
+        model_path=MODEL_PATH,
     )
     self_training_model = self_training_model.to(device)
 
