@@ -71,3 +71,95 @@ function sigmoid_value = sigmoid(z)
     % Sigmoid function
     sigmoid_value = 1 ./ (1 + exp(-z));
 end
+
+% ==============================
+% ==============================
+% Visualization
+% ==============================
+% ==============================
+
+figure;
+hold on;
+axis equal;
+
+% Unit circle
+t = linspace(0, 2*pi, 500);
+plot(cos(t), sin(t), '--', ...
+    'Color', [0.75 0.75 0.75], ...
+    'LineWidth', 1.2);
+
+% Initial points
+scatter(1, 0, 130, 'filled');
+scatter(-1, 0, 130, 'filled');
+
+% Labels
+text(1.10, 0.08, 'A', ...
+    'FontSize', 14, 'FontWeight', 'bold');
+
+text(-1.18, 0.08, 'B', ...
+    'FontSize', 14, 'FontWeight', 'bold');
+
+% ==============================
+% Curved arrows with arrowheads
+% ==============================
+
+start_angles = [0, pi];
+
+for i = 1:2
+
+    theta = linspace(start_angles(i) + 0.12, ...
+                     start_angles(i) + 0.75, 100);
+
+    x = cos(theta);
+    y = sin(theta);
+
+    % Curved black line
+    plot(x, y, 'k', 'LineWidth', 2);
+
+    % ----- Arrowhead at the END of the curve -----
+
+    % End point
+    tip = [x(end), y(end)];
+
+    % Tangent direction at the end
+    direction = tip - [x(end-3), y(end-3)];
+    direction = direction / norm(direction);
+
+    % Perpendicular direction
+    perpendicular = [-direction(2), direction(1)];
+
+    % Arrowhead size
+    headLength = 0.09;
+    headWidth  = 0.05;
+
+    % Base of triangle
+    base = tip - headLength * direction;
+
+    % Triangle corners
+    p1 = tip;
+    p2 = base + headWidth * perpendicular;
+    p3 = base - headWidth * perpendicular;
+
+    % Draw arrowhead
+    patch([p1(1) p2(1) p3(1)], ...
+          [p1(2) p2(2) p3(2)], ...
+          'k', ...
+          'EdgeColor', 'k');
+end
+
+% Coordinate axes
+plot([-1.3 1.3], [0 0], 'k', 'LineWidth', 0.8);
+plot([0 0], [-1.3 1.3], 'k', 'LineWidth', 0.8);
+
+% Axis labels
+text(1.32, -0.08, 'x_1', 'FontSize', 13);
+text(0.05, 1.28, 'x_2', 'FontSize', 13);
+
+xlim([-1.4 1.4]);
+ylim([-1.4 1.4]);
+
+set(gca, 'XTick', [], 'YTick', []);
+set(gca, 'XColor', 'none', 'YColor', 'none');
+
+box off;
+set(gcf, 'Color', 'w');
