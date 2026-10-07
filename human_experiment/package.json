@@ -1,0 +1,25 @@
+{
+  "name": "human-drift-experiment",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Browser experiment for human participants: representation stability under drifting stimuli.",
+  "type": "module",
+  "scripts": {
+    "prepare-assets": "node scripts/prepare-assets.mjs",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "parity:fixtures": "py -3 scripts/reference/make_parity_fixtures.py",
+    "verify:repo": "node scripts/verify-repo-unchanged.mjs",
+    "verify:participant-build": "node scripts/verify-participant-build.mjs",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "jsdom": "^26.1.0",
+    "vite": "^7.3.7",
+    "vitest": "^3.2.7"
+  }
+}

@@ -1,0 +1,7 @@
+node_modules/
+dist/
+public/assets/faces/
+exports/
+__pycache__/
+test-results/
+playwright-report/

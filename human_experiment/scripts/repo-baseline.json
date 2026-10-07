@@ -1,0 +1,51 @@
+{
+  "capturedAt": "2026-10-07T08:56:59.987Z",
+  "head": "48cadce6fecd40babac40324a2f878456d003839",
+  "modifiedTracked": [],
+  "ignored": {
+    ".venv/": {
+      "dir": true,
+      "mtimeMs": 1789368114032.8096
+    },
+    "archive/PCAs/": {
+      "dir": true,
+      "mtimeMs": 1789380295991.2227
+    },
+    "extract_embeddings/resnet50_scratch_weight.pkl": {
+      "size": 165000856,
+      "mtimeMs": 1788894445056.0645
+    },
+    "female_facenet_vggface2_embeddings.csv": {
+      "size": 1271611517,
+      "mtimeMs": 1788955061170.9956
+    },
+    "female_faces/": {
+      "dir": true,
+      "mtimeMs": 1788885239383.8704
+    },
+    "female_resnet50_vggface2_embeddings.csv": {
+      "size": 3975596186,
+      "mtimeMs": 1788895414401.6377
+    },
+    "model_ft_0_RESNET50_VGGFACE2_PERCEPTRON.pth": {
+      "size": 18725,
+      "mtimeMs": 1788946105842.7112
+    },
+    "network_classification/__pycache__/resnet50_embeddings_training.cpython-314.pyc": {
+      "size": 27173,
+      "mtimeMs": 1789378588681.7256
+    },
+    "pca_top2_filtered_female_vgg_1.csv": {
+      "size": 604153,
+      "mtimeMs": 1788884282261.8984
+    },
+    "training_progress_resnet50_vggface2_PERCEPTRON.png": {
+      "size": 96389,
+      "mtimeMs": 1788932324469.119
+    }
+  },
+  "pcaSha256": "cc393110d3e5e3ec632d718d5923afd2516c22866b484ba89db24342531df6d6",
+  "userAuthorizedChanges": {
+    "human_experiment/IMPLEMENTATION_PLAN.md": "user request 2026-10-07: translate the plan to English"
+  }
+}
