@@ -6,6 +6,8 @@ Build an English-language browser experiment for human participants, parallel to
 
 This document is an implementation specification for Claude Code. Implement a working, modular experiment, local pilot persistence, CSV export, development controls, and verification of the requirements below. Do not invent scientific procedures that are absent from the existing experiment.
 
+Read the seminar paper in `Seminar - Representation stability under drifting stimuli` to understand the research background, scientific rationale, and experimental methodology; use it alongside the existing neural-network code as read-only reference material.
+
 ## 2. Absolute repository protection rule
 
 **ALL EXISTING REPOSITORY CODE AND FILES ARE READ-ONLY. THERE ARE NO EXCEPTIONS.**
@@ -14,7 +16,7 @@ Claude must NEVER modify, delete, move, rename, refactor, reformat, or overwrite
 
 **All new implementation work must be created under `human_experiment/`.** This includes application code, configuration, package manifests and lockfiles, scripts, generated data, build output, documentation, tests, and copied assets. Run installation and build tools from that directory, with output confined to it.
 
-If existing code or logic is needed, first copy it into `human_experiment/`, then modify only the copy. Existing PCA data and `female_faces/` may be read directly; if browser serving requires copies or conversion, create those copies or derived files only inside `human_experiment/`. Preserve source files and their original paths.
+If existing code or logic is needed, first copy it into `human_experiment/`, then modify only the copy. Existing PCA data `pca_top2_filtered_female_vgg_1.csv` and `female_faces/` may be read directly; if browser serving requires copies or conversion, create those copies or derived files only inside `human_experiment/`. Preserve source files and their original paths.
 
 Before and after implementation, inspect repository status and verify that no pre-existing file has changed. Preserve any changes that already existed before work began. This delivered PRD is a specification artifact; it does not authorize subsequent edits outside `human_experiment/`.
 
@@ -23,7 +25,7 @@ Before and after implementation, inspect repository status and verify that no pr
 Before implementing stimulus generation, inspect the existing neural-network experiment and locate:
 
 - The existing `female_faces/` directory and image identifiers.
-- The existing PCA data, loading procedure, dimensions, preprocessing, and image-to-coordinate mapping.
+- The existing PCA data, loading procedure, dimensions, preprocessing, and image-to-coordinate mapping. `pca_top2_filtered_female_vgg_1.csv`.
 - The scientific trajectory: origin, geometry, radius, coordinate conventions, and angular conventions.
 - How Group A and Group B clusters are constructed around their current centers.
 - Candidate membership, distances, tolerances, sampling weights, and any repeat or exclusion rules.
@@ -254,7 +256,7 @@ Define these contracts, including error behavior, centrally. Keep browser storag
 
 ## 14. CSV and completion
 
-At normal experiment completion, automatically download `experiment_<sessionId>.csv`, with exactly one row per answered trial and stable headers containing the full trial schema. Include session metadata as repeated explicit columns or provide a documented companion metadata export; seed, configuration, consent, and completion metadata must remain exportable rather than existing only in memory. Serialize nested configuration deterministically where needed.
+At normal experiment completion, automatically download `<sessionId>.csv`, with exactly one row per answered trial and stable headers containing the full trial schema. Include session metadata as repeated explicit columns or provide a documented companion metadata export; seed, configuration, consent, and completion metadata must remain exportable rather than existing only in memory. Serialize nested configuration deterministically where needed.
 
 Escape commas, quotes, and newlines correctly, preserve the four original response strings, and use unambiguous booleans and numeric units. Do not use a participant name in the filename. Show an English completion screen with a manual download/retry button if automatic download is blocked. Development exports of partial sessions must be marked incomplete. Keep saved local data available after export.
 
@@ -330,3 +332,19 @@ Verify and document these behaviors:
 13. Development controls and debug information are absent in participant mode. Replacing the storage adapter requires no edits to scientific or phase logic.
 
 Deliver run/build instructions, configuration documentation, a trial/session schema description, source logic provenance, verification results, and the explicit pilot-only storage limitation in `human_experiment/README.md`. Do not claim readiness for final Prolific collection while using only local downloads.
+
+## Scientific stimulus-selection visualization
+
+Create a researcher-facing PCA visualization that reproduces the corresponding plot from the existing neural-network experiment. Inspect its plotting code and use the same coordinate system, trajectory, and visual conventions.
+
+The plot must show:
+- All available stimulus points along the circular trajectory, using the existing experiment’s definition of trajectory membership.
+- The circular trajectory and the current centers of Group A and Group B.
+- The actual stimulus points selected for presentation, clearly highlighted against the full set of points.
+- The currently displayed stimulus, distinguished from previously presented stimuli.
+
+Update the visualization as trials progress, using the actual trial records rather than generating a separate set of example selections. Allow inspection of the selected stimuli by phase and group, and provide an export of the plot for research review.
+
+Keep this visualization separate from the participant-facing experiment. It should be available only in development mode or a researcher review view, because revealing category centers or group membership could influence participant responses.
+
+All visualization code and exported artifacts must remain under `human_experiment/`. Existing plotting code is read-only; copy it into `human_experiment/` before adapting it.
