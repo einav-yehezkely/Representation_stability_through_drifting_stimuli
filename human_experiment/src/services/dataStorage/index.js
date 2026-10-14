@@ -5,6 +5,7 @@
 import { browserDownload } from "./browserDownload.js";
 import { LocalCsvStorage } from "./localCsvStorage.js";
 import { MemoryStorage } from "./memoryStorage.js";
+import { ServerStorage } from "./serverStorage.js";
 import { assertImplementsContract } from "./storageContract.js";
 
 export function createStorage(config, overrides = {}) {
@@ -19,6 +20,16 @@ export function createStorage(config, overrides = {}) {
       break;
     case "memory":
       adapter = new MemoryStorage(overrides);
+      break;
+    case "server":
+      adapter = new ServerStorage({
+        endpoint: config.storage.serverEndpoint,
+        timeoutMs: config.storage.requestTimeoutMs,
+        maxAttempts: config.storage.maxAttempts,
+        // Local copy for recovery/development; its CSV download is only used in development mode.
+        backup: new LocalCsvStorage({ prefix: config.storage.localStoragePrefix, download: browserDownload }),
+        ...overrides,
+      });
       break;
     default:
       throw new Error(`Unsupported storage adapter: ${config.storage.adapter}`);

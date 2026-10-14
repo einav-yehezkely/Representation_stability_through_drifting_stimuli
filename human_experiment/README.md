@@ -4,7 +4,7 @@ A browser experiment for human participants, parallel to the neural-network expe
 
 Specification: [HUMAN_EXPERIMENT_PRD.md](HUMAN_EXPERIMENT_PRD.md). Build plan and researcher decisions: [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md).
 
-> **⚠ Pilot-only data storage.** This version saves data in the participant's browser (`localStorage`) and downloads a CSV file to the participant's computer. **It is NOT a data collection mechanism for Prolific**: a browser download stays on the participant's machine and never reaches the researcher. Online collection requires a server-backed storage adapter (see [Storage](#storage)), which is not implemented here. Do not run this version on Prolific.
+> **Data storage.** The production build sends every answer to `save.php` on the web server, which writes one file per session outside the web root (see [Storage](#storage) and [Deployment](#deployment-opalstack)). The Vite dev server (`npm run dev`) cannot run PHP, so it keeps the pilot behavior: data in `localStorage` and a CSV download. Before running on Prolific, replace the consent placeholders and set `completion.prolificCompletionUrl`.
 
 ---
 
@@ -22,7 +22,7 @@ npm run build               # production build -> dist/ (static files, ~105 MB i
 npm run preview             # serve dist/ on http://localhost:4173/
 ```
 
-To serve the study, deploy the contents of `dist/` to any static web server. Participant links can carry `?PROLIFIC_PID=...`.
+To serve the study, deploy the contents of `dist/` to a web server with PHP (see [Deployment](#deployment-opalstack)). Participant links can carry `?PROLIFIC_PID=...`.
 
 | Script | Purpose |
 | --- | --- |
@@ -32,12 +32,13 @@ To serve the study, deploy the contents of `dist/` to any static web server. Par
 | `npm run parity:fixtures` | Regenerates `tests/fixtures/parity/parity.json` from verbatim copies of the source Python functions. |
 | `npm run verify:repo` | Confirms that no pre-existing repository file changed and that all new files are under `human_experiment/`. |
 | `npm run verify:participant-build` | Confirms that development mode is disabled and lazily loaded in `dist/`. |
+| `npm run data:csv -- <folder>` | Converts the server's `*.jsonl` session files to CSV (one file per session plus `all_sessions.csv`) in `<folder>/csv/`. |
 
 ---
 
 ## Participant flow
 
-`Consent → Instructions → Training with feedback → Transition → Drift without feedback → Completion and CSV download`
+`Consent → Instructions → Training with feedback → Transition → Drift without feedback → Completion`
 
 - **Consent**: the study text lives in [src/content/consent.js](src/content/consent.js) and consists entirely of `[RESEARCHER: ...]` placeholders, which must be replaced with approved text. The checkbox uses the exact PRD wording. `Continue` stays disabled until the box is checked.
 - **Instructions** ([src/content/instructions.js](src/content/instructions.js)): explain one face at a time, the A/B groups, the four answers, and initial feedback. They do not mention the drift.
@@ -45,8 +46,8 @@ To serve the study, deploy the contents of `dist/` to any static web server. Par
 - **Training**: `Correct` / `Incorrect` feedback (1 s) after every answer, centers fixed. Training ends only when ≥ 20 trials are completed **and** the last 20 trials are ≥ 80% correct (sliding window). The qualifying trial also receives feedback.
 - **Transition**: the exact PRD text. Drift starts only after `Continue`.
 - **Drift**: 360 trials. No feedback, no cues. Both centers rotate 1° counterclockwise **after** each response.
-- **Completion**: `<sessionId>.csv` downloads automatically. A `Download data` button retries the download.
-- **Recovery**: when the page is reloaded during a session, the interrupted session is kept and offered for export (`<sessionId>_INCOMPLETE.csv`). A new session never overwrites it.
+- **Completion**: with server storage, "Your responses have been saved" and, when `completion.prolificCompletionUrl` is set, a `Return to Prolific` button. With the pilot adapter (dev server), `<sessionId>.csv` downloads automatically and a `Download data` button retries the download.
+- **Recovery**: when the page is reloaded during a session, the interrupted session is kept and a new session starts; neither overwrites the other. With server storage the old session is marked `interrupted` on the server and no download is offered. With the pilot adapter it is offered for export (`<sessionId>_INCOMPLETE.csv`).
 
 All participant-facing text is in [src/content/](src/content/) and can be edited without touching the logic.
 
@@ -114,7 +115,10 @@ Single entry point: [src/config/experimentConfig.js](src/config/experimentConfig
 | `scientific.*` | see file | Source-derived (`targetRadius 0.45`, `radiusErrorWeight 100`, CCW, Euclidean) plus decisions D1–D5. |
 | `randomization.trainingBlockSize` | 4 | Placeholder OQ3. Must be even. |
 | `ui.feedbackDurationMs`, `ui.imageDisplayScale` | 1000, 2 | Placeholders OQ3. |
-| `storage.adapter` | `localCsv` | `memory` is also available (tests). |
+| `storage.adapter` | `server` | `localCsv` (pilot) and `memory` (tests) are also available. |
+| `storage.developmentAdapter` | `localCsv` | Used by the Vite dev server, which cannot run PHP. |
+| `storage.serverEndpoint`, `requestTimeoutMs`, `maxAttempts` | `save.php`, 15000, 3 | Attempts per save before the participant sees `Try again`. |
+| `completion.prolificCompletionUrl` | `""` | Prolific completion link (`https://...?cc=...`). Empty: no link is shown. |
 | `development.enabled` | `false` | See [Development mode](#development-mode). |
 
 ### Randomization and reproducibility
@@ -187,12 +191,29 @@ The pilot adapter, [localCsvStorage.js](src/services/dataStorage/localCsvStorage
 
 It never overwrites another session, never downloads a CSV per trial, and downloads the CSV at completion. Saved data stays in `localStorage` after export.
 
-**Adding a server or Supabase adapter**:
+The server adapter, [serverStorage.js](src/services/dataStorage/serverStorage.js), POSTs each call to [public/save.php](public/save.php) and resolves only after the server confirmed the write. Network and 5xx errors are retried (`maxAttempts`); a rejected request (4xx) is not. It also keeps a best-effort copy in `localStorage` through the pilot adapter; a failing copy never blocks the participant. `save.php` appends to `~/exp_data/representation_stability/<sessionId>.jsonl`, one JSON object per line (`start`, `trial`, `complete`, `interrupted`). Trials are idempotent on `sessionId:trialNumber`. [serverRecords.js](src/services/dataStorage/serverRecords.js) reads these files back and `npm run data:csv` writes them with the same CSV serializer, so the columns are identical to the pilot CSV. A session without a `complete` record is exported as `interrupted` and `_INCOMPLETE`.
+
+**Adding another adapter** (e.g. Supabase):
 1. Implement the three methods (plus optional `exportSession`/`listSessions`/`getSession`/`markInterrupted`).
 2. Register it in [src/services/dataStorage/index.js](src/services/dataStorage/index.js).
 3. Set `storage.adapter`.
 
-No phase, selection, timing or response-coding code changes. The engine tests run unchanged on both the memory and the localStorage adapters.
+No phase, selection, timing or response-coding code changes. The engine tests run unchanged on the memory, localStorage and server adapters.
+
+---
+
+## Deployment (Opalstack)
+
+One-time setup:
+1. Opalstack dashboard: create an Application of type **PHP-FPM + Apache** under the OS user used for SFTP, and a Site that routes a path of the domain to it, with Let's Encrypt enabled.
+2. Over SSH, create the data folder next to `apps/` (outside the web root): `mkdir -p ~/exp_data/representation_stability`.
+
+Each release:
+1. `npm run build`, then `tar -czf dist.tar.gz --exclude=./review.html -C dist .` (the participant site without the review page).
+2. Upload `dist.tar.gz` to `~/apps/<app>/` (FileZilla), then over SSH: `cd ~/apps/<app> && tar -xzf dist.tar.gz && rm dist.tar.gz`. When only code changed, uploading `index.html`, `app/` and `save.php` is enough.
+3. Open `https://<site>/save.php?check=1`: it must show `"dataDirWritable":true`.
+
+Collecting data: download `~/exp_data/representation_stability/*.jsonl` (FileZilla) to a local folder and run `npm run data:csv -- <folder>`.
 
 ---
 
@@ -257,8 +278,8 @@ Results as of 2026-10-07: `npm test` 72/72 passed, `npm run test:e2e` 2/2 passed
 
 ## Known limitations
 
-- **Pilot-only storage**: see the warning at the top.
-- **Placeholder consent text**: the consent text and the Prolific completion step are placeholders and must be completed by the researcher.
+- **Reload restarts**: a participant who reloads the page starts a new session from consent; the interrupted session stays on the server as a separate `_INCOMPLETE` file with the same `participantId`.
+- **Placeholder consent text**: the consent text is a placeholder and `completion.prolificCompletionUrl` is empty; both must be completed by the researcher.
 - **Onset precision**: onset is tied to the browser's rendering frame (about 16 ms resolution at 60 Hz). Actual display latency of the monitor is not measurable from the browser.
 - **Size**: `public/assets/faces/` (85.7 MB, 11,817 images) is regenerated by `prepare-assets` and is not tracked. `public/assets/pca.json` and the manifest are small derived files.
 
@@ -279,6 +300,7 @@ human_experiment/
 │   └── dev/                         development setup screen and panel (lazy)
 ├── scripts/                         prepare-assets, verify scripts, reference/ (Python parity)
 ├── reference_source/                verbatim copies of the inspected source files
+├── public/save.php                  server data endpoint (copied to dist/)
 ├── public/assets/                   derived PCA JSON, manifest, copied faces
 └── tests/                           unit, integration (jsdom), e2e (Playwright), parity fixtures
 ```

@@ -57,8 +57,20 @@ export const experimentConfig = {
   },
 
   storage: {
-    adapter: "localCsv",
+    // "server": every record is sent to save.php (online collection). The Vite dev server
+    // (`npm run dev`) cannot run PHP, so it uses developmentAdapter instead.
+    adapter: "server",
+    developmentAdapter: "localCsv",
+    serverEndpoint: "save.php", // relative to index.html
+    requestTimeoutMs: 15000,
+    maxAttempts: 3, // per save, before the participant sees "Try again"
     localStoragePrefix: "hx",
+  },
+
+  completion: {
+    // Prolific completion link shown on the final screen, e.g.
+    // "https://app.prolific.com/submissions/complete?cc=XXXXXXX". Empty: no link is shown.
+    prolificCompletionUrl: "",
   },
 
   development: {

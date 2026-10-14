@@ -19,8 +19,10 @@ export const uiText = {
     downloadedMessage: "A data file named {file} has been downloaded to this computer.",
     notDownloadedMessage: "The data file could not be downloaded automatically. Please use the button below.",
     downloadLabel: "Download data",
-    // [RESEARCHER: completion code / redirect instructions for Prolific go here once a
-    // server-backed storage adapter exists.]
+    // Online collection (server storage). The link itself is config.completion.prolificCompletionUrl.
+    savedMessage: "Your responses have been saved.",
+    returnToProlificMessage: "Please click the button below to return to Prolific and register your submission.",
+    returnToProlificLabel: "Return to Prolific",
   },
   recovery: {
     heading: "A previous session was interrupted",
@@ -30,7 +32,7 @@ export const uiText = {
   },
   errors: {
     imageLoad: "The picture could not be loaded. Please check your internet connection and try again.",
-    storage: "Your answer could not be saved in this browser. Please try again.",
+    storage: "Your answer could not be saved. Please check your internet connection and try again.",
     config: "The experiment could not be started because its configuration is invalid.",
     assets: "The experiment data could not be loaded. Please reload the page.",
     retryLabel: "Try again",

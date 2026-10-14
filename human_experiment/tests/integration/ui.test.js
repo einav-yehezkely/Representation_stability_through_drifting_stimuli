@@ -2,7 +2,7 @@
 // Participant UI in a DOM (acceptance checks 3, 5, 7, 12, 13).
 import { describe, expect, it } from "vitest";
 import { mountExperiment } from "../../src/app.js";
-import { consentScreen } from "../../src/components/screens.js";
+import { completionScreen, consentScreen } from "../../src/components/screens.js";
 import { TrialScreen } from "../../src/components/trialScreen.js";
 import { experimentConfig } from "../../src/config/experimentConfig.js";
 import { resolveEffectiveConfig } from "../../src/config/validateConfig.js";
@@ -195,5 +195,28 @@ describe("trial screen (acceptance checks 3, 5, 7, 8)", () => {
     click([...root.querySelectorAll("button")].find((x) => x.textContent === "Try again"));
     await waitFor(() => engine.state.status === "responding", tick);
     expect(root.querySelectorAll("img")).toHaveLength(1);
+  });
+});
+
+describe("completion screen", () => {
+  const url = "https://app.prolific.com/submissions/complete?cc=TEST123";
+
+  it("online collection: confirms the save, links back to Prolific and offers no download", () => {
+    const el = completionScreen({ state: { completionStatus: "complete", savedToServer: true, exported: true }, completionUrl: url, onDownload: () => {} });
+    expect(el.textContent).toContain(uiText.completion.savedMessage);
+    expect(el.querySelector("a.button").getAttribute("href")).toBe(url);
+    expect(el.querySelector("a.button").textContent).toBe(uiText.completion.returnToProlificLabel);
+    expect(el.querySelectorAll("button")).toHaveLength(0);
+  });
+
+  it("online collection without a configured link shows no link", () => {
+    const el = completionScreen({ state: { completionStatus: "complete", savedToServer: true }, completionUrl: "", onDownload: () => {} });
+    expect(el.querySelector("a")).toBeNull();
+  });
+
+  it("pilot storage keeps the download button", () => {
+    const el = completionScreen({ state: { completionStatus: "complete", exported: true, exportName: "s.csv" }, completionUrl: url, onDownload: () => {} });
+    expect(el.querySelector("a")).toBeNull();
+    expect(el.querySelector("button").textContent).toBe(uiText.completion.downloadLabel);
   });
 });

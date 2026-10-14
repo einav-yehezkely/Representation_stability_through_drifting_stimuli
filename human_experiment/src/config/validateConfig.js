@@ -17,7 +17,7 @@ const SUPPORTED = {
   driftSelection: ["nearestUnused"],
   exclusionScope: ["perPhase"],
   algorithm: ["sfc32"],
-  adapter: ["localCsv", "memory"],
+  adapter: ["localCsv", "memory", "server"],
 };
 
 function isPositiveInteger(value) {
@@ -81,6 +81,15 @@ export function findConfigProblems(config, { pcaCount } = {}) {
     problems.push("ui.feedbackDurationMs must be a non-negative number");
   }
   if (!SUPPORTED.adapter.includes(config.storage?.adapter)) problems.push(`storage.adapter "${config.storage?.adapter}" is not supported`);
+  if (config.storage?.adapter === "server") {
+    if (typeof config.storage.serverEndpoint !== "string" || !config.storage.serverEndpoint) problems.push("storage.serverEndpoint must be a non-empty URL");
+    if (!isPositiveInteger(config.storage.maxAttempts)) problems.push("storage.maxAttempts must be a positive integer");
+    if (!(Number.isFinite(config.storage.requestTimeoutMs) && config.storage.requestTimeoutMs > 0)) problems.push("storage.requestTimeoutMs must be a positive number");
+  }
+  const completionUrl = config.completion?.prolificCompletionUrl ?? "";
+  if (typeof completionUrl !== "string" || (completionUrl && !/^https:\/\//.test(completionUrl))) {
+    problems.push("completion.prolificCompletionUrl must be empty or an https:// URL");
+  }
   for (const key of ["facesDirectory", "pcaDataPath", "manifestPath"]) {
     if (typeof config.assets?.[key] !== "string" || !config.assets[key]) problems.push(`assets.${key} must be a non-empty path`);
   }

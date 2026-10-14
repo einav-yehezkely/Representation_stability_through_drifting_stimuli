@@ -37,6 +37,12 @@ async function handleRecovery(root, storage) {
     return false;
   }
   if (!sessions.length) return true;
+  if (storage.serverBacked) {
+    // Online collection: the server already holds the interrupted data, so the participant is
+    // not offered a download; the old session is marked interrupted and a new one starts.
+    for (const s of sessions) await storage.markInterrupted(s.sessionId);
+    return true;
+  }
   return new Promise((resolve) => {
     const markAll = async () => {
       for (const s of sessions) await storage.markInterrupted(s.sessionId);
@@ -65,7 +71,9 @@ async function boot() {
 
   let storage;
   try {
-    storage = createStorage(experimentConfig);
+    // The Vite dev server cannot run save.php, so it uses the development adapter.
+    const adapter = import.meta.env.DEV ? experimentConfig.storage.developmentAdapter : experimentConfig.storage.adapter;
+    storage = createStorage({ ...experimentConfig, storage: { ...experimentConfig.storage, adapter } });
   } catch (error) {
     fatal(root, uiText.errors.storage, error);
     return;

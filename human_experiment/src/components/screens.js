@@ -61,14 +61,28 @@ export function transitionScreen({ onContinue }) {
   );
 }
 
-export function completionScreen({ state, onDownload }) {
+export function completionScreen({ state, completionUrl, onDownload }) {
   const c = uiText.completion;
   const complete = state.completionStatus === "complete";
+  const status = h("p", { text: complete ? c.completeMessage : c.incompleteMessage });
+  if (state.savedToServer) {
+    // Online collection: the data is on the server; the participant only returns to Prolific.
+    return h(
+      "section",
+      { class: "panel", "data-screen": "complete" },
+      h("h1", { text: c.heading }),
+      status,
+      h("p", { text: c.savedMessage }),
+      complete && completionUrl
+        ? [h("p", { text: c.returnToProlificMessage }), h("div", { class: "actions" }, h("a", { class: "button", href: completionUrl }, c.returnToProlificLabel))]
+        : null,
+    );
+  }
   return h(
     "section",
     { class: "panel", "data-screen": "complete" },
     h("h1", { text: c.heading }),
-    h("p", { text: complete ? c.completeMessage : c.incompleteMessage }),
+    status,
     h("p", { text: state.exported ? c.downloadedMessage.replace("{file}", state.exportName) : c.notDownloadedMessage }),
     h("div", { class: "actions" }, h("button", { type: "button", onclick: () => onDownload() }, c.downloadLabel)),
   );

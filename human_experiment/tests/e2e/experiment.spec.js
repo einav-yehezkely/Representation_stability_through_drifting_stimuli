@@ -27,7 +27,18 @@ async function storedSession(page) {
   });
 }
 
-test("participant mode (production build): no dev controls, one face, feedback, persistence, recovery", async ({ page }) => {
+/** Stand-in for save.php (vite preview cannot run PHP): records every request and acknowledges it. */
+async function fakeSaveEndpoint(page) {
+  const requests = [];
+  await page.route("**/save.php", async (route) => {
+    requests.push(JSON.parse(route.request().postData()));
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ok: true }) });
+  });
+  return requests;
+}
+
+test("participant mode (production build): no dev controls, one face, feedback, server saving, reload", async ({ page }) => {
+  const requests = await fakeSaveEndpoint(page);
   // ?dev=1 must be ignored by a production build.
   await page.goto(`${PROD}/index.html?PROLIFIC_PID=E2E-PID&dev=1`);
   await expect(page.locator("[data-dev]")).toHaveCount(0);
@@ -45,30 +56,29 @@ test("participant mode (production build): no dev controls, one face, feedback, 
   }
   await expect(page.locator(".dev-panel")).toHaveCount(0);
 
-  const { meta, trials } = await storedSession(page);
-  expect(meta).toMatchObject({ participantId: "E2E-PID", participantIdSource: "prolific_url", consentGiven: true, developmentMode: false });
-  expect(trials.length).toBeGreaterThanOrEqual(4);
-  for (const t of trials) {
-    expect(t.responseTimeMs).toBeGreaterThan(0);
-    expect(t.responseTimeMs).toBeLessThan(5000);
-    expect(t.phase).toBe("training");
-    expect(t.feedbackShown).toBe(true);
+  // Every answer was sent to the server.
+  const [startRequest, ...trialRequests] = requests;
+  expect(startRequest.action).toBe("start");
+  expect(startRequest.session).toMatchObject({ participantId: "E2E-PID", participantIdSource: "prolific_url", consentGiven: true, developmentMode: false });
+  expect(trialRequests.length).toBeGreaterThanOrEqual(4);
+  for (const { action, trial } of trialRequests) {
+    expect(action).toBe("trial");
+    expect(trial.sessionId).toBe(startRequest.session.sessionId);
+    expect(trial.responseTimeMs).toBeGreaterThan(0);
+    expect(trial.responseTimeMs).toBeLessThan(5000);
+    expect(trial.phase).toBe("training");
+    expect(trial.feedbackShown).toBe(true);
   }
+  // A local backup is kept as well.
+  const { meta, trials } = await storedSession(page);
+  expect(meta.sessionId).toBe(startRequest.session.sessionId);
+  expect(trials.length).toBe(trialRequests.length);
 
-  // Refresh: the interrupted session is preserved and exportable.
+  // Reload: no download is offered; the old session is marked interrupted and a new one starts.
   await page.reload();
-  await expect(page.locator('[data-screen="recovery"]')).toBeVisible();
-  const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Download its data" }).click();
-  const download = await downloadPromise;
-  expect(download.suggestedFilename()).toBe(`${meta.sessionId}_INCOMPLETE.csv`);
-  const rows = parseCsv(fs.readFileSync(await download.path(), "utf8"));
-  expect(rows.length).toBe(trials.length);
-  expect(rows[0]).toMatchObject({ completionStatus: "interrupted", exportedAsIncomplete: "true", participantId: "E2E-PID" });
-  // A new session starts with consent; the old one is still stored.
   await expect(page.locator('[data-screen="consent"]')).toBeVisible();
-  const index = await page.evaluate(() => JSON.parse(localStorage.getItem("hx:index")));
-  expect(index).toContain(meta.sessionId);
+  await expect(page.locator('[data-screen="recovery"]')).toHaveCount(0);
+  expect(requests.at(-1)).toEqual({ action: "interrupted", sessionId: meta.sessionId });
 });
 
 test("development mode: overrides, bypass, full run to CSV, live PCA plot, review page", async ({ page, context }) => {

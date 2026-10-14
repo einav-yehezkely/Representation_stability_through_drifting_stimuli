@@ -14,7 +14,8 @@
     "parity:fixtures": "py -3 scripts/reference/make_parity_fixtures.py",
     "verify:repo": "node scripts/verify-repo-unchanged.mjs",
     "verify:participant-build": "node scripts/verify-participant-build.mjs",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "data:csv": "node scripts/server-data-to-csv.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
