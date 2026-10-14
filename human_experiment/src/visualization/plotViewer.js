@@ -1,22 +1,19 @@
-// Interactive wrapper around the PCA plot: phase/group filters, source-sequence toggle,
+// Interactive wrapper around the PCA plot: phase/group filters,
 // stimulus details with thumbnail, SVG/PNG export. Used by the development panel and the
 // researcher review page only — never by the participant view.
 
 import { h } from "../components/dom.js";
-import { initialCenters } from "../scientific/trajectory.js";
 import { createPcaPlot } from "./pcaPlot.js";
 import { exportPng, exportSvg } from "./plotExport.js";
-import { driftCandidateIndices, sourceRotationSequence } from "./trajectoryMembership.js";
+import { driftCandidateIndices } from "./trajectoryMembership.js";
 
 export function createPlotViewer({ pca, config, facesDirectory }) {
-  const start = initialCenters(pca, config);
   const plot = createPcaPlot({
     pca,
     trajectoryIndices: driftCandidateIndices(pca, config),
-    sourceSequenceIndices: sourceRotationSequence(pca, start.centerA).map((s) => s.index),
   });
 
-  const state = { phase: "all", group: "all", showSourceSequence: false, view: null };
+  const state = { phase: "all", group: "all", view: null };
   const select = (name, options) =>
     h(
       "select",
@@ -32,12 +29,6 @@ export function createPlotViewer({ pca, config, facesDirectory }) {
     { class: "plot-controls" },
     h("label", {}, "Phase ", select("phase", [["all", "All"], ["training", "Training"], ["drift", "Drift"]])),
     h("label", {}, "Group ", select("group", [["all", "All"], ["A", "A"], ["B", "B"]])),
-    h(
-      "label",
-      {},
-      h("input", { type: "checkbox", onchange: (e) => ((state.showSourceSequence = e.target.checked), render()) }),
-      " Source rotation sequence",
-    ),
     count,
     h("button", { type: "button", class: "secondary", onclick: () => exportSvg(plot.svg, `${fileBase()}.svg`) }, "Export SVG"),
     h("button", { type: "button", class: "secondary", onclick: () => exportPng(plot.svg, `${fileBase()}.png`) }, "Export PNG"),
@@ -71,7 +62,6 @@ export function createPlotViewer({ pca, config, facesDirectory }) {
       centers,
       current,
       filters: { phase: state.phase, group: state.group },
-      showSourceSequence: state.showSourceSequence,
       onSelect: showDetails,
       title,
     });

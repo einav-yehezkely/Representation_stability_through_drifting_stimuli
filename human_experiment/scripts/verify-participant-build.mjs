@@ -3,7 +3,7 @@
 //   2. dist/index.html does not load or preload the development chunks.
 //   3. The development chunks are reachable only through dynamic import (never a static import
 //      from the entry chunk).
-//   4. The review page is not linked from the participant page.
+//   4. The review and admin pages are not linked from the participant page.
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -22,6 +22,7 @@ if (!fs.existsSync(path.join(dist, "index.html"))) {
 const html = fs.readFileSync(path.join(dist, "index.html"), "utf8");
 if (/devPanel|devSetup/.test(html)) errors.push("dist/index.html references development chunks");
 if (/review\.html/.test(html)) errors.push("dist/index.html links the review page");
+if (/admin(\.html|_api)/.test(html)) errors.push("dist/index.html links the admin page");
 
 const entry = html.match(/<script type="module"[^>]*src="\.\/(app\/index-[^"]+\.js)"/)?.[1];
 if (!entry) errors.push("could not find the entry chunk in dist/index.html");

@@ -19,7 +19,6 @@ export const PLOT_STYLE = Object.freeze({
   margin: 64,
   allPoints: { color: "gray", radius: 1.6, opacity: 0.3 }, // s=5, alpha=0.3
   trajectory: { color: "#4d4d4d", radius: 2.2, opacity: 0.75 },
-  sourceSequence: { color: "#9467bd", radius: 2.2, opacity: 0.9 },
   groupColor: { A: "blue", B: "red" },
   presentedRadius: { training: 3.6, drift: 3.6 },
   referenceCircle: { color: "black", dash: "6 4", opacity: 0.5, scale: 1.05 },
@@ -49,7 +48,7 @@ function starPath(cx, cy, r) {
  * Create a plot bound to one PCA dataset. The static layers (all points, reference circle,
  * spokes, axes, trajectory) are drawn once; `update()` redraws only the dynamic layer.
  */
-export function createPcaPlot({ pca, trajectoryIndices = [], sourceSequenceIndices = [], title = "" }) {
+export function createPcaPlot({ pca, trajectoryIndices = [], title = "" }) {
   const S = PLOT_STYLE;
   const refRadius = pca.maxRadius * S.referenceCircle.scale;
   const extent = refRadius * 1.12;
@@ -120,9 +119,6 @@ export function createPcaPlot({ pca, trajectoryIndices = [], sourceSequenceIndic
   const trajectory = el("g", { fill: S.trajectory.color, opacity: S.trajectory.opacity, "data-layer": "trajectory" });
   for (const i of trajectoryIndices) trajectory.append(el("circle", { cx: sx(pca.pc1[i]), cy: sy(pca.pc2[i]), r: S.trajectory.radius }));
   svg.append(trajectory);
-  const sourceSeq = el("g", { fill: S.sourceSequence.color, opacity: S.sourceSequence.opacity, "data-layer": "source-sequence", display: "none" });
-  for (const i of sourceSequenceIndices) sourceSeq.append(el("circle", { cx: sx(pca.pc1[i]), cy: sy(pca.pc2[i]), r: S.sourceSequence.radius }));
-  svg.append(sourceSeq);
 
   const centerCircle = el("circle", { fill: "none", stroke: S.centerCircle.color, "stroke-dasharray": S.centerCircle.dash, "stroke-width": S.centerCircle.width });
   svg.append(centerCircle);
@@ -168,12 +164,10 @@ export function createPcaPlot({ pca, trajectoryIndices = [], sourceSequenceIndic
    * @param {{phase:string, group:string}} view.filters  "all" | "training" | "drift", "all" | "A" | "B"
    * @param {{centerA:number[], centerB:number[]}|null} view.centers  current centers
    * @param {object|null} view.current  { imageIndex, trueGroup } of the displayed stimulus
-   * @param {boolean} view.showSourceSequence
    * @param {(record:object) => void} [view.onSelect]
    */
-  function update({ records = [], filters = { phase: "all", group: "all" }, centers = null, current = null, showSourceSequence = false, onSelect, title: newTitle } = {}) {
+  function update({ records = [], filters = { phase: "all", group: "all" }, centers = null, current = null, onSelect, title: newTitle } = {}) {
     if (newTitle !== undefined) titleNode.textContent = newTitle;
-    sourceSeq.setAttribute("display", showSourceSequence ? "inline" : "none");
     dynamic.replaceChildren();
     const visible = records.filter(
       (r) => (filters.phase === "all" || r.phase === filters.phase) && (filters.group === "all" || r.trueGroup === filters.group),

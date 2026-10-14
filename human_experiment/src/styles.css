@@ -1,16 +1,31 @@
+/* Participant experiment. A single light theme on purpose: every participant sees the faces on
+   the same neutral background, whatever their system theme. */
 :root {
-  --bg: #f4f4f2;
+  --bg: #eef0f3;
   --surface: #ffffff;
-  --text: #1d1d1f;
-  --muted: #5f6368;
-  --border: #d4d4d0;
-  --accent: #2f4a6d;
+  --surface-muted: #f6f7f9;
+  --text: #1a1f2b;
+  --muted: #5d6675;
+  --border: #dde1e7;
+  --border-strong: #a9b1bd;
+  --accent: #2c4a78;
+  --accent-hover: #233d64;
+  --accent-soft: #e8eef8;
   --accent-text: #ffffff;
-  --danger: #8a1c1c;
-  --radius: 10px;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --success: #17703d;
+  --success-soft: #e3f4ea;
+  --danger: #a32020;
+  --danger-soft: #fbe7e7;
+  --radius: 16px;
+  --radius-sm: 10px;
+  --shadow: 0 1px 2px rgba(20, 30, 50, 0.06), 0 10px 30px rgba(20, 30, 50, 0.07);
+  --focus: 0 0 0 3px rgba(44, 74, 120, 0.35);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 16px;
   color: var(--text);
   background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
 }
 
 * {
@@ -26,68 +41,245 @@ body {
 #app {
   max-width: 760px;
   margin: 0 auto;
-  padding: 32px 16px 64px;
+  padding: clamp(16px, 5vh, 56px) 16px 48px;
 }
+
+/* ---------------------------------------------------------------- panels */
 
 .panel {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 28px 32px;
-  line-height: 1.55;
+  box-shadow: var(--shadow);
+  padding: clamp(24px, 5vw, 44px);
+  line-height: 1.65;
+  animation: enter 0.28s ease-out both;
 }
 
 .panel h1 {
-  font-size: 1.5rem;
-  margin-top: 0;
+  font-size: clamp(1.4rem, 3.2vw, 1.75rem);
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  font-weight: 650;
+  margin: 0 0 0.6em;
 }
 
 .panel h2 {
-  font-size: 1.05rem;
-  margin: 1.4em 0 0.3em;
+  font-size: 1rem;
+  font-weight: 650;
+  margin: 0 0 0.25em;
 }
 
+.panel p {
+  margin: 0 0 0.9em;
+}
+
+.eyebrow {
+  font-size: 0.78rem;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0 0 0.5em !important;
+}
+
+.lead {
+  font-size: 1.1rem;
+}
+
+.panel-centered {
+  text-align: center;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.panel-centered .actions {
+  justify-content: center;
+}
+
+.icon-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  margin-bottom: 16px;
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.icon-badge svg {
+  width: 28px;
+  height: 28px;
+}
+
+.icon-success {
+  color: var(--success);
+  background: var(--success-soft);
+}
+
+.icon-danger {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+/* ---------------------------------------------------------------- consent */
+
 .consent-body {
-  max-height: 55vh;
+  max-height: 50vh;
   overflow-y: auto;
-  padding-right: 8px;
+  margin: 8px -12px 20px;
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  scrollbar-width: thin;
+}
+
+.consent-body:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+
+.consent-section {
+  padding: 14px 0;
   border-bottom: 1px solid var(--border);
-  margin-bottom: 18px;
+}
+
+.consent-section:last-child {
+  border-bottom: none;
+}
+
+.consent-section p {
+  margin: 0;
+  color: #333a47;
 }
 
 .consent-check {
   display: flex;
-  gap: 10px;
+  gap: 14px;
   align-items: flex-start;
-  margin: 12px 0 20px;
-  font-weight: 500;
+  padding: 16px 18px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-muted);
+  font-weight: 550;
+  cursor: pointer;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+
+.consent-check:hover {
+  border-color: var(--border-strong);
+}
+
+.consent-check.checked {
+  border-color: var(--accent);
+  background: var(--accent-soft);
 }
 
 .consent-check input {
-  width: 18px;
-  height: 18px;
-  margin-top: 3px;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: 3px 0 0;
+  accent-color: var(--accent);
+  cursor: pointer;
 }
+
+/* ---------------------------------------------------------------- instructions */
+
+ul.responses {
+  list-style: none;
+  display: grid;
+  gap: 8px;
+  padding: 0;
+  margin: 4px 0 20px;
+}
+
+ul.responses li {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-muted);
+}
+
+.response-key {
+  flex: none;
+  min-width: 104px;
+  padding: 6px 10px;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  text-align: center;
+  font-size: 0.92rem;
+}
+
+.note {
+  padding: 14px 18px;
+  border-left: 4px solid var(--accent);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--accent-soft);
+}
+
+.note p:last-child {
+  margin-bottom: 0;
+}
+
+/* ---------------------------------------------------------------- buttons */
 
 .actions {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
-  margin-top: 20px;
+  margin-top: 24px;
 }
 
 button,
 a.button {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   text-decoration: none;
   font: inherit;
   font-size: 1rem;
-  padding: 10px 22px;
-  border-radius: 8px;
-  border: 1px solid var(--accent);
+  font-weight: 600;
+  line-height: 1.2;
+  padding: 12px 26px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--accent);
   background: var(--accent);
   color: var(--accent-text);
   cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s, transform 0.05s;
+  touch-action: manipulation;
+}
+
+button:not(:disabled):hover,
+a.button:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+button:not(:disabled):active,
+a.button:active {
+  transform: translateY(1px);
+}
+
+button:focus-visible,
+a.button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+
+button.large,
+a.button.large {
+  padding: 14px 34px;
+  font-size: 1.05rem;
 }
 
 button.secondary {
@@ -95,31 +287,38 @@ button.secondary {
   color: var(--accent);
 }
 
+button.secondary:not(:disabled):hover {
+  background: var(--accent-soft);
+  color: var(--accent-hover);
+}
+
 button:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
 
-ul.responses {
-  padding-left: 1.2em;
-}
+/* ---------------------------------------------------------------- trial screen
+   One centered face, four identical buttons below it, nothing else. All four buttons share
+   one style so no answer is visually favored. Nothing on this screen animates the face: its
+   onset is the timing reference. */
 
-/* Trial screen: one centered face, four buttons below, nothing else. */
 .trial {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 22px;
-  padding-top: 24px;
+  justify-content: center;
+  gap: 24px;
+  min-height: calc(100vh - clamp(16px, 5vh, 56px) - 48px);
 }
 
 .stimulus-frame {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  overflow: hidden;
+  background: #e2e5ea;
+  border-radius: 14px;
+  box-shadow: var(--shadow);
 }
 
 .stimulus-frame img {
@@ -128,32 +327,109 @@ ul.responses {
   height: 100%;
   object-fit: contain;
   user-select: none;
+  -webkit-user-select: none;
   -webkit-user-drag: none;
+  pointer-events: none;
 }
 
 .response-buttons {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
-  width: min(100%, 560px);
+  width: min(100%, 600px);
 }
 
 .response-buttons button {
-  padding: 14px 6px;
+  padding: 16px 6px;
+  font-size: 1.02rem;
   background: var(--surface);
   color: var(--text);
-  border: 1px solid #8a8a86;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(20, 30, 50, 0.06);
+  transition: background-color 0.1s, border-color 0.1s, color 0.1s, opacity 0.2s, transform 0.05s;
 }
 
 .response-buttons button:not(:disabled):hover {
-  background: #ececea;
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent-hover);
+}
+
+.response-buttons button:disabled {
+  opacity: 0.45;
+}
+
+/* The answer just given stays visible while it is saved. */
+.response-buttons button.selected,
+.response-buttons button.selected:disabled {
+  opacity: 1;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
 }
 
 .feedback {
-  min-height: 1.6em;
-  font-size: 1.25rem;
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 2.6rem;
+  padding: 0 20px;
+  border-radius: 999px;
+  font-size: 1.2rem;
+  font-weight: 650;
   color: var(--text);
+}
+
+.feedback:empty {
+  visibility: hidden;
+}
+
+/* Training feedback only (drift never sets data-outcome or text). */
+.feedback[data-outcome="correct"] {
+  color: var(--success);
+  background: var(--success-soft);
+  animation: pop 0.18s ease-out;
+}
+
+.feedback[data-outcome="incorrect"] {
+  color: var(--danger);
+  background: var(--danger-soft);
+  animation: pop 0.18s ease-out;
+}
+
+.feedback[data-outcome="correct"]::before {
+  content: "\2713";
+}
+
+.feedback[data-outcome="incorrect"]::before {
+  content: "\2715";
+}
+
+/* ---------------------------------------------------------------- loading, errors */
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  min-height: 50vh;
+  color: var(--muted);
+  animation: enter 0.2s ease-out 0.15s both; /* skip the flash on fast loads */
+}
+
+.loading p {
+  margin: 0;
+}
+
+.spinner {
+  width: 34px;
+  height: 34px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
 }
 
 .status-line {
@@ -162,11 +438,7 @@ ul.responses {
 }
 
 .error-panel {
-  border-color: var(--danger);
-}
-
-.error-panel h1 {
-  color: var(--danger);
+  border-color: #f0c9c9;
 }
 
 .error-detail {
@@ -175,11 +447,59 @@ ul.responses {
   word-break: break-word;
 }
 
-@media (max-width: 520px) {
-  .panel {
-    padding: 20px 18px;
+/* ---------------------------------------------------------------- motion */
+
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition: none !important;
+  }
+}
+
+/* ---------------------------------------------------------------- small screens */
+
+@media (max-width: 560px) {
+  ul.responses li {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
   }
   .response-buttons {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .actions button,
+  .actions a.button {
+    flex: 1 1 auto;
   }
 }

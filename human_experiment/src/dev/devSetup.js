@@ -16,7 +16,6 @@ export function showDevSetup(root, baseConfig, { pcaCount }) {
   return new Promise((resolve) => {
     const inputs = new Map();
     const problemsBox = h("ul", { class: "dev-problems" });
-    const seedInput = h("input", { type: "text", inputmode: "numeric", placeholder: "random", "data-field": "seed" });
 
     const rows = FIELDS.map(([path, label, kind]) => {
       const [section, key] = path.split(".");
@@ -31,21 +30,17 @@ export function showDevSetup(root, baseConfig, { pcaCount }) {
         const value = kind === "integer" ? Number.parseInt(input.value, 10) : Number.parseFloat(input.value);
         if (value !== base) overrides[path] = value;
       }
-      const seedText = seedInput.value.trim();
-      const seed = seedText === "" ? null : Number(seedText);
-      return { overrides, seed };
+      return { overrides };
     };
 
     const start = () => {
-      const { overrides, seed } = collect();
-      const problems = [];
-      if (seed !== null && !(Number.isInteger(seed) && seed >= 0 && seed <= 0xffffffff)) problems.push("Seed must be an integer between 0 and 4294967295.");
-      problems.push(...findConfigProblems(resolveEffectiveConfig(baseConfig, overrides), { pcaCount }));
+      const { overrides } = collect();
+      const problems = findConfigProblems(resolveEffectiveConfig(baseConfig, overrides), { pcaCount });
       if (problems.length) {
         problemsBox.replaceChildren(...problems.map((p) => h("li", { text: p })));
         return;
       }
-      resolve({ overrides, seed });
+      resolve({ overrides });
     };
 
     root.replaceChildren(
@@ -56,7 +51,8 @@ export function showDevSetup(root, baseConfig, { pcaCount }) {
         h("p", {
           text: "These settings apply to this session only and are recorded in its metadata. Development sessions are marked as development data.",
         }),
-        h("div", { class: "dev-grid" }, rows, h("label", { class: "dev-field" }, h("span", { text: "Session seed" }), seedInput)),
+        h("p", { text: `Session seed: ${baseConfig.randomization.fixedSeed} (fixed for every session in experimentConfig.js).` }),
+        h("div", { class: "dev-grid" }, rows),
         problemsBox,
         h("div", { class: "actions" }, h("button", { type: "button", onclick: start }, "Start session")),
       ),

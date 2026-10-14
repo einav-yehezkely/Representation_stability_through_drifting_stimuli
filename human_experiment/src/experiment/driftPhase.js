@@ -37,6 +37,11 @@ export class DriftState {
     };
   }
 
+  /** Independent copy (used for lookahead; rotating the copy leaves this state unchanged). */
+  clone() {
+    return Object.assign(Object.create(DriftState.prototype), this, { centerA: [...this.centerA], centerB: [...this.centerB] });
+  }
+
   /** Called only after an accepted, saved response. */
   advanceAfterResponse() {
     this.centerA = rotateVector(this.centerA, this.degreesPerTrial);

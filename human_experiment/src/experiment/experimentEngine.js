@@ -1,9 +1,11 @@
 // Experiment engine: phase progression and trial loop (PRD §4-§9).
 //
 // The engine knows nothing about the DOM or concrete storage. It receives by injection:
-//   presenter: { show(imageUrl) -> Promise<onsetMs>, disableResponses(), clear() }
+//   presenter: { show(imageUrl) -> Promise<onsetMs>, disableResponses(), clear(), [preload(urls)] }
 //              show() resolves with the performance.now() onset of the painted image and enables
 //              the response controls at that same moment; it rejects on image load failure.
+//              The optional preload() receives the URLs of the next images so they can be
+//              downloaded and decoded in advance; it never changes selection or onset.
 //   storage:   the storage contract (startSession / saveTrial / completeSession [+ optional]).
 //   clock:     { sleep(ms) -> Promise, wallNow() -> Date }
 //
@@ -15,6 +17,7 @@ import { experimentConfig } from "../config/experimentConfig.js";
 import { selectStimulus } from "../scientific/stimulusSelector.js";
 import { angleDeg, initialCenters } from "../scientific/trajectory.js";
 import { DriftState } from "./driftPhase.js";
+import { planDriftStimuli, planTrainingStimuli } from "./sequencePlanner.js";
 import { isCorrect, RESPONSES, toBinary } from "./responseCoding.js";
 import {
   createDriftSchedule,
@@ -54,6 +57,7 @@ export class ExperimentEngine {
     config = experimentConfig,
     developmentMode = false,
     developmentOverrides = {},
+    experimentSettings = null,
     pca,
     storage,
     presenter,
@@ -103,6 +107,9 @@ export class ExperimentEngine {
       consentBypassed: false,
       developmentMode,
       developmentOverrides,
+      // Settings saved on the admin page that this session applied ({ values, updatedAt, source });
+      // their values are also part of effectiveConfig.
+      experimentSettings,
       effectiveConfig: config,
       sessionSeed,
       rngAlgorithm: RNG_ALGORITHM,
@@ -191,6 +198,7 @@ export class ExperimentEngine {
       await this.storage.startSession({ ...this.meta });
       this.sessionStarted = true;
       this.setState({ screen: SCREENS.INSTRUCTIONS });
+      this.preloadUpcoming("training");
     } catch (error) {
       this.showError("storage", error, () => this.startSession());
     }
@@ -269,6 +277,8 @@ export class ExperimentEngine {
     if (pending.phase === "training") {
       criterionAfter = evaluateCriterion([...this.trainingRecords, { correct }], this.config.training);
     }
+    // Start fetching the next images now, so they load while this answer is being saved.
+    this.preloadUpcoming(pending.phase === "training" && !criterionAfter.passed ? "training" : "drift");
     const { snapshot, stimulus } = pending;
     const record = {
       participantId: this.meta.participantId,
@@ -349,6 +359,40 @@ export class ExperimentEngine {
   async continueToDrift() {
     if (this.state.screen !== SCREENS.TRANSITION) return;
     await this.runTrial();
+  }
+
+  // ---------------------------------------------------------------- preloading
+
+  /**
+   * The next `count` stimuli of `nextPhase`, counted from after the pending trial (which is
+   * treated as answered). Pure lookahead on copies of the state: nothing here is consumed.
+   */
+  upcomingStimuli(nextPhase, count) {
+    const pending = this.pending;
+    const { clusterSize } = this.config.scientific;
+    if (nextPhase === "training") {
+      const excluded = new Set(this.usedTrainingIndices);
+      if (pending?.phase === "training") excluded.add(pending.stimulus.imageIndex);
+      return planTrainingStimuli({ groups: this.trainingSchedule.peek(count), initial: this.initial, pca: this.pca, excluded, clusterSize });
+    }
+    const drift = this.drift.clone();
+    const excluded = new Set(this.usedDriftIndices);
+    if (pending?.phase === "drift") {
+      excluded.add(pending.stimulus.imageIndex);
+      drift.advanceAfterResponse();
+    }
+    return planDriftStimuli({ drift, schedule: this.driftSchedule, count, pca: this.pca, excluded, clusterSize });
+  }
+
+  /** Hand the URLs of the next images to the presenter (an optimization only; errors are ignored). */
+  preloadUpcoming(nextPhase) {
+    const count = this.config.ui.preloadCount ?? 0;
+    if (!count || typeof this.presenter?.preload !== "function") return;
+    try {
+      this.presenter.preload(this.upcomingStimuli(nextPhase, count).map((t) => this.imageUrl(t.stimulus.imageId)));
+    } catch {
+      // Without preloading, show() simply loads the image itself.
+    }
   }
 
   // ---------------------------------------------------------------- completion

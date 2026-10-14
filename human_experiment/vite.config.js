@@ -19,6 +19,7 @@ export default defineConfig({
       input: {
         index: resolve(projectDir, "index.html"),
         review: resolve(projectDir, "review.html"),
+        admin: resolve(projectDir, "admin.html"),
       },
     },
   },

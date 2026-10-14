@@ -109,6 +109,18 @@ describe("seeded randomization (PRD §8)", () => {
   });
 });
 
+describe("fixed session seed", () => {
+  it("the configuration fixes one valid seed; other policies and invalid seeds are rejected", () => {
+    expect(experimentConfig.randomization.seedPolicy).toBe("fixed");
+    expect(Number.isInteger(experimentConfig.randomization.fixedSeed)).toBe(true);
+    const withRandomization = (patch) => ({ ...experimentConfig, randomization: { ...experimentConfig.randomization, ...patch } });
+    expect(findConfigProblems(withRandomization({ seedPolicy: "crypto-random-uint32" })).join(" ")).toMatch(/seedPolicy/);
+    for (const fixedSeed of [undefined, -1, 1.5, 2 ** 32, "7"]) {
+      expect(findConfigProblems(withRandomization({ fixedSeed })).join(" ")).toMatch(/fixedSeed/);
+    }
+  });
+});
+
 describe("configuration validation (PRD §10)", () => {
   it("accepts the default configuration", () => {
     expect(findConfigProblems(experimentConfig, { pcaCount: 11817 })).toEqual([]);

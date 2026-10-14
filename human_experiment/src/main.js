@@ -6,10 +6,10 @@ import { mountExperiment } from "./app.js";
 import { errorScreen, loadingScreen, recoveryScreen } from "./components/screens.js";
 import { TrialScreen } from "./components/trialScreen.js";
 import { experimentConfig } from "./config/experimentConfig.js";
+import { applySettings, loadExperimentSettings } from "./config/experimentSettings.js";
 import { ConfigError, resolveEffectiveConfig, validateConfig } from "./config/validateConfig.js";
 import { uiText } from "./content/uiText.js";
 import { ExperimentEngine } from "./experiment/experimentEngine.js";
-import { generateSessionSeed } from "./experiment/seededRandomization.js";
 import { createSessionId, resolveParticipantId } from "./experiment/session.js";
 import { loadPca } from "./scientific/pcaLoader.js";
 import { createStorage } from "./services/dataStorage/index.js";
@@ -68,11 +68,22 @@ async function boot() {
   const root = document.getElementById("app");
   root.replaceChildren(loadingScreen());
   const developmentMode = isDevelopmentMode(window.location.search);
+  // The Vite dev server cannot run save.php, so it uses the development adapter.
+  const adapter = import.meta.env.DEV ? experimentConfig.storage.developmentAdapter : experimentConfig.storage.adapter;
+  const settle = (promise) => promise.then((value) => ({ value }), (error) => ({ error }));
+  // Start downloading the PCA data and the admin-page settings right away, in parallel with the
+  // storage/recovery step. Settings come from the server, or from this browser under the dev server.
+  const pcaRequest = settle(loadPca(experimentConfig));
+  const settingsRequest = settle(
+    loadExperimentSettings({
+      source: adapter === "server" ? "server" : "local",
+      endpoint: experimentConfig.storage.serverEndpoint,
+      prefix: experimentConfig.storage.localStoragePrefix,
+    }),
+  );
 
   let storage;
   try {
-    // The Vite dev server cannot run save.php, so it uses the development adapter.
-    const adapter = import.meta.env.DEV ? experimentConfig.storage.developmentAdapter : experimentConfig.storage.adapter;
     storage = createStorage({ ...experimentConfig, storage: { ...experimentConfig.storage, adapter } });
   } catch (error) {
     fatal(root, uiText.errors.storage, error);
@@ -82,43 +93,48 @@ async function boot() {
   root.replaceChildren(loadingScreen());
 
   let pca;
+  let settings;
+  let baseConfig; // experimentConfig with the settings saved on the admin page
   try {
     validateConfig(experimentConfig);
-    pca = await loadPca(experimentConfig);
+    const loaded = await pcaRequest;
+    if (loaded.error) throw loaded.error;
+    pca = loaded.value;
+    const loadedSettings = await settingsRequest;
+    if (loadedSettings.error) throw loadedSettings.error;
+    settings = loadedSettings.value;
+    baseConfig = applySettings(experimentConfig, settings.values);
   } catch (error) {
     fatal(root, error instanceof ConfigError ? uiText.errors.config : uiText.errors.assets, error);
     return;
   }
 
   let overrides = {};
-  let seed = null;
   let devModule = null;
   if (developmentMode) {
     const setup = await import("./dev/devSetup.js");
-    ({ overrides, seed } = await setup.showDevSetup(root, experimentConfig, { pcaCount: pca.count }));
+    ({ overrides } = await setup.showDevSetup(root, baseConfig, { pcaCount: pca.count }));
     devModule = await import("./dev/devPanel.js");
   }
 
   let config;
   try {
-    config = validateConfig(resolveEffectiveConfig(experimentConfig, overrides), { pcaCount: pca.count });
+    config = validateConfig(resolveEffectiveConfig(baseConfig, overrides), { pcaCount: pca.count });
   } catch (error) {
     fatal(root, uiText.errors.config, error);
     return;
   }
 
-  const developmentOverrides = { ...overrides };
-  if (seed !== null) developmentOverrides.sessionSeed = seed;
-
   const engine = new ExperimentEngine({
     config,
     developmentMode,
-    developmentOverrides,
+    developmentOverrides: { ...overrides },
+    experimentSettings: settings,
     pca,
     storage,
     presenter: null,
     sessionId: createSessionId(),
-    sessionSeed: seed ?? generateSessionSeed(),
+    sessionSeed: config.randomization.fixedSeed, // the same for every session
     identity: resolveParticipantId(window.location.search),
   });
   const trialScreen = new TrialScreen({

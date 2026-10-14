@@ -45,7 +45,8 @@ export function mountExperiment(root, engine, trialScreen, { developmentMode = f
       case SCREENS.TRIAL:
         show(trialScreen.element, SCREENS.TRIAL);
         // Feedback text exists only in training states; drift states never carry it.
-        trialScreen.setFeedback(state.status === "feedback" ? state.feedback : null);
+        if (state.status === "feedback") trialScreen.setFeedback(state.feedback, state.correct);
+        else trialScreen.setFeedback(null);
         break;
       case SCREENS.TRANSITION:
         show(transitionScreen({ onContinue: () => engine.continueToDrift() }), SCREENS.TRANSITION);

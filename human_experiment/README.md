@@ -18,6 +18,7 @@ npm run prepare-assets      # copy faces + derive PCA JSON into public/assets/ (
 npm run dev                 # http://localhost:5173/            participant view
                             # http://localhost:5173/?dev=1      development mode
                             # http://localhost:5173/review.html researcher review page
+                            # http://localhost:5173/admin.html  admin page (sessions saved in this browser)
 npm run build               # production build -> dist/ (static files, ~105 MB incl. faces)
 npm run preview             # serve dist/ on http://localhost:4173/
 ```
@@ -91,7 +92,7 @@ An image counts as "used" only after its response has been saved. A failed image
 | # | Default |
 | --- | --- |
 | OQ1 | `currentAngleA/B` hold the nominal angle (`initial + (k−1)·step`). The actual center angle is in `centerA_actualAngle` / `centerB_actualAngle`, which sit 0.51° below nominal with the default data. |
-| OQ2 | Visualization "trajectory candidates" = images nearest to A or B at any drift position, without exclusion (251 images by default). The source `generate_rotation_sequence` is an optional layer. |
+| OQ2 | Visualization "trajectory candidates" = images nearest to A or B at any drift position, without exclusion (251 images by default). |
 | OQ3 | `feedbackDurationMs: 1000`, `trainingBlockSize: 4`, display scale ×2 (356×436 px). |
 
 ### Measured consequences (default configuration)
@@ -109,12 +110,14 @@ Single entry point: [src/config/experimentConfig.js](src/config/experimentConfig
 
 | Key | Default | Notes |
 | --- | --- | --- |
-| `training.initialAngleA` / `initialAngleB` | 0 / 180 | Also the drift start. Must be 180° apart (D3). |
+| `training.initialAngleA` / `initialAngleB` | 0 / 180 | Also the drift start. Must be 180° apart (D3). Default only: the admin page can change it (see [Experiment settings](#experiment-settings)). |
 | `training.minTrials` / `accuracyWindow` / `accuracyThreshold` | 20 / 20 / 0.8 | Sliding-window criterion. No cap or timeout. |
-| `drift.numberOfTrials` / `degreesPerTrial` | 360 / 1 | Independent of each other. |
+| `drift.numberOfTrials` / `degreesPerTrial` | 360 / 1 | Independent of each other. Defaults only: the admin page can change them (see [Experiment settings](#experiment-settings)). |
 | `scientific.*` | see file | Source-derived (`targetRadius 0.45`, `radiusErrorWeight 100`, CCW, Euclidean) plus decisions D1–D5. |
+| `randomization.seedPolicy`, `randomization.fixedSeed` | `"fixed"`, 20261014 | One seed for all sessions (uint32). See [Randomization](#randomization-and-reproducibility). |
 | `randomization.trainingBlockSize` | 4 | Placeholder OQ3. Must be even. |
 | `ui.feedbackDurationMs`, `ui.imageDisplayScale` | 1000, 2 | Placeholders OQ3. |
+| `ui.preloadCount` | 3 | Upcoming images downloaded in advance (performance only; 0 disables). See [Timing](#timing). |
 | `storage.adapter` | `server` | `localCsv` (pilot) and `memory` (tests) are also available. |
 | `storage.developmentAdapter` | `localCsv` | Used by the Vite dev server, which cannot run PHP. |
 | `storage.serverEndpoint`, `requestTimeoutMs`, `maxAttempts` | `save.php`, 15000, 3 | Attempts per save before the participant sees `Try again`. |
@@ -123,7 +126,7 @@ Single entry point: [src/config/experimentConfig.js](src/config/experimentConfig
 
 ### Randomization and reproducibility
 
-- **Seed**: each session gets a `sessionSeed` (uint32 from `crypto.getRandomValues`), or a seed set in development mode.
+- **Seed**: every session uses the same `sessionSeed`, `randomization.fixedSeed` (default 20261014), so every participant sees the same group order and the same faces in the same order. It can only be changed in [src/config/experimentConfig.js](src/config/experimentConfig.js); development mode and the admin page show it but cannot change it. The seed is still recorded in every session.
 - **Generator**: one documented generator, sfc32 v1, with two independent named streams seeded from `(sessionSeed, name)` via FNV-1a and splitmix32.
   - `trainingSchedule`: balanced shuffled blocks of `trainingBlockSize` (2 A + 2 B), generated on demand.
   - `driftSchedule`: a single shuffled list of ⌊N/2⌋ A + ⌊N/2⌋ B, plus one random extra group when N is odd. |A − B| ≤ 1.
@@ -143,6 +146,8 @@ Response time is measured with `performance.now()` ([src/components/trialScreen.
 3. The decoded image is inserted into the empty frame.
 4. In the second `requestAnimationFrame` callback, after the frame with the image has been rendered, `onset = performance.now()` is taken and the buttons are enabled **at the same moment**.
 5. On click, `performance.now()` is captured first. `responseTimeMs = click − onset`, computed before saving or feedback.
+
+**Preloading.** Image selection is deterministic and the group schedules depend only on the seed, so the engine knows the next faces in advance ([src/experiment/sequencePlanner.js](src/experiment/sequencePlanner.js)). It announces the next `ui.preloadCount` images (default 3) at the instructions screen and right after each accepted answer, while that answer is being saved. The trial screen downloads and decodes them off-screen. Step 2 then finds the image already decoded, so the next face appears as soon as the save is confirmed, without waiting for an image download. Preloading changes neither which face is shown nor when the timer starts: onset is still taken after the frame with the new face is painted. The lookahead works on copies of the state (`TrainingSchedule.peek`, `DriftState.clone`), and a test checks that sessions are identical with and without it. A failed preload falls back to a normal load. Measured on the production build with a simulated 120 ms save and 80 ms image latency, the time from click to the next face fell from 252 ms to 167 ms; the remainder is the save round trip, which is kept so that a face never advances before its answer is stored.
 
 As a result, image loading, feedback duration and storage latency never enter the response time. A failed load shows an English error with `Try again`. It creates no record, starts no timer and does not move the centers. Duplicate clicks are ignored: only the first click per trial is accepted, and the record key `sessionId:trialNumber` is idempotent.
 
@@ -207,13 +212,53 @@ No phase, selection, timing or response-coding code changes. The engine tests ru
 One-time setup:
 1. Opalstack dashboard: create an Application of type **PHP-FPM + Apache** under the OS user used for SFTP, and a Site that routes a path of the domain to it, with Let's Encrypt enabled.
 2. Over SSH, create the data folder next to `apps/` (outside the web root): `mkdir -p ~/exp_data/representation_stability`.
+3. Over SSH, set the admin password (see [Admin page](#admin-page)).
 
 Each release:
 1. `npm run build`, then `tar -czf dist.tar.gz --exclude=./review.html -C dist .` (the participant site without the review page).
-2. Upload `dist.tar.gz` to `~/apps/<app>/` (FileZilla), then over SSH: `cd ~/apps/<app> && tar -xzf dist.tar.gz && rm dist.tar.gz`. When only code changed, uploading `index.html`, `app/` and `save.php` is enough.
+2. Upload `dist.tar.gz` to `~/apps/<app>/` (FileZilla), then over SSH: `cd ~/apps/<app> && tar -xzf dist.tar.gz && rm dist.tar.gz`. When only code changed, uploading `index.html`, `admin.html`, `app/` and the three PHP files (`save.php`, `admin_api.php`, `data_config.php`) is enough.
 3. Open `https://<site>/save.php?check=1`: it must show `"dataDirWritable":true`.
 
-Collecting data: download `~/exp_data/representation_stability/*.jsonl` (FileZilla) to a local folder and run `npm run data:csv -- <folder>`.
+Collecting data: open `https://<site>/admin.html` and use **Download CSV**, or download `~/exp_data/representation_stability/*.jsonl` (FileZilla) to a local folder and run `npm run data:csv -- <folder>`. Both produce identical CSV files.
+
+---
+
+## Admin page
+
+`admin.html` is the researcher's view of the collected data. It is not linked from the participant page (checked by `verify:participant-build`).
+
+- **Sessions**: every session with participant ID, status (complete / in progress / interrupted), training trials and when the criterion was met, drift progress, drift accuracy and mean response time. The list refreshes every 30 s. It can be filtered by text and status; development sessions are hidden unless *Include development sessions* is ticked. **Download CSV (shown sessions)** writes one combined file with the same columns as `npm run data:csv`.
+- **Session view**: summary tiles, a chart of rolling accuracy over the last 20 trials with the start of drift marked, the **image order** (every face in the order it was shown, numbered within its phase, with its group, the answer and ✓/✗; filter by phase, group and correctness; click a face for its details), the PCA stimulus plot, the full trial table, and a CSV download for that session. An unfinished session counts as *in progress* while its file changed in the last 30 minutes, and as *interrupted* after that.
+- **Planned image order**: the faces every session sees, in order, for the fixed seed (shown read-only; it can only be changed in the configuration file) and the saved experiment settings. Stimulus selection is deterministic, so this is exact. Training images always come in this order (answers only decide how many are shown), and drift images are the same however long training took.
+- **Settings**: the experiment settings below.
+
+### Experiment settings
+
+The **Settings** tab changes four values without a new build:
+
+| Setting | Default | Notes |
+| --- | --- | --- |
+| Center A initial angle | 0° | Training center of A and start of the drift. |
+| Center B initial angle | 180° | Always opposite A (decision D3: B = −A). Changing either angle moves the other. |
+| Movement per drift trial | 1° | Both centers rotate counterclockwise after every drift answer. Must be > 0 and ≤ 360. |
+| Number of drift trials | 360 | Filled in automatically for one full rotation, 360 ÷ movement, whenever the movement changes (rounded when 360 is not a multiple, with a warning). It can still be edited. |
+
+- **Scope.** Saved settings apply to every session that starts afterwards; a running session keeps the settings it started with. Each session records them in its metadata (`experimentSettings`: values, save time and source), and they are part of `effectiveConfigJson` in the CSV. The session page shows the settings a session used.
+- **Storage.** On the server, the settings are saved in `~/exp_data/representation_stability_settings.json` (outside the web root) by `admin_api.php`, after a login and server-side validation. Participants read them with `save.php?settings=1`. Without the file, the defaults of [src/config/experimentConfig.js](src/config/experimentConfig.js) apply. Under `npm run dev`, the settings are saved in this browser's localStorage.
+- **Failure.** If the settings cannot be loaded, the participant sees an error and the session does not start, so a session never runs silently with the wrong settings.
+- Development mode applies its own overrides on top of the saved settings.
+
+**Where the data comes from.** On the server, the page reads the session files through [public/admin_api.php](public/admin_api.php), which requires a login and never changes session files (its only write is the settings file). Under `npm run dev` (no PHP), it shows the sessions saved in this browser's localStorage, without a login.
+
+**Setting the password** (once, over SSH on the server). Run this, then type the password and press Enter:
+
+```bash
+php -r 'echo password_hash(trim(fgets(STDIN)), PASSWORD_DEFAULT), PHP_EOL;' > ~/exp_data/representation_stability_admin_password
+```
+
+Only the hash is stored, outside the web root. Run the same command again to change the password. Without this file the login is disabled and the page says so.
+
+**Security.** The login uses a PHP session cookie (`HttpOnly`, `SameSite=Strict`, `Secure` over HTTPS) that expires after 2 hours of inactivity or 12 hours in total. After 5 wrong passwords, the IP address is locked out for 15 minutes (`~/exp_data/representation_stability_admin_attempts.json`). Session IDs are validated before any file is read. The API never writes or deletes session data; saving settings requires a login.
 
 ---
 
@@ -225,7 +270,7 @@ Development mode is off by default and opens in one of two ways:
 
 Its code is loaded lazily and never appears in participant mode.
 
-- **Setup screen**: overrides for minimum training trials, accuracy window, threshold, drift trial count, degrees per trial, and session seed. Overrides are validated and recorded in `developmentOverrides` and `effectiveConfig`.
+- **Setup screen**: overrides for minimum training trials, accuracy window, threshold, drift trial count, and degrees per trial. The fixed session seed is shown but cannot be changed. Overrides are validated and recorded in `developmentOverrides` and `effectiveConfig`.
 - **Consent bypass**: recorded as `consentBypassed: true, consentGiven: false`.
 - **Debug panel** (docked right): phase, trial numbers, true group, image, stimulus angle, nominal and actual center angles, window accuracy, seed.
 - **Finish early**: ends the session as `incomplete_dev_early_finish`. The criterion is never marked as met unless it actually was.
@@ -248,7 +293,7 @@ It adds:
 - every presented stimulus, taken from the actual trial records (training points have a white outline)
 - the current or most recent stimulus, ringed
 
-Filters cover phase (all/training/drift) and group (all/A/B), and an optional source rotation-sequence layer can be turned on. Clicking a point shows its details and a thumbnail. **Export SVG** and **Export PNG** save `<sessionId>_pca_plot.svg|png`.
+Filters cover phase (all/training/drift) and group (all/A/B). Clicking a point shows its details and a thumbnail. **Export SVG** and **Export PNG** save `<sessionId>_pca_plot.svg|png`.
 
 The review page reads sessions from this browser's `localStorage` and updates live while the experiment runs in another tab. It can also load an exported CSV.
 
@@ -256,7 +301,7 @@ The review page reads sessions from this browser's `localStorage` and updates li
 
 ## Verification results
 
-Results as of 2026-10-07: `npm test` 72/72 passed, `npm run test:e2e` 2/2 passed (Chrome), `verify:repo` OK, `verify:participant-build` OK.
+Results as of 2026-10-14: `npm test` 112/112 passed, `npm run test:e2e` 2/2 passed (Chrome; the development test now also opens the admin page), `verify:repo` OK, `verify:participant-build` OK. `save.php` and `admin_api.php` were also exercised with PHP 8.3 in the Opalstack folder layout: a full 380-trial session, an interrupted session, login, wrong password, the lockout after 5 failures, sign-out, and the session CSV (byte-identical to `npm run data:csv`).
 
 | PRD §17 check | Evidence |
 | --- | --- |
@@ -288,8 +333,10 @@ Results as of 2026-10-07: `npm test` 72/72 passed, `npm run test:e2e` 2/2 passed
 ```text
 human_experiment/
 ├── index.html, review.html          participant page, researcher review page
+├── admin.html                       admin page (sessions, image order, data)
 ├── src/
 │   ├── main.js, app.js, review.js   composition roots and screen rendering
+│   ├── admin.js, admin/             admin page: data sources, session list/view, chart, planned order
 │   ├── config/                      experimentConfig.js (single entry point), validateConfig.js
 │   ├── content/                     researcher-editable English text
 │   ├── components/                  screens, trial screen / presenter
@@ -301,6 +348,8 @@ human_experiment/
 ├── scripts/                         prepare-assets, verify scripts, reference/ (Python parity)
 ├── reference_source/                verbatim copies of the inspected source files
 ├── public/save.php                  server data endpoint (copied to dist/)
+├── public/admin_api.php             read-only admin data endpoint (login required)
+├── public/data_config.php           data folder and admin password file locations
 ├── public/assets/                   derived PCA JSON, manifest, copied faces
 └── tests/                           unit, integration (jsdom), e2e (Playwright), parity fixtures
 ```

@@ -77,14 +77,18 @@ if (!fs.existsSync(BASELINE)) {
 const baseline = JSON.parse(fs.readFileSync(BASELINE, "utf8"));
 const errors = [];
 
-// 1. Tracked files: compare working tree with the baseline commit.
+// 1. Tracked files: compare working tree with the baseline commit. Pre-existing files (present
+// in the baseline commit, including the PRD) and everything outside human_experiment/ are
+// protected; files this project added under human_experiment/ after the baseline may change.
 // Files the user explicitly asked to change are listed in baseline.userAuthorizedChanges
 // (path -> reason) and reported, not treated as violations.
 const authorized = baseline.userAuthorizedChanges ?? {};
+const preExisting = new Set(git(["ls-tree", "-r", "--name-only", baseline.head]).split("\n").filter(Boolean));
 const changedSinceBaseline = git(["diff", "--name-only", baseline.head])
   .split("\n")
   .filter(Boolean)
-  .filter((file) => !baseline.modifiedTracked.includes(file));
+  .filter((file) => !baseline.modifiedTracked.includes(file))
+  .filter((file) => !file.startsWith(PROJECT_PREFIX) || preExisting.has(file));
 for (const file of changedSinceBaseline) {
   if (file in authorized) console.log(`authorized change: ${file} (${authorized[file]})`);
   else errors.push(`tracked file changed: ${file}`);

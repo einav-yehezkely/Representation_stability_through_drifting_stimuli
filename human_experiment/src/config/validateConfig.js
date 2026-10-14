@@ -74,11 +74,18 @@ export function findConfigProblems(config, { pcaCount } = {}) {
     if (!SUPPORTED[key].includes(s[key])) problems.push(`scientific.${key} "${s[key]}" is not supported`);
   }
   if (!SUPPORTED.algorithm.includes(r.algorithm)) problems.push(`randomization.algorithm "${r.algorithm}" is not supported`);
+  if (r.seedPolicy !== "fixed") problems.push(`randomization.seedPolicy "${r.seedPolicy}" is not supported (only "fixed")`);
+  if (!(Number.isInteger(r.fixedSeed) && r.fixedSeed >= 0 && r.fixedSeed <= 0xffffffff)) {
+    problems.push("randomization.fixedSeed must be an integer between 0 and 4294967295");
+  }
   if (!isPositiveInteger(r.trainingBlockSize) || r.trainingBlockSize % 2 !== 0) {
     problems.push("randomization.trainingBlockSize must be a positive even integer");
   }
   if (!(Number.isFinite(config.ui?.feedbackDurationMs) && config.ui.feedbackDurationMs >= 0)) {
     problems.push("ui.feedbackDurationMs must be a non-negative number");
+  }
+  if (config.ui?.preloadCount !== undefined && !(Number.isInteger(config.ui.preloadCount) && config.ui.preloadCount >= 0)) {
+    problems.push("ui.preloadCount must be a non-negative integer");
   }
   if (!SUPPORTED.adapter.includes(config.storage?.adapter)) problems.push(`storage.adapter "${config.storage?.adapter}" is not supported`);
   if (config.storage?.adapter === "server") {

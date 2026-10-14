@@ -1,6 +1,7 @@
 // Real-browser smoke tests (Chrome). Run with `npm run build && npm run test:e2e`.
 import fs from "node:fs";
 import { expect, test } from "@playwright/test";
+import { experimentConfig } from "../../src/config/experimentConfig.js";
 import { parseCsv } from "../../src/services/dataStorage/csvSerializer.js";
 
 const PROD = "http://localhost:4173";
@@ -30,6 +31,10 @@ async function storedSession(page) {
 /** Stand-in for save.php (vite preview cannot run PHP): records every request and acknowledges it. */
 async function fakeSaveEndpoint(page) {
   const requests = [];
+  // Experiment settings saved on the admin page: none, so the defaults apply.
+  await page.route("**/save.php?settings=1", (route) =>
+    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ok: true, settings: null }) }),
+  );
   await page.route("**/save.php", async (route) => {
     requests.push(JSON.parse(route.request().postData()));
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ok: true }) });
@@ -59,7 +64,7 @@ test("participant mode (production build): no dev controls, one face, feedback, 
   // Every answer was sent to the server.
   const [startRequest, ...trialRequests] = requests;
   expect(startRequest.action).toBe("start");
-  expect(startRequest.session).toMatchObject({ participantId: "E2E-PID", participantIdSource: "prolific_url", consentGiven: true, developmentMode: false });
+  expect(startRequest.session).toMatchObject({ participantId: "E2E-PID", participantIdSource: "prolific_url", consentGiven: true, developmentMode: false, sessionSeed: experimentConfig.randomization.fixedSeed });
   expect(trialRequests.length).toBeGreaterThanOrEqual(4);
   for (const { action, trial } of trialRequests) {
     expect(action).toBe("trial");
@@ -88,7 +93,7 @@ test("development mode: overrides, bypass, full run to CSV, live PCA plot, revie
   await page.locator('[data-field="training.accuracyWindow"]').fill("4");
   await page.locator('[data-field="drift.numberOfTrials"]').fill("6");
   await page.locator('[data-field="drift.degreesPerTrial"]').fill("30");
-  await page.locator('[data-field="seed"]').fill("2024");
+  await expect(page.locator('[data-field="seed"]')).toHaveCount(0); // the seed is fixed, not editable
   await page.getByRole("button", { name: "Start session" }).click();
   await page.locator('[data-dev="bypass-consent"]').click();
   await page.getByRole("button", { name: "Start" }).click();
@@ -133,8 +138,10 @@ test("development mode: overrides, bypass, full run to CSV, live PCA plot, revie
   const drift = rows.filter((r) => r.phase === "drift");
   expect(drift.map((r) => r.currentAngleA)).toEqual(["0", "30", "60", "90", "120", "150"]);
   expect(drift.every((r) => r.feedbackShown === "false")).toBe(true);
-  expect(rows[0]).toMatchObject({ developmentMode: "true", consentBypassed: "true", consentGiven: "false", sessionSeed: "2024", completionStatus: "complete" });
-  expect(JSON.parse(rows[0].developmentOverridesJson)).toMatchObject({ "training.minTrials": 4, "drift.numberOfTrials": 6, sessionSeed: 2024 });
+  expect(rows[0]).toMatchObject({ developmentMode: "true", consentBypassed: "true", consentGiven: "false", sessionSeed: String(experimentConfig.randomization.fixedSeed), completionStatus: "complete" });
+  const devOverrides = JSON.parse(rows[0].developmentOverridesJson);
+  expect(devOverrides).toMatchObject({ "training.minTrials": 4, "drift.numberOfTrials": 6 });
+  expect(devOverrides).not.toHaveProperty("sessionSeed");
   for (const r of rows) expect(Number(r.responseTimeMs)).toBeGreaterThan(0);
 
   // Plot export.
@@ -152,4 +159,18 @@ test("development mode: overrides, bypass, full run to CSV, live PCA plot, revie
   await expect(review.locator('[data-layer="dynamic"] circle[data-trial]')).toHaveCount(9); // most recent trial drawn as "current"
   await expect(review.locator(".status-line").nth(1)).toContainText("10 answered trials");
   await review.screenshot({ path: "test-results/review.png", fullPage: true });
+
+  // Admin page (dev server: sessions from this browser's localStorage, no login).
+  const admin = await context.newPage();
+  await admin.goto(`${DEV}/admin.html`);
+  await admin.locator("label.check input").check(); // development sessions are hidden by default
+  await admin.locator(".sessions-table tbody tr").first().click();
+  await expect(admin.locator(".image-grid .thumb")).toHaveCount(10);
+  await expect(admin.locator(".image-grid-title").first()).toContainText("Training");
+  await expect(admin.getByRole("button", { name: "Planned order for this seed" })).toHaveCount(0);
+  await admin.getByRole("link", { name: "Planned image order" }).click();
+  await expect(admin.locator(".seed-value")).toHaveText(String(experimentConfig.randomization.fixedSeed));
+  await expect(admin.locator('input[aria-label="Seed"]')).toHaveCount(0); // read-only
+  await expect(admin.locator(".image-grid .thumb")).toHaveCount(400); // default config: 40 training + 360 drift
+  await admin.screenshot({ path: "test-results/admin.png", fullPage: true });
 });

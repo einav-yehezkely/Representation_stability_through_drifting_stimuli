@@ -11,14 +11,15 @@
 // Convert the files to CSV with `npm run data:csv -- <folder with .jsonl files>`.
 //
 // GET save.php?check=1 reports whether DATA_DIR is writable (deployment check).
+// GET save.php?settings=1 returns the experiment settings saved on the admin page
+//     ({ ok, settings: {values, updatedAt} | null }); every new session applies them.
 
 declare(strict_types=1);
 
-// ~/exp_data/representation_stability: the app lives in ~/apps/<app>/, so two levels up is the
-// home directory. The folder is outside the web root, so the data cannot be downloaded from the site.
-const DATA_DIR = __DIR__ . '/../../exp_data/representation_stability';
+// DATA_DIR (~/exp_data/representation_stability, outside the web root) and SESSION_ID_PATTERN.
+require __DIR__ . '/data_config.php';
+
 const MAX_BODY_BYTES = 1000000;
-const SESSION_ID_PATTERN = '/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/';
 
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
@@ -26,14 +27,12 @@ header('X-Content-Type-Options: nosniff');
 
 function reply(int $status, array $body): void
 {
-    http_response_code($status);
-    echo json_encode($body);
-    exit;
+    json_reply($status, $body);
 }
 
 function fail(int $status, string $error): void
 {
-    reply($status, ['ok' => false, 'error' => $error]);
+    json_fail($status, $error);
 }
 
 function session_file(string $sessionId): string
@@ -79,6 +78,9 @@ function append($handle, string $text): void
 }
 
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+if ($method === 'GET' && isset($_GET['settings'])) {
+    reply(200, ['ok' => true, 'settings' => read_settings()]);
+}
 if ($method === 'GET' && isset($_GET['check'])) {
     reply(200, ['ok' => true, 'dataDirWritable' => is_dir(DATA_DIR) && is_writable(DATA_DIR)]);
 }

@@ -10,7 +10,7 @@ export function h(tag, props = {}, ...children) {
     else if (value === true) el.setAttribute(key, "");
     else el.setAttribute(key, String(value));
   }
-  for (const child of children.flat()) {
+  for (const child of children.flat(Infinity)) {
     if (child === null || child === undefined || child === false) continue;
     el.append(child instanceof Node ? child : document.createTextNode(String(child)));
   }

@@ -44,7 +44,10 @@ export const experimentConfig = {
   },
 
   randomization: {
-    seedPolicy: "crypto-random-uint32",
+    // Every session uses this seed, so all participants see the same group order and images.
+    // It can only be changed here (not in development mode or on the admin page).
+    seedPolicy: "fixed",
+    fixedSeed: 20261014, // unsigned 32-bit integer
     algorithm: "sfc32",
     algorithmVersion: "1",
     trainingBlockSize: 4, // placeholder OQ3: balanced shuffled blocks of 2 A + 2 B
@@ -53,6 +56,7 @@ export const experimentConfig = {
   ui: {
     feedbackDurationMs: 1000, // placeholder OQ3
     imageDisplayScale: 2, // placeholder OQ3: source images are 178x218 px
+    preloadCount: 3, // next images downloaded and decoded in advance (performance only; 0 disables)
     feedbackText: { correct: "Correct", incorrect: "Incorrect" },
   },
 

@@ -70,6 +70,11 @@ export class SeededRng {
   state() {
     return { stream: this.streamName, draws: this.draws };
   }
+
+  /** Independent copy at the same position (used for lookahead; the original is not advanced). */
+  clone() {
+    return Object.assign(Object.create(SeededRng.prototype), this);
+  }
 }
 
 export function createRngFactory(sessionSeed) {
@@ -127,5 +132,13 @@ export class TrainingSchedule {
     const group = this.blocks[blockIndex][this.position % this.blockSize];
     this.position += 1;
     return group;
+  }
+
+  /** The next `count` groups, without consuming them (this schedule and its generator are untouched). */
+  peek(count) {
+    const copy = new TrainingSchedule(this.blockSize, this.rng.clone());
+    copy.blocks = this.blocks.map((block) => [...block]);
+    copy.position = this.position;
+    return Array.from({ length: count }, () => copy.next());
   }
 }

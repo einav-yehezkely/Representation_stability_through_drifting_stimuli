@@ -3,10 +3,6 @@
 //   * driftCandidates: images that are nearest (cluster of size 1, no exclusion) to the A or B
 //     center at any drift position of the effective configuration (training centers + the
 //     incremental rotation used during drift).
-//   * sourceRotationSequence: the source experiment's own trajectory sequence,
-//     generate_rotation_sequence(base_point, num_steps=360, start_angle=0, rotation_range=360,
-//     used_indices=set()) (classify_rotation_resnet50.py lines 760-804 and 1491-1500), offered as
-//     an optional layer.
 
 import { collectNearest } from "../scientific/clusterConstruction.js";
 import { initialCenters, rotateVector } from "../scientific/trajectory.js";
@@ -25,16 +21,3 @@ export function driftCandidateIndices(pca, config) {
   return [...members];
 }
 
-/** Port of generate_rotation_sequence (angle_deg = (start + range * i / steps) % 360). */
-export function sourceRotationSequence(pca, basePoint, { numSteps = 360, startAngle = 0, rotationRange = 360 } = {}) {
-  const used = new Set();
-  const results = [];
-  for (let i = 0; i < numSteps; i += 1) {
-    const angle = (startAngle + (rotationRange * i) / numSteps) % 360;
-    const rotated = rotateVector(basePoint, angle);
-    const [{ index }] = collectNearest(rotated, pca, 1, used);
-    used.add(index);
-    results.push({ step: i, index });
-  }
-  return results;
-}
