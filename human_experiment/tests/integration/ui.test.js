@@ -166,7 +166,8 @@ describe("trial screen (acceptance checks 3, 5, 7, 8)", () => {
     }
     await waitFor(() => engine.state.screen === SCREENS.COMPLETE, tick);
     expect(engine.driftRecords.map((r) => r.response)).toEqual(["A", "Probably A", "Probably B"]);
-    expect(root.textContent).toContain("Download data");
+    expect(root.textContent).toContain(uiText.completion.savedMessage);
+    expect(root.querySelectorAll("button, a")).toHaveLength(0); // no data download for participants
   });
 
   it("buttons stay disabled while the image loads; RT excludes load time; double click is ignored", async () => {
@@ -202,7 +203,7 @@ describe("completion screen", () => {
   const url = "https://app.prolific.com/submissions/complete?cc=TEST123";
 
   it("online collection: confirms the save, links back to Prolific and offers no download", () => {
-    const el = completionScreen({ state: { completionStatus: "complete", savedToServer: true, exported: true }, completionUrl: url, onDownload: () => {} });
+    const el = completionScreen({ state: { completionStatus: "complete", savedToServer: true, exported: true }, completionUrl: url });
     expect(el.textContent).toContain(uiText.completion.savedMessage);
     expect(el.querySelector("a.button").getAttribute("href")).toBe(url);
     expect(el.querySelector("a.button").textContent).toBe(uiText.completion.returnToProlificLabel);
@@ -210,13 +211,16 @@ describe("completion screen", () => {
   });
 
   it("online collection without a configured link shows no link", () => {
-    const el = completionScreen({ state: { completionStatus: "complete", savedToServer: true }, completionUrl: "", onDownload: () => {} });
+    const el = completionScreen({ state: { completionStatus: "complete", savedToServer: true }, completionUrl: "" });
     expect(el.querySelector("a")).toBeNull();
   });
 
-  it("pilot storage keeps the download button", () => {
-    const el = completionScreen({ state: { completionStatus: "complete", exported: true, exportName: "s.csv" }, completionUrl: url, onDownload: () => {} });
-    expect(el.querySelector("a")).toBeNull();
-    expect(el.querySelector("button").textContent).toBe(uiText.completion.downloadLabel);
+  it("participants are never offered a data download (browser storage or server)", () => {
+    for (const state of [{ completionStatus: "complete" }, { completionStatus: "complete", savedToServer: true }, { completionStatus: "incomplete_dev_early_finish" }]) {
+      const el = completionScreen({ state, completionUrl: "" });
+      expect(el.querySelectorAll("button")).toHaveLength(0);
+      expect(el.textContent).not.toMatch(/download/i);
+      expect(el.textContent).toContain(uiText.completion.savedMessage);
+    }
   });
 });

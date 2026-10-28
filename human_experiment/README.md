@@ -4,7 +4,7 @@ A browser experiment for human participants, parallel to the neural-network expe
 
 Specification: [HUMAN_EXPERIMENT_PRD.md](HUMAN_EXPERIMENT_PRD.md). Build plan and researcher decisions: [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md).
 
-> **Data storage.** The production build sends every answer to `save.php` on the web server, which writes one file per session outside the web root (see [Storage](#storage) and [Deployment](#deployment-opalstack)). The Vite dev server (`npm run dev`) cannot run PHP, so it keeps the pilot behavior: data in `localStorage` and a CSV download. Before running on Prolific, replace the consent placeholders and set `completion.prolificCompletionUrl`.
+> **Data storage.** The production build sends every answer to `save.php` on the web server, which writes one file per session outside the web root (see [Storage](#storage) and [Deployment](#deployment-opalstack)). The Vite dev server (`npm run dev`) cannot run PHP, so it keeps the data in this browser's `localStorage`. Participants are never offered a download of their data; the researcher exports it from the [admin page](#admin-page). Before running on Prolific, replace the consent placeholders and set `completion.prolificCompletionUrl`.
 
 ---
 
@@ -47,8 +47,8 @@ To serve the study, deploy the contents of `dist/` to a web server with PHP (see
 - **Training**: `Correct` / `Incorrect` feedback (1 s) after every answer, centers fixed. Training ends only when ≥ 20 trials are completed **and** the last 20 trials are ≥ 80% correct (sliding window). The qualifying trial also receives feedback.
 - **Transition**: the exact PRD text. Drift starts only after `Continue`.
 - **Drift**: 360 trials. No feedback, no cues. Both centers rotate 1° counterclockwise **after** each response.
-- **Completion**: with server storage, "Your responses have been saved" and, when `completion.prolificCompletionUrl` is set, a `Return to Prolific` button. With the pilot adapter (dev server), `<sessionId>.csv` downloads automatically and a `Download data` button retries the download.
-- **Recovery**: when the page is reloaded during a session, the interrupted session is kept and a new session starts; neither overwrites the other. With server storage the old session is marked `interrupted` on the server and no download is offered. With the pilot adapter it is offered for export (`<sessionId>_INCOMPLETE.csv`).
+- **Completion**: "Your responses have been saved" and, when `completion.prolificCompletionUrl` is set, a `Return to Prolific` button. Participants are never offered a download of their data, with either storage adapter.
+- **Recovery**: when the page is reloaded during a session, the interrupted session keeps its saved data, is marked `interrupted` (on the server, and in this browser), and a new session starts; neither overwrites the other. No download is offered.
 
 All participant-facing text is in [src/content/](src/content/) and can be edited without touching the logic.
 
@@ -194,7 +194,7 @@ The pilot adapter, [localCsvStorage.js](src/services/dataStorage/localCsvStorage
 - `hx:session:<id>:meta`
 - `hx:session:<id>:trials`
 
-It never overwrites another session, never downloads a CSV per trial, and downloads the CSV at completion. Saved data stays in `localStorage` after export.
+It never overwrites another session and never downloads anything by itself: `completeSession()` only saves the final metadata. `exportSession()` writes a CSV on request (development panel, admin page under `npm run dev`); the data stays in `localStorage` afterwards.
 
 The server adapter, [serverStorage.js](src/services/dataStorage/serverStorage.js), POSTs each call to [public/save.php](public/save.php) and resolves only after the server confirmed the write. Network and 5xx errors are retried (`maxAttempts`); a rejected request (4xx) is not. It also keeps a best-effort copy in `localStorage` through the pilot adapter; a failing copy never blocks the participant. `save.php` appends to `~/exp_data/representation_stability/<sessionId>.jsonl`, one JSON object per line (`start`, `trial`, `complete`, `interrupted`). Trials are idempotent on `sessionId:trialNumber`. [serverRecords.js](src/services/dataStorage/serverRecords.js) reads these files back and `npm run data:csv` writes them with the same CSV serializer, so the columns are identical to the pilot CSV. A session without a `complete` record is exported as `interrupted` and `_INCOMPLETE`.
 
@@ -301,7 +301,7 @@ The review page reads sessions from this browser's `localStorage` and updates li
 
 ## Verification results
 
-Results as of 2026-10-14: `npm test` 112/112 passed, `npm run test:e2e` 2/2 passed (Chrome; the development test now also opens the admin page), `verify:repo` OK, `verify:participant-build` OK. `save.php` and `admin_api.php` were also exercised with PHP 8.3 in the Opalstack folder layout: a full 380-trial session, an interrupted session, login, wrong password, the lockout after 5 failures, sign-out, and the session CSV (byte-identical to `npm run data:csv`).
+Results as of 2026-10-28: `npm test` 114/114 passed, `npm run test:e2e` 2/2 passed (Chrome; the development test now also opens the admin page), `verify:repo` OK, `verify:participant-build` OK. `save.php` and `admin_api.php` were also exercised with PHP 8.3 in the Opalstack folder layout: a full 380-trial session, an interrupted session, login, wrong password, the lockout after 5 failures, sign-out, and the session CSV (byte-identical to `npm run data:csv`).
 
 | PRD §17 check | Evidence |
 | --- | --- |
@@ -315,7 +315,7 @@ Results as of 2026-10-14: `npm test` 112/112 passed, `npm run test:e2e` 2/2 pass
 | 8. Timing and failures | A 1.5–2 s load delay does not change RT; a failed load creates no record and no rotation and retries the same image; double clicks give one record. |
 | 9. Reproducibility and balancing | Same seed + responses give identical sequences; different seeds differ; drift balance ≤ 1; every training block is balanced; drift is independent of training length. |
 | 10. Persistence and recovery | localStorage save; recovery after a reload in real Chrome; quota and unavailable errors surfaced; sessions never overwritten. |
-| 11. CSV | One row per response, every column, RFC 4180 escaping, metadata columns, `_INCOMPLETE` partial exports, manual re-download. |
+| 11. CSV | One row per response, every column, RFC 4180 escaping, metadata columns, `_INCOMPLETE` partial exports. By researcher decision (2026-10-28), participants get no download: the CSV comes from the admin page or `npm run data:csv`. |
 | 12. Identity and consent | `PROLIFIC_PID` used when non-empty, else anonymous; `Continue` disabled until consent; bypass only in development mode and recorded honestly. |
 | 13. No dev in participant mode; replaceable adapter | e2e on the production build with `?dev=1` shows no development controls; `verify:participant-build`; engine runs unchanged on the memory and localStorage adapters. |
 

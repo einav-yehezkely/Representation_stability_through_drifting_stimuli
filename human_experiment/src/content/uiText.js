@@ -16,19 +16,10 @@ export const uiText = {
     heading: "Thank you!",
     completeMessage: "You have completed the experiment.",
     incompleteMessage: "The session has ended before completion and was saved as incomplete.",
-    downloadedMessage: "A data file named {file} has been downloaded to this computer.",
-    notDownloadedMessage: "The data file could not be downloaded automatically. Please use the button below.",
-    downloadLabel: "Download data",
-    // Online collection (server storage). The link itself is config.completion.prolificCompletionUrl.
     savedMessage: "Your responses have been saved.",
+    // The link itself is config.completion.prolificCompletionUrl.
     returnToProlificMessage: "Please click the button below to return to Prolific and register your submission.",
     returnToProlificLabel: "Return to Prolific",
-  },
-  recovery: {
-    heading: "A previous session was interrupted",
-    body: "A session in this browser ended before it was completed. Its saved responses are kept. You can download them, or start a new session.",
-    downloadLabel: "Download its data",
-    startNewLabel: "Start a new session",
   },
   errors: {
     imageLoad: "The picture could not be loaded. Please check your internet connection and try again.",

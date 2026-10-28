@@ -10,6 +10,9 @@ export default defineConfig({
   publicDir: resolve(projectDir, "public"),
   server: {
     fs: { strict: true, allow: [projectDir] }, // never serve files from outside human_experiment/
+    // The 11,817 face images (and their copy in dist/) never change while developing; watching
+    // them kept the dev server busy and made every face take seconds to load.
+    watch: { ignored: ["**/dist/**", "**/public/assets/faces/**", "**/test-results/**"] },
   },
   build: {
     outDir: resolve(projectDir, "dist"),

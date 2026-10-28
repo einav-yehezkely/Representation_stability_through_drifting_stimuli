@@ -169,14 +169,19 @@ describe("localStorage adapter (PRD §13, acceptance check 10)", () => {
     await expect(storage.startSession(meta("s1"))).rejects.toMatchObject({ code: "UNAVAILABLE" });
   });
 
-  it("a blocked download leaves data saved and reports exported:false", async () => {
+  it("completion saves the metadata and downloads nothing; a blocked export on request reports exported:false", async () => {
     const ls = new FakeLocalStorage();
-    const storage = new LocalCsvStorage({ localStorage: ls, download: () => { throw new Error("blocked"); } });
+    const downloads = [];
+    const storage = new LocalCsvStorage({ localStorage: ls, download: (name) => downloads.push(name) });
     await storage.startSession(meta("s1"));
     await storage.saveTrial(trial("s1", 1));
-    const result = await storage.completeSession({ sessionId: "s1", completionStatus: "complete" });
-    expect(result).toMatchObject({ ok: true, exported: false, exportName: "s1.csv" });
+    expect(await storage.completeSession({ sessionId: "s1", completionStatus: "complete" })).toEqual({ ok: true });
+    expect(downloads).toEqual([]);
     expect(JSON.parse(ls.getItem("hx:session:s1:meta")).completionStatus).toBe("complete");
+    storage.download = () => {
+      throw new Error("blocked");
+    };
+    expect(await storage.exportSession("s1")).toMatchObject({ ok: true, exported: false, exportName: "s1.csv" });
   });
 });
 
@@ -190,8 +195,9 @@ describe("replaceable adapter (acceptance check 13)", () => {
     await runTraining(engine, presenter, Array(20).fill(true));
     await engine.continueToDrift();
     while (engine.state.screen === SCREENS.TRIAL) await answer(engine, presenter, "B");
-    expect(engine.state).toMatchObject({ screen: SCREENS.COMPLETE, exported: true });
-    expect(downloads).toHaveLength(1);
+    expect(engine.state).toMatchObject({ screen: SCREENS.COMPLETE });
+    expect(downloads).toHaveLength(0); // nothing is downloaded at completion
+    await storage.exportSession(engine.meta.sessionId);
     expect(parseCsv(downloads[0].t)).toHaveLength(24);
   });
 });

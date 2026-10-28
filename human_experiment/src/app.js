@@ -55,7 +55,7 @@ export function mountExperiment(root, engine, trialScreen, { developmentMode = f
         show(loadingScreen(), SCREENS.COMPLETING);
         break;
       case SCREENS.COMPLETE:
-        show(completionScreen({ state, completionUrl: engine.config.completion?.prolificCompletionUrl, onDownload: () => engine.downloadAgain() }), `${SCREENS.COMPLETE}:${state.exported}`);
+        show(completionScreen({ state, completionUrl: engine.config.completion?.prolificCompletionUrl }), SCREENS.COMPLETE);
         break;
       case SCREENS.ERROR:
         show(

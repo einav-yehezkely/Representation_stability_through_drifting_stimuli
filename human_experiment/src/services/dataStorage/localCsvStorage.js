@@ -1,7 +1,9 @@
-// Development/pilot storage adapter: in-memory + localStorage, CSV download at completion.
+// Development/pilot storage adapter: in-memory + localStorage. Nothing is downloaded at
+// completion (participants never receive their data); exportSession() writes a CSV on request
+// (development panel, admin page under the Vite dev server).
 //
-// THIS IS NOT THE FINAL PROLIFIC DATA COLLECTION MECHANISM. A browser download stays on the
-// participant's computer; final online collection needs a server-backed adapter.
+// THIS IS NOT THE FINAL PROLIFIC DATA COLLECTION MECHANISM: the data stays in this browser.
+// Online collection uses the server adapter.
 //
 // localStorage layout (prefix defaults to "hx"):
 //   <prefix>:index                 JSON array of sessionIds (append-only)
@@ -140,11 +142,10 @@ export class LocalCsvStorage {
     return { ok: true };
   }
 
+  /** Saves the final metadata. No download: participants never receive their data. */
   async completeSession(completionMetadata) {
-    const { sessionId } = completionMetadata;
-    await this.updateSession(sessionId, completionMetadata);
-    const incomplete = completionMetadata.completionStatus !== "complete";
-    return this.exportSession(sessionId, { incomplete });
+    await this.updateSession(completionMetadata.sessionId, completionMetadata);
+    return { ok: true };
   }
 
   async exportSession(sessionId, { incomplete } = {}) {

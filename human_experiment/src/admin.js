@@ -143,6 +143,7 @@ async function boot() {
     source,
     defaults: settingsFromConfig(experimentConfig),
     getPca: () => pca,
+    facesDirectory,
     onSaved: usePlannedConfig,
     onError: showError,
   });

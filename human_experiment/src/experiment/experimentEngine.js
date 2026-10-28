@@ -426,16 +426,6 @@ export class ExperimentEngine {
     }
   }
 
-  /** Re-export after completion (manual download / retry). */
-  async downloadAgain() {
-    if (typeof this.storage.exportSession !== "function") return null;
-    const result = await this.storage.exportSession(this.meta.sessionId, {
-      incomplete: this.meta.completionStatus !== COMPLETION_STATUS.COMPLETE,
-    });
-    if (this.state.screen === SCREENS.COMPLETE) this.setState({ ...this.state, ...result });
-    return result;
-  }
-
   // ---------------------------------------------------------------- development controls
 
   /** Development only: stop now and save the session as incomplete. */

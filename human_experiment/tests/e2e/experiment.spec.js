@@ -124,16 +124,29 @@ test("development mode: overrides, bypass, full run to CSV, live PCA plot, revie
   await expect(page.locator('.dev-plot [data-layer="dynamic"] circle[data-trial]')).toHaveCount(4);
 
   await page.getByRole("button", { name: "Continue" }).click();
-  const downloadPromise = page.waitForEvent("download");
+  const downloads = [];
+  page.on("download", (d) => downloads.push(d.suggestedFilename()));
   for (let i = 0; i < 6; i += 1) {
     const buttons = page.locator(".response-buttons button");
     await expect(buttons.first()).toBeEnabled();
     await expect(page.locator(".feedback")).toHaveText("");
     await buttons.nth(i % 4).click();
   }
-  const download = await downloadPromise;
   await expect(page.locator('[data-screen="complete"]')).toBeVisible();
-  const rows = parseCsv(fs.readFileSync(await download.path(), "utf8"));
+  // Participants get no data download: nothing is downloaded and the screen offers no button.
+  await page.waitForTimeout(500);
+  expect(downloads).toEqual([]);
+  await expect(page.locator('[data-screen="complete"] button')).toHaveCount(0);
+
+  // The researcher exports the CSV from the admin page.
+  const csvPage = await context.newPage();
+  await csvPage.goto(`${DEV}/admin.html`);
+  await csvPage.locator("label.check input").check(); // development sessions are hidden by default
+  await csvPage.locator(".sessions-table tbody tr").first().click();
+  const csvDownload = csvPage.waitForEvent("download");
+  await csvPage.getByRole("button", { name: "Download CSV" }).click();
+  const rows = parseCsv(fs.readFileSync(await (await csvDownload).path(), "utf8"));
+  await csvPage.close();
   expect(rows).toHaveLength(10);
   const drift = rows.filter((r) => r.phase === "drift");
   expect(drift.map((r) => r.currentAngleA)).toEqual(["0", "30", "60", "90", "120", "150"]);

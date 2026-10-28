@@ -3,7 +3,7 @@
 
 import "./styles.css";
 import { mountExperiment } from "./app.js";
-import { errorScreen, loadingScreen, recoveryScreen } from "./components/screens.js";
+import { errorScreen, loadingScreen } from "./components/screens.js";
 import { TrialScreen } from "./components/trialScreen.js";
 import { experimentConfig } from "./config/experimentConfig.js";
 import { applySettings, loadExperimentSettings } from "./config/experimentSettings.js";
@@ -36,32 +36,10 @@ async function handleRecovery(root, storage) {
     fatal(root, uiText.errors.storage, error);
     return false;
   }
-  if (!sessions.length) return true;
-  if (storage.serverBacked) {
-    // Online collection: the server already holds the interrupted data, so the participant is
-    // not offered a download; the old session is marked interrupted and a new one starts.
-    for (const s of sessions) await storage.markInterrupted(s.sessionId);
-    return true;
-  }
-  return new Promise((resolve) => {
-    const markAll = async () => {
-      for (const s of sessions) await storage.markInterrupted(s.sessionId);
-    };
-    root.replaceChildren(
-      recoveryScreen({
-        sessions,
-        onDownload: async () => {
-          await markAll();
-          for (const s of sessions) await storage.exportSession(s.sessionId, { incomplete: true });
-          resolve(true);
-        },
-        onStartNew: async () => {
-          await markAll();
-          resolve(true);
-        },
-      }),
-    );
-  });
+  // The interrupted session keeps its saved data (server or this browser) and is marked
+  // interrupted; a new session starts. Participants are never offered a download of their data.
+  for (const s of sessions) await storage.markInterrupted(s.sessionId);
+  return true;
 }
 
 async function boot() {

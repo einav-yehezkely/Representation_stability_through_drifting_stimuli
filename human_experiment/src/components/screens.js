@@ -10,7 +10,6 @@ const ICONS = {
   check: '<path d="M20 6 9 17l-5-5"/>',
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>',
   alert: '<path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/>',
-  history: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/>',
 };
 
 function icon(name, tone = "accent") {
@@ -85,50 +84,21 @@ export function transitionScreen({ onContinue }) {
   );
 }
 
-export function completionScreen({ state, completionUrl, onDownload }) {
+// Participants are never offered their data: it is saved (server or browser storage) and the
+// researcher exports it from the admin page.
+export function completionScreen({ state, completionUrl }) {
   const c = uiText.completion;
   const complete = state.completionStatus === "complete";
-  const status = h("p", { class: "lead", text: complete ? c.completeMessage : c.incompleteMessage });
-  const badge = icon(complete ? "check" : "info", complete ? "success" : "accent");
-  if (state.savedToServer) {
-    // Online collection: the data is on the server; the participant only returns to Prolific.
-    return h(
-      "section",
-      { class: "panel panel-centered", "data-screen": "complete" },
-      badge,
-      h("h1", { text: c.heading }),
-      status,
-      h("p", { text: c.savedMessage }),
-      complete && completionUrl
-        ? [h("p", { text: c.returnToProlificMessage }), h("div", { class: "actions" }, h("a", { class: "button large", href: completionUrl }, c.returnToProlificLabel))]
-        : null,
-    );
-  }
   return h(
     "section",
     { class: "panel panel-centered", "data-screen": "complete" },
-    badge,
+    icon(complete ? "check" : "info", complete ? "success" : "accent"),
     h("h1", { text: c.heading }),
-    status,
-    h("p", { text: state.exported ? c.downloadedMessage.replace("{file}", state.exportName) : c.notDownloadedMessage }),
-    h("div", { class: "actions" }, h("button", { type: "button", onclick: () => onDownload() }, c.downloadLabel)),
-  );
-}
-
-export function recoveryScreen({ sessions, onDownload, onStartNew }) {
-  const r = uiText.recovery;
-  return h(
-    "section",
-    { class: "panel panel-centered", "data-screen": "recovery" },
-    icon("history"),
-    h("h1", { text: r.heading }),
-    h("p", { text: r.body }),
-    h(
-      "div",
-      { class: "actions" },
-      h("button", { type: "button", onclick: () => onDownload(sessions) }, r.downloadLabel),
-      h("button", { type: "button", class: "secondary", onclick: () => onStartNew(sessions) }, r.startNewLabel),
-    ),
+    h("p", { class: "lead", text: complete ? c.completeMessage : c.incompleteMessage }),
+    h("p", { text: c.savedMessage }),
+    complete && completionUrl
+      ? [h("p", { text: c.returnToProlificMessage }), h("div", { class: "actions" }, h("a", { class: "button large", href: completionUrl }, c.returnToProlificLabel))]
+      : null,
   );
 }
 

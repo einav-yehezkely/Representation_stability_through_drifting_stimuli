@@ -112,3 +112,43 @@ describe("a session with saved settings", () => {
     expect(engine.meta).toHaveProperty("experimentSettings", null);
   });
 });
+
+describe("example faces on the settings page", () => {
+  it("are exactly the first training face of each group (experiment's center rule and radius)", async () => {
+    const { exampleFaces } = await import("../../src/admin/settingsView.js");
+    const { realPca } = await import("../helpers/engineHarness.js");
+    const pca = realPca();
+    for (const angleA of [0, 1, 37, 90, 200.5, 359]) {
+      const values = settings({ "training.initialAngleA": angleA, "training.initialAngleB": oppositeAngle(angleA) });
+      const examples = exampleFaces(pca, experimentConfig, values);
+      const { engine, presenter } = makeEngine({ overrides: values });
+      await startToTraining(engine);
+      const firstShown = {};
+      while (!firstShown.A || !firstShown.B) {
+        firstShown[engine.pending.group] ??= engine.pending.stimulus.imageId;
+        await answer(engine, presenter, correctResponse(engine));
+      }
+      expect({ A: examples.A.imageId, B: examples.B.imageId }).toEqual(firstShown);
+      // A is the starting center itself: radius near the computational experiment's 0.45.
+      expect(Math.abs(examples.A.radius - experimentConfig.scientific.targetRadius)).toBeLessThan(0.02);
+    }
+    expect(exampleFaces(pca, experimentConfig, settings()).A.imageId).toBe("183785.jpg"); // README: center A at 0°
+  });
+});
+
+describe("preloading the faces of the whole circle", () => {
+  it("covers both groups' example face for every whole degree, nearest to the current angle first", async () => {
+    const { circleFaceUrls, exampleFaces } = await import("../../src/admin/settingsView.js");
+    const { realPca } = await import("../helpers/engineHarness.js");
+    const pca = realPca();
+    const urls = circleFaceUrls(pca, experimentConfig, "faces/", 90);
+    expect(new Set(urls).size).toBe(urls.length);
+    const faces = (deg) => exampleFaces(pca, experimentConfig, settings({ "training.initialAngleA": deg, "training.initialAngleB": oppositeAngle(deg) }));
+    const url = (face) => `faces/${encodeURIComponent(face.imageId)}`;
+    expect(urls.slice(0, 2)).toEqual([url(faces(90).A), url(faces(90).B)]);
+    for (const deg of [0, 45, 89, 91, 180, 359]) {
+      expect(urls).toContain(url(faces(deg).A));
+      expect(urls).toContain(url(faces(deg).B));
+    }
+  });
+});
