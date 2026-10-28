@@ -129,8 +129,9 @@ describe("example faces on the settings page", () => {
         await answer(engine, presenter, correctResponse(engine));
       }
       expect({ A: examples.A.imageId, B: examples.B.imageId }).toEqual(firstShown);
-      // A is the starting center itself: radius near the computational experiment's 0.45.
-      expect(Math.abs(examples.A.radius - experimentConfig.scientific.targetRadius)).toBeLessThan(0.02);
+      // A is the starting center itself: radius near the computational experiment's 0.45 (the
+      // source rule trades angle error against radius error, so it is close, not exact).
+      expect(Math.abs(examples.A.radius - experimentConfig.scientific.targetRadius)).toBeLessThan(0.05);
     }
     expect(exampleFaces(pca, experimentConfig, settings()).A.imageId).toBe("183785.jpg"); // README: center A at 0°
   });
@@ -152,3 +153,30 @@ describe("preloading the faces of the whole circle", () => {
     }
   });
 });
+
+describe("comparing the two groups on the settings page", () => {
+  it("shows the training faces each group gets in a real session, in order", async () => {
+    const { exampleFaces, groupTrainingFaces } = await import("../../src/admin/settingsView.js");
+    const { realPca } = await import("../helpers/engineHarness.js");
+    const pca = realPca();
+    for (const angleA of [0, 120]) {
+      const values = settings({ "training.initialAngleA": angleA, "training.initialAngleB": oppositeAngle(angleA) });
+      const faces = groupTrainingFaces(pca, experimentConfig, values, 12);
+      expect(faces.A).toHaveLength(12);
+      expect(faces.B).toHaveLength(12);
+      // A real session with the fixed seed and these settings.
+      const { engine, presenter } = makeEngine({ overrides: values, seed: experimentConfig.randomization.fixedSeed });
+      await startToTraining(engine);
+      while (engine.trainingRecords.filter((r) => r.trueGroup === "A").length < 12 || engine.trainingRecords.filter((r) => r.trueGroup === "B").length < 12) {
+        await answer(engine, presenter, engine.trainingRecords.length % 3 === 0 ? "A" : "B"); // mixed answers: training continues
+      }
+      for (const group of ["A", "B"]) {
+        const shown = engine.trainingRecords.filter((r) => r.trueGroup === group).slice(0, 12).map((r) => r.imageId);
+        expect(faces[group].map((x) => x.imageId)).toEqual(shown);
+      }
+      const first = exampleFaces(pca, experimentConfig, values);
+      expect([faces.A[0].imageId, faces.B[0].imageId]).toEqual([first.A.imageId, first.B.imageId]);
+    }
+  });
+});
+

@@ -33,7 +33,7 @@ from source_functions import (  # noqa: E402
     rotate_vector,
 )
 
-PCA_CSV = os.path.join(REPO, "pca_top2_filtered_female_vgg_1.csv")  # read-only
+PCA_CSV = os.path.join(REPO, "pca_top2_filtered_female_vgg_1.csv")  # read-only; same file as scripts/prepare-assets.mjs
 OUT = os.path.join(PROJECT, "tests", "fixtures", "parity", "parity.json")
 
 names, points = load_top2_filtered(PCA_CSV)

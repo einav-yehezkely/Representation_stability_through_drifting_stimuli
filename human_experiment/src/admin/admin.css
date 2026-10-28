@@ -853,6 +853,66 @@ body.admin {
   color: var(--text);
 }
 
+.compare-toggle {
+  margin: 8px 0 4px;
+}
+
+.group-compare {
+  margin: 8px 0 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-muted);
+}
+
+.compare-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.compare-header p {
+  margin: 0;
+  max-width: 520px;
+}
+
+.compare-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.compare-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+}
+
+.compare-title .key {
+  margin-left: 0;
+}
+
+.compare-vs {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  padding: 0 4px;
+  border-left: 1px dashed var(--border-strong);
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.compare-column .thumbs {
+  grid-template-columns: repeat(auto-fill, minmax(58px, 1fr));
+}
+
 .preload-status {
   display: block;
   margin: 2px 0 4px;
@@ -992,8 +1052,17 @@ body.admin {
   }
   .image-order,
   .settings-layout,
-  .settings-row {
+  .settings-row,
+  .compare-columns {
     grid-template-columns: 1fr;
+  }
+  .compare-vs {
+    border-left: none;
+    border-top: 1px dashed var(--border-strong);
+    padding: 6px 0 0;
+  }
+  .compare-header {
+    flex-direction: column;
   }
   .image-details-host {
     position: static;

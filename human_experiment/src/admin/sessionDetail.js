@@ -65,6 +65,10 @@ function trialTable(trials) {
 export async function renderSessionDetail({ source, sessionId, pca, config, facesDirectory, onBack, onRefresh }) {
   const { meta, trials, status, lastActivity, warnings } = await source.getSession(sessionId);
   const effectiveConfig = meta.effectiveConfig ?? config;
+  // Sessions recorded with another PCA file: their coordinates belong to that file, not to the
+  // data loaded now (the plot's background and trajectory come from the current file).
+  const otherPcaFile = Boolean(pca && meta.pcaSha256 && meta.pcaSha256 !== pca.sha256);
+  const sameAxes = pca && !otherPcaFile ? pca.axes : null;
   const training = trials.filter((t) => t.phase === "training");
   const drift = trials.filter((t) => t.phase === "drift");
   const criterionAt = training.find((t) => t.criterionPassed === true)?.trialNumber ?? null;
@@ -88,7 +92,7 @@ export async function renderSessionDetail({ source, sessionId, pca, config, face
           ["True group", r.trueGroup],
           ["Answer", `${r.response} · ${r.correct ? "correct" : "incorrect"}`],
           ["Response time", formatMs(r.responseTimeMs)],
-          ["PC1, PC2", `${fixed(r.pc1, 4)}, ${fixed(r.pc2, 4)}`],
+          [sameAxes ? sameAxes.join(", ") : "PCA coordinates", `${fixed(r.pc1, 4)}, ${fixed(r.pc2, 4)}`],
           ["Stimulus angle", `${fixed(r.stimulusAngle, 2)}°`],
           ["Centers (nominal)", `A ${r.currentAngleA}° · B ${r.currentAngleB}°`],
           ["Distance to center", fixed(r.distanceToCenter, 4)],
@@ -172,6 +176,9 @@ export async function renderSessionDetail({ source, sessionId, pca, config, face
       ),
     ),
     warnings?.length ? h("p", { class: "warning", text: `File warnings: ${warnings.join("; ")}` }) : null,
+    otherPcaFile
+      ? h("p", { class: "warning", text: `This session was recorded with a different PCA file (${meta.pcaSource ?? "unknown"}) than the one loaded now (${pca.source}). Its images, angles and coordinates are those of its own file; the gray points and trajectory in the PCA plot are from the current file.` })
+      : null,
     h(
       "div",
       { class: "stats" },

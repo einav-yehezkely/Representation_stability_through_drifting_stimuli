@@ -6,7 +6,7 @@
 //     all points gray (s=5, alpha=0.3); A blue, B red; dashed black reference circle of radius
 //     max(sqrt(x^2 + y^2)) * 1.05 (alpha 0.5); gray radial lines every 20° (lw 0.5, alpha 0.5)
 //     with "<angle>°" labels at 1.05 * radius; black x=0 / y=0 axes; grid; axis equal;
-//     axis labels PC1 / PC2.
+//     axis labels PC1 / PC2 (here: the components of the loaded PCA file, pca.axes).
 //   plot_clusters_with_given_indices (generate_rotation_sequence.py lines 205-259):
 //     base point as a black "x", opposite point as a black "*".
 // Additions required by the PRD: the circular trajectory of the centers, trajectory membership
@@ -112,8 +112,9 @@ export function createPcaPlot({ pca, trajectoryIndices = [], title = "" }) {
   svg.append(spokes);
   svg.append(el("line", { x1: sx(-extent), y1: sy(0), x2: sx(extent), y2: sy(0), stroke: "black", "stroke-width": 1 }));
   svg.append(el("line", { x1: sx(0), y1: sy(-extent), x2: sx(0), y2: sy(extent), stroke: "black", "stroke-width": 1 }));
-  svg.append(el("text", { x: S.size / 2, y: S.size - 14, "text-anchor": "middle", "font-size": 13 }, "PC1"));
-  svg.append(el("text", { x: 18, y: S.size / 2, "text-anchor": "middle", "font-size": 13, transform: `rotate(-90 18 ${S.size / 2})` }, "PC2"));
+  const [xLabel, yLabel] = pca.axes ?? ["PC1", "PC2"];
+  svg.append(el("text", { x: S.size / 2, y: S.size - 14, "text-anchor": "middle", "font-size": 13 }, xLabel));
+  svg.append(el("text", { x: 18, y: S.size / 2, "text-anchor": "middle", "font-size": 13, transform: `rotate(-90 18 ${S.size / 2})` }, yLabel));
 
   // Trajectory membership layers.
   const trajectory = el("g", { fill: S.trajectory.color, opacity: S.trajectory.opacity, "data-layer": "trajectory" });

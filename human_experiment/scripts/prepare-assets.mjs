@@ -5,9 +5,13 @@
 //   ../female_faces/<filename>
 //
 // Outputs (all inside human_experiment/public/assets/):
-//   faces/<filename>          copies of every image listed in the PCA file
+//   faces/<filename>          copies of every image listed in the PCA file (copies of images no
+//                             longer listed are removed, so the served set matches the file)
 //   pca.json                  PCA coordinates in source row order
 //   assets-manifest.json      version information (hashes, counts)
+//
+// The two coordinates are stored as pc1/pc2 (first/second axis of the stimulus plane) whatever
+// components the plane uses; PCA_AXES names them for the researcher plot.
 
 import { createHash } from "node:crypto";
 import fs from "node:fs";
@@ -18,7 +22,11 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const projectDir = path.resolve(here, "..");
 const repoRoot = path.resolve(projectDir, "..");
 
-const PCA_SOURCE = path.join(repoRoot, "pca_top2_filtered_female_vgg_1.csv");
+// Source PCA file (also in scripts/reference/make_parity_fixtures.py) and the components of its
+// two columns. pca_PC3_PC4_filtered.csv (PC3/PC4) was tried on 2026-10-28 and reverted.
+const PCA_FILE = "pca_top2_filtered_female_vgg_1.csv";
+const PCA_AXES = ["PC1", "PC2"];
+const PCA_SOURCE = path.join(repoRoot, PCA_FILE);
 const FACES_SOURCE = path.join(repoRoot, "female_faces");
 const OUT_DIR = path.join(projectDir, "public", "assets");
 const OUT_FACES = path.join(OUT_DIR, "faces");
@@ -102,10 +110,21 @@ for (const name of imageIds) {
   imageListHash.update(`${name}:${srcSize}\n`);
 }
 
+// Remove copies of images that are no longer in the PCA file (only inside public/assets/faces/).
+const listed = new Set(imageIds);
+let removed = 0;
+for (const name of fs.readdirSync(OUT_FACES)) {
+  if (!listed.has(name)) {
+    fs.unlinkSync(path.join(OUT_FACES, name));
+    removed += 1;
+  }
+}
+
 const pcaSha256 = sha256(pcaBytes);
 const manifest = {
   generatedAt: new Date().toISOString(),
-  pcaSource: "pca_top2_filtered_female_vgg_1.csv",
+  pcaSource: PCA_FILE,
+  pcaAxes: PCA_AXES,
   pcaSha256,
   pcaRowCount: imageIds.length,
   facesSource: "female_faces/",
@@ -117,6 +136,7 @@ const pcaJson = {
   source: manifest.pcaSource,
   sha256: pcaSha256,
   columns: ["imageId", "pc1", "pc2"],
+  axes: PCA_AXES, // components behind pc1 / pc2
   imageIds,
   pc1,
   pc2,
@@ -126,5 +146,5 @@ fs.writeFileSync(path.join(OUT_DIR, "pca.json"), JSON.stringify(pcaJson));
 fs.writeFileSync(path.join(OUT_DIR, "assets-manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
 
 console.log(`PCA rows: ${imageIds.length} (sha256 ${pcaSha256})`);
-console.log(`Faces copied: ${copied}, already present: ${skipped}`);
+console.log(`Faces copied: ${copied}, already present: ${skipped}, removed (no longer listed): ${removed}`);
 console.log(`Wrote ${path.relative(projectDir, OUT_DIR)}/pca.json and assets-manifest.json`);

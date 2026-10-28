@@ -45,6 +45,7 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 # LOAD PCA DATA AND COMPUTE ANGLES OF ALL IMAGES
 # ============================================================
 PCA_CSV = "pca_top2_filtered_female_vgg_1.csv"
+# PCA_CSV = "pca_PC3_PC4_filtered.csv"
 
 PCA_DF = pd.read_csv(PCA_CSV, header=None)
 PCA_DF.columns = ["filename", "x", "y"]

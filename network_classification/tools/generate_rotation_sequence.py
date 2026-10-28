@@ -348,7 +348,7 @@ def plot_two_rotation_paths_fixed_color(
 
 
 # Load data
-names, points = load_top2_filtered("pca_top2_filtered_female_vgg_20-30percent.csv")
+names, points = load_top2_filtered("pca_top2_filtered_female_vgg_1.csv")
 
 # Compute angles (in radians) of each point from the origin
 angles = np.arctan2(points[:, 1], points[:, 0])

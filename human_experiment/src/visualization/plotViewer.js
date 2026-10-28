@@ -44,7 +44,7 @@ export function createPlotViewer({ pca, config, facesDirectory }) {
           ["Trial", `${r.trialNumber} (${r.phase} #${r.phaseTrialNumber})`],
           ["Image", r.imageId],
           ["True group", r.trueGroup],
-          ["PC1, PC2", `${Number(r.pc1).toFixed(4)}, ${Number(r.pc2).toFixed(4)}`],
+          [(pca.axes ?? ["PC1", "PC2"]).join(", "), `${Number(r.pc1).toFixed(4)}, ${Number(r.pc2).toFixed(4)}`],
           ["Stimulus angle", `${Number(r.stimulusAngle).toFixed(2)}°`],
           ["Centers (nominal)", `A ${r.currentAngleA}° · B ${r.currentAngleB}°`],
           ["Distance to center", Number(r.distanceToCenter).toFixed(4)],

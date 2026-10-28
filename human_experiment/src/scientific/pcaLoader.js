@@ -31,6 +31,7 @@ export function buildPca(payload, manifest = null) {
     pc1: x,
     pc2: y,
     maxRadius,
+    axes: Array.isArray(payload.axes) && payload.axes.length === 2 ? payload.axes : ["PC1", "PC2"], // components behind pc1/pc2
     source: payload.source,
     sha256: payload.sha256,
     manifest,

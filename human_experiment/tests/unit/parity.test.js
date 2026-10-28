@@ -31,16 +31,21 @@ describe("parity with the source experiment", () => {
   });
 
   it("selects the same base and opposite points (create_base_and_opposite_points)", () => {
+    // The selected image must be identical. Coordinates may differ by 1 ulp: pandas' default CSV
+    // float parser rounds some values one ulp away from the correctly rounded value that
+    // JavaScript (and Python's float()) produce (seen with pca_PC3_PC4_filtered.csv: 0.44435298977663595).
+    const close = (actual, expected) => actual.forEach((v, i) => expect(Math.abs(v - expected[i])).toBeLessThan(1e-12));
     for (const ref of fx.basePoints) {
       const index = createBasePointIndex(pca, ref.angle, sci);
       expect(index).toBe(ref.index);
-      expect([pca.pc1[index], pca.pc2[index]]).toEqual(ref.base);
+      close([pca.pc1[index], pca.pc2[index]], ref.base);
       const centers = initialCenters(pca, {
         ...experimentConfig,
         training: { ...experimentConfig.training, initialAngleA: ref.angle, initialAngleB: ref.angle + 180 },
       });
-      expect(centers.centerA).toEqual(ref.base);
-      expect(centers.centerB).toEqual(ref.opposite);
+      expect(centers.baseImageIndex).toBe(ref.index);
+      close(centers.centerA, ref.base);
+      close(centers.centerB, ref.opposite);
     }
   });
 

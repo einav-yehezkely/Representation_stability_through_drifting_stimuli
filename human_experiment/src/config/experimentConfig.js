@@ -25,7 +25,7 @@ export const experimentConfig = {
 
   assets: {
     facesDirectory: "assets/faces/", // served copy of female_faces/ (scripts/prepare-assets.mjs)
-    pcaDataPath: "assets/pca.json", // derived from pca_top2_filtered_female_vgg_1.csv
+    pcaDataPath: "assets/pca.json", // derived from pca_top2_filtered_female_vgg_1.csv (scripts/prepare-assets.mjs)
     manifestPath: "assets/assets-manifest.json",
   },
 

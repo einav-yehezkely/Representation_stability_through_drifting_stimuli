@@ -3,6 +3,7 @@
 
 import { h } from "../components/dom.js";
 import { applySettings, findSettingsProblems, normalizeAngle, oppositeAngle, trialsForFullRotation } from "../config/experimentSettings.js";
+import { planSession } from "../experiment/sequencePlanner.js";
 import { collectNearest } from "../scientific/clusterConstruction.js";
 import { angleDeg, initialCenters } from "../scientific/trajectory.js";
 import { card, formatDateTime } from "./format.js";
@@ -87,6 +88,25 @@ export function circleFaceUrls(pca, baseConfig, facesDirectory, aroundDegree = 0
     return [A, B].map((face) => `${facesDirectory}${encodeURIComponent(face.imageId)}`);
   });
   return [...new Set(urls)];
+}
+
+/**
+ * The first `count` training faces of each group, in the order participants see them: the
+ * experiment's own plan (sequencePlanner.planSession) with the fixed session seed and these
+ * settings. Returns { A: [{ imageId, angle, radius, distance }], B: [...] }.
+ */
+export function groupTrainingFaces(pca, baseConfig, values, count) {
+  const config = applySettings(baseConfig, values);
+  const blockSize = config.randomization.trainingBlockSize;
+  // Balanced blocks: 2 * count + one block always contains at least `count` trials of each group.
+  const plan = planSession({ pca, config, sessionSeed: config.randomization.fixedSeed, trainingTrials: 2 * count + blockSize });
+  const faces = { A: [], B: [] };
+  for (const t of plan.training) {
+    if (faces[t.group].length >= count) continue;
+    const { imageId, pc1, pc2, stimulusAngle, distanceToCenter } = t.stimulus;
+    faces[t.group].push({ imageId, angle: stimulusAngle, radius: Math.hypot(pc1, pc2), distance: distanceToCenter });
+  }
+  return faces;
 }
 
 const PRELOAD_CONCURRENCY = 6;
@@ -190,6 +210,71 @@ export function createSettingsView({ source, defaults, getPca, facesDirectory, o
     }
   }
 
+  // Side-by-side view of the two groups (opened with the "Compare the two groups" button).
+  const compareCount = h(
+    "select",
+    { "aria-label": "Faces per group", onchange: () => renderComparison() },
+    [6, 12, 24, 48].map((n) => h("option", { value: n, selected: n === 12 }, `${n} faces per group`)),
+  );
+  const compareBody = h("div", { class: "compare-columns" });
+  const comparePanel = h(
+    "section",
+    { class: "group-compare", hidden: true },
+    h(
+      "div",
+      { class: "compare-header" },
+      h("p", { class: "muted small", text: "The first faces each group shows in training, in the order participants see them (fixed session seed, these settings). Use it to judge how distinct the two groups look." }),
+      compareCount,
+    ),
+    compareBody,
+  );
+  const compareButton = h("button", { type: "button", class: "secondary small", "aria-expanded": "false", onclick: () => toggleComparison() }, "Compare the two groups");
+
+  function toggleComparison() {
+    comparePanel.hidden = !comparePanel.hidden;
+    compareButton.textContent = comparePanel.hidden ? "Compare the two groups" : "Hide comparison";
+    compareButton.setAttribute("aria-expanded", String(!comparePanel.hidden));
+    renderComparison();
+  }
+
+  function renderComparison() {
+    if (comparePanel.hidden) return;
+    const pca = getPca();
+    const v = read();
+    let faces = null;
+    if (pca && baseConfig && Number.isFinite(v["training.initialAngleA"]) && Number.isFinite(v["training.initialAngleB"])) {
+      try {
+        faces = groupTrainingFaces(pca, baseConfig, v, Number(compareCount.value));
+      } catch {
+        faces = null;
+      }
+    }
+    if (!faces) {
+      compareBody.replaceChildren(h("p", { class: "muted", text: pca ? "Enter valid angles to compare the groups." : "Loading faces…" }));
+      return;
+    }
+    const column = (group, angle) =>
+      h(
+        "div",
+        { class: "compare-column", "data-group": group },
+        h("h3", { class: "compare-title" }, h("span", { class: `key key-${group.toLowerCase()}`, text: group }), `Group ${group}`, h("span", { class: "muted small", text: ` · starts at ${round(angle, 2)}°` })),
+        h(
+          "div",
+          { class: "thumbs" },
+          faces[group].map((face, i) =>
+            h(
+              "div",
+              { class: "thumb", "data-group": group, title: `Group ${group}, training face ${i + 1}: ${face.imageId} · ${face.angle.toFixed(1)}°, radius ${face.radius.toFixed(3)}, distance to center ${face.distance.toFixed(3)}` },
+              h("img", { src: `${facesDirectory}${encodeURIComponent(face.imageId)}`, alt: `Group ${group} face ${i + 1}`, loading: "lazy", decoding: "async", width: 64, height: 78 }),
+              h("span", { class: "thumb-num", text: i + 1 }),
+              h("span", { class: "thumb-group", text: group }),
+            ),
+          ),
+        ),
+      );
+    compareBody.replaceChildren(column("A", v["training.initialAngleA"]), h("div", { class: "compare-vs", "aria-hidden": "true", text: "vs" }), column("B", v["training.initialAngleB"]));
+  }
+
   const rotationNote = h("p", { class: "rotation-note" });
   const diagramHost = h("div", { class: "settings-diagram" });
   const problemsBox = h("ul", { class: "form-problems" });
@@ -224,6 +309,7 @@ export function createSettingsView({ source, defaults, getPca, facesDirectory, o
     } else rotationNote.textContent = "";
     diagramHost.replaceChildren(diagram(v["training.initialAngleA"], v["training.initialAngleB"], v["drift.degreesPerTrial"]));
     updateFaces(v);
+    renderComparison();
     const current = saved?.values ?? defaults;
     const dirty = Object.keys(current).some((k) => current[k] !== v[k]);
     status.textContent = `${saved ? `Saved ${formatDateTime(saved.updatedAt)}.` : "Default settings (nothing saved yet)."}${dirty ? " · Unsaved changes" : ""}`;
@@ -290,6 +376,8 @@ export function createSettingsView({ source, defaults, getPca, facesDirectory, o
           h("div", { class: "settings-row" }, angleA.element, angleB.element),
           h("div", { class: "settings-row example-faces" }, faces.A.element, faces.B.element),
           preloadStatus,
+          h("div", { class: "compare-toggle" }, compareButton),
+          comparePanel,
           h("p", { class: "muted small", text: "Each example is the first face a participant sees for that group in training, chosen exactly as in the experiment: the starting center is the image closest to the angle with a radius near 0.45 (the rule of the computational experiment), B is opposite A, and each group shows the image nearest to its center. When no closer image exists, neighboring angles show the same face, as they would for participants." }),
           h("h2", { class: "card-title", text: "Drift" }),
           h("div", { class: "settings-row" }, degrees.element, trials.element),
