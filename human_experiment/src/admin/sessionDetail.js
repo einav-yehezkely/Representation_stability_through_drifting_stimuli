@@ -122,10 +122,11 @@ export async function renderSessionDetail({ source, sessionId, pca, config, face
     );
   applyFilters();
 
-  // PCA plot of the presented stimuli (same viewer as the development panel).
+  // PCA plot of the presented stimuli, colored by the participant's answers (same viewer as the
+  // development panel, which colors by true group).
   const plotHost = h("div", {});
   if (pca && trials.length) {
-    const viewer = createPlotViewer({ pca, config: effectiveConfig, facesDirectory });
+    const viewer = createPlotViewer({ pca, config: effectiveConfig, facesDirectory, colorBy: "prediction" });
     const last = trials.at(-1);
     viewer.setView({
       sessionId,

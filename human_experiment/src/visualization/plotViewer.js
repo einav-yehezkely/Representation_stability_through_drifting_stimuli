@@ -7,10 +7,11 @@ import { createPcaPlot } from "./pcaPlot.js";
 import { exportPng, exportSvg } from "./plotExport.js";
 import { driftCandidateIndices } from "./trajectoryMembership.js";
 
-export function createPlotViewer({ pca, config, facesDirectory }) {
+export function createPlotViewer({ pca, config, facesDirectory, colorBy = "group" }) {
   const plot = createPcaPlot({
     pca,
     trajectoryIndices: driftCandidateIndices(pca, config),
+    colorBy,
   });
 
   const state = { phase: "all", group: "all", view: null };
@@ -28,7 +29,7 @@ export function createPlotViewer({ pca, config, facesDirectory }) {
     "div",
     { class: "plot-controls" },
     h("label", {}, "Phase ", select("phase", [["all", "All"], ["training", "Training"], ["drift", "Drift"]])),
-    h("label", {}, "Group ", select("group", [["all", "All"], ["A", "A"], ["B", "B"]])),
+    h("label", {}, colorBy === "prediction" ? "True group " : "Group ", select("group", [["all", "All"], ["A", "A"], ["B", "B"]])),
     count,
     h("button", { type: "button", class: "secondary", onclick: () => exportSvg(plot.svg, `${fileBase()}.svg`) }, "Export SVG"),
     h("button", { type: "button", class: "secondary", onclick: () => exportPng(plot.svg, `${fileBase()}.png`) }, "Export PNG"),

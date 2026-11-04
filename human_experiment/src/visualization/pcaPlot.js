@@ -11,6 +11,10 @@
 //     base point as a black "x", opposite point as a black "*".
 // Additions required by the PRD: the circular trajectory of the centers, trajectory membership
 // points, presented stimuli highlighted, and the currently displayed stimulus distinguished.
+//
+// colorBy "group" colors presented stimuli by their true group. colorBy "prediction" colors them
+// by the participant's binary answer, as create_prediction_scatter colors by the model's
+// prediction; it needs records with binaryResponse, so a stimulus not yet answered cannot use it.
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
@@ -48,8 +52,10 @@ function starPath(cx, cy, r) {
  * Create a plot bound to one PCA dataset. The static layers (all points, reference circle,
  * spokes, axes, trajectory) are drawn once; `update()` redraws only the dynamic layer.
  */
-export function createPcaPlot({ pca, trajectoryIndices = [], title = "" }) {
+export function createPcaPlot({ pca, trajectoryIndices = [], title = "", colorBy = "group" }) {
   const S = PLOT_STYLE;
+  const byPrediction = colorBy === "prediction";
+  const pointColor = (r) => S.groupColor[byPrediction ? r.binaryResponse : r.trueGroup];
   const refRadius = pca.maxRadius * S.referenceCircle.scale;
   const extent = refRadius * 1.12;
   const inner = S.size - 2 * S.margin;
@@ -132,8 +138,8 @@ export function createPcaPlot({ pca, trajectoryIndices = [], title = "" }) {
   const legendItems = [
     ["circle", S.allPoints.color, "All images", 0.6],
     ["circle", S.trajectory.color, "Trajectory candidates", 1],
-    ["circle", S.groupColor.A, "Presented A", 1],
-    ["circle", S.groupColor.B, "Presented B", 1],
+    ["circle", S.groupColor.A, byPrediction ? "Predicted A" : "Presented A", 1],
+    ["circle", S.groupColor.B, byPrediction ? "Predicted B" : "Presented B", 1],
     ["ring", "black", "Current stimulus", 1],
     ["x", "black", "Center A", 1],
     ["star", "black", "Center B", 1],
@@ -180,7 +186,7 @@ export function createPcaPlot({ pca, trajectoryIndices = [], title = "" }) {
         cx: sx(r.pc1),
         cy: sy(r.pc2),
         r: S.presentedRadius[r.phase] ?? 3.6,
-        fill: S.groupColor[r.trueGroup],
+        fill: pointColor(r),
         stroke: r.phase === "training" ? "white" : "none",
         "stroke-width": r.phase === "training" ? 0.8 : 0,
         "data-trial": r.trialNumber,
@@ -211,7 +217,7 @@ export function createPcaPlot({ pca, trajectoryIndices = [], title = "" }) {
     if (current) {
       const passes = (filters.phase === "all" || current.phase === filters.phase) && (filters.group === "all" || current.trueGroup === filters.group);
       if (passes) {
-        dynamic.append(el("circle", { cx: sx(current.pc1), cy: sy(current.pc2), r: 4.5, fill: S.groupColor[current.trueGroup] }));
+        dynamic.append(el("circle", { cx: sx(current.pc1), cy: sy(current.pc2), r: 4.5, fill: pointColor(current) }));
         dynamic.append(
           el("circle", { cx: sx(current.pc1), cy: sy(current.pc2), r: S.current.radius, fill: "none", stroke: S.current.stroke, "stroke-width": S.current.width }),
         );

@@ -230,7 +230,7 @@ Collecting data: open `https://<site>/admin.html` and use **Download CSV**, or d
 `admin.html` is the researcher's view of the collected data. It is not linked from the participant page (checked by `verify:participant-build`).
 
 - **Sessions**: every session with participant ID, status (complete / in progress / interrupted), training trials and when the criterion was met, drift progress, drift accuracy and mean response time. The list refreshes every 30 s. It can be filtered by text and status; development sessions are hidden unless *Include development sessions* is ticked. **Download CSV (shown sessions)** writes one combined file with the same columns as `npm run data:csv`.
-- **Session view**: summary tiles, a chart of rolling accuracy over the last 20 trials with the start of drift marked, the **image order** (every face in the order it was shown, numbered within its phase, with its group, the answer and ✓/✗; filter by phase, group and correctness; click a face for its details), the PCA stimulus plot, the full trial table, and a CSV download for that session. An unfinished session counts as *in progress* while its file changed in the last 30 minutes, and as *interrupted* after that.
+- **Session view**: summary tiles, a chart of rolling accuracy over the last 20 trials with the start of drift marked, the **image order** (every face in the order it was shown, numbered within its phase, with its group, the answer and ✓/✗; filter by phase, group and correctness; click a face for its details), the PCA stimulus plot (colored by what the participant answered, see [Researcher visualization](#researcher-visualization)), the full trial table, and a CSV download for that session. An unfinished session counts as *in progress* while its file changed in the last 30 minutes, and as *interrupted* after that.
 - **Planned image order**: the faces every session sees, in order, for the fixed seed (shown read-only; it can only be changed in the configuration file) and the saved experiment settings. Stimulus selection is deterministic, so this is exact. Training images always come in this order (answers only decide how many are shown), and drift images are the same however long training took.
 - **Settings**: the experiment settings below.
 
@@ -295,7 +295,9 @@ It adds:
 - every presented stimulus, taken from the actual trial records (training points have a white outline)
 - the current or most recent stimulus, ringed
 
-Filters cover phase (all/training/drift) and group (all/A/B). Clicking a point shows its details and a thumbnail. **Export SVG** and **Export PNG** save `<sessionId>_pca_plot.svg|png`.
+In the admin session view, presented stimuli are colored by the participant's answer (`binaryResponse`: blue = predicted A, red = predicted B, with `Probably A/B` counted as A/B), as `create_prediction_scatter` colors by the model's prediction. The development panel and `review.html` color them by true group.
+
+Filters cover phase (all/training/drift) and true group (all/A/B). Clicking a point shows its details and a thumbnail. **Export SVG** and **Export PNG** save `<sessionId>_pca_plot.svg|png`.
 
 The review page reads sessions from this browser's `localStorage` and updates live while the experiment runs in another tab. It can also load an exported CSV.
 
