@@ -1,0 +1,98 @@
+/* Docked to the right; the experiment column is shifted left so nothing is covered. */
+body.dev-mode #app {
+  margin: 0 456px 0 16px;
+}
+
+@media (max-width: 1000px) {
+  body.dev-mode #app {
+    margin: 0 auto;
+  }
+  body.dev-mode .dev-panel {
+    position: static;
+    width: auto;
+    max-height: none;
+    margin: 16px;
+  }
+}
+
+.dev-panel {
+  position: fixed;
+  right: 12px;
+  top: 12px;
+  width: 420px;
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
+  background: #fffbe6;
+  border: 2px solid #b8860b;
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 0.8rem;
+  z-index: 1000;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.15);
+}
+
+.dev-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.dev-info {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 1px 10px;
+  margin: 0 0 10px;
+}
+
+.dev-info dt {
+  color: #6b5300;
+}
+
+.dev-info dd {
+  margin: 0;
+  font-family: ui-monospace, Consolas, monospace;
+  word-break: break-all;
+}
+
+.dev-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.dev-actions button {
+  padding: 5px 10px;
+  font-size: 0.8rem;
+}
+
+.dev-message {
+  margin-top: 6px;
+  color: #6b5300;
+  min-height: 1em;
+}
+
+.dev-plot {
+  margin-top: 10px;
+}
+
+.dev-setup .dev-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px 18px;
+}
+
+.dev-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.9rem;
+}
+
+.dev-field input {
+  font: inherit;
+  padding: 6px 8px;
+}
+
+.dev-problems {
+  color: #8a1c1c;
+}

@@ -1,0 +1,51 @@
+.plot-viewer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.plot-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  align-items: center;
+  font-size: 0.9rem;
+}
+
+.plot-controls button {
+  padding: 5px 12px;
+  font-size: 0.85rem;
+}
+
+.plot-count {
+  color: #5f6368;
+}
+
+.plot-svg {
+  background: white;
+  border: 1px solid #d4d4d0;
+  border-radius: 8px;
+}
+
+.plot-details {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  font-size: 0.85rem;
+  min-height: 60px;
+}
+
+.plot-details dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 12px;
+  margin: 0;
+}
+
+.plot-details dt {
+  color: #5f6368;
+}
+
+.plot-details dd {
+  margin: 0;
+}

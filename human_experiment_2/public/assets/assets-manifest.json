@@ -1,0 +1,13 @@
+{
+  "generatedAt": "2026-11-04T13:46:50.126Z",
+  "pcaSource": "pca_top2_filtered_female_vgg_1.csv",
+  "pcaAxes": [
+    "PC1",
+    "PC2"
+  ],
+  "pcaSha256": "cc393110d3e5e3ec632d718d5923afd2516c22866b484ba89db24342531df6d6",
+  "pcaRowCount": 11817,
+  "facesSource": "female_faces/",
+  "facesCount": 11817,
+  "facesListSha256": "4b74042aaa606fe5086bda3624d111a219d11d8b390985803b3b6780c328752f"
+}

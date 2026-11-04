@@ -1,0 +1,167 @@
+// Experiment settings set on the admin page: derivations, validation, loading, effect on sessions.
+import { describe, expect, it } from "vitest";
+import { experimentConfig } from "../../src/config/experimentConfig.js";
+import {
+  applySettings,
+  findSettingsProblems,
+  loadExperimentSettings,
+  oppositeAngle,
+  saveLocalSettings,
+  SettingsError,
+  settingsFromConfig,
+  trialsForFullRotation,
+} from "../../src/config/experimentSettings.js";
+import { makeEngine, runAll, startExperiment } from "../helpers/engineHarness.js";
+
+class MapStorage {
+  constructor() {
+    this.map = new Map();
+  }
+  getItem(k) {
+    return this.map.has(k) ? this.map.get(k) : null;
+  }
+  setItem(k, v) {
+    this.map.set(k, String(v));
+  }
+}
+
+const settings = (patch = {}) => ({ ...settingsFromConfig(experimentConfig), ...patch });
+
+describe("derived values", () => {
+  it("full rotation trial count and opposite angle", () => {
+    expect(trialsForFullRotation(1)).toBe(360);
+    expect(trialsForFullRotation(2)).toBe(180);
+    expect(trialsForFullRotation(0.5)).toBe(720);
+    expect(trialsForFullRotation(7)).toBe(51); // 360 / 7 = 51.4 -> rounded
+    expect(trialsForFullRotation(0)).toBeNull();
+    expect(trialsForFullRotation(-1)).toBeNull();
+    expect(oppositeAngle(0)).toBe(180);
+    expect(oppositeAngle(270)).toBe(90);
+    expect(oppositeAngle(-30)).toBe(150);
+  });
+
+  it("defaults are the configuration values", () => {
+    expect(settingsFromConfig(experimentConfig)).toEqual({
+      "drift.initialAngleA": 0,
+      "drift.initialAngleB": 180,
+      "drift.degreesPerTrial": 1,
+      "drift.numberOfTrials": 360,
+    });
+  });
+});
+
+describe("validation", () => {
+  it("accepts valid settings and rejects broken ones", () => {
+    expect(findSettingsProblems(settings({ "drift.initialAngleA": 45, "drift.initialAngleB": 225, "drift.degreesPerTrial": 2, "drift.numberOfTrials": 180 }), experimentConfig, { pcaCount: 11817 })).toEqual([]);
+    expect(findSettingsProblems(settings({ "drift.initialAngleB": 200 }), experimentConfig).join(" ")).toMatch(/180°/);
+    expect(findSettingsProblems(settings({ "drift.degreesPerTrial": 0 }), experimentConfig).join(" ")).toMatch(/greater than 0/);
+    expect(findSettingsProblems(settings({ "drift.numberOfTrials": 2.5 }), experimentConfig).join(" ")).toMatch(/numberOfTrials/);
+    expect(findSettingsProblems(settings({ "drift.numberOfTrials": 5909 }), experimentConfig, { pcaCount: 11817 }).join(" ")).toMatch(/more images/);
+    expect(findSettingsProblems(settings({ "drift.initialAngleA": Number.NaN }), experimentConfig).join(" ")).toMatch(/must be a number/);
+  });
+
+  it("applySettings changes only the four values and never mutates experimentConfig", () => {
+    const config = applySettings(experimentConfig, settings({ "drift.initialAngleA": 90, "drift.initialAngleB": 270, "drift.degreesPerTrial": 3, "drift.numberOfTrials": 120 }));
+    expect(config.drift).toEqual({ initialAngleA: 90, initialAngleB: 270, numberOfTrials: 120, degreesPerTrial: 3 });
+    expect(config.timing).toEqual(experimentConfig.timing);
+    expect(experimentConfig.drift.initialAngleA).toBe(0);
+    expect(applySettings(experimentConfig, null)).toEqual(JSON.parse(JSON.stringify(experimentConfig)));
+  });
+});
+
+describe("loading", () => {
+  it("local (dev server): saved settings round-trip; nothing saved means defaults", async () => {
+    const ls = new MapStorage();
+    expect(await loadExperimentSettings({ source: "local", localStorage: ls })).toEqual({ values: null, updatedAt: null, source: "local" });
+    saveLocalSettings(settings({ "drift.degreesPerTrial": 2, "drift.numberOfTrials": 180 }), { localStorage: ls, now: () => new Date("2026-10-14T10:00:00Z") });
+    const loaded = await loadExperimentSettings({ source: "local", localStorage: ls });
+    expect(loaded.values["drift.numberOfTrials"]).toBe(180);
+    expect(loaded.updatedAt).toBe("2026-10-14T10:00:00.000Z");
+  });
+
+  it("server: reads save.php?settings=1 and fails loudly instead of silently using defaults", async () => {
+    const urls = [];
+    const ok = async (url) => (urls.push(url), { ok: true, status: 200, json: async () => ({ ok: true, settings: { values: settings({ "drift.numberOfTrials": 90, "drift.degreesPerTrial": 4 }), updatedAt: "t" } }) });
+    const loaded = await loadExperimentSettings({ source: "server", endpoint: "save.php", fetch: ok });
+    expect(urls).toEqual(["save.php?settings=1"]);
+    expect(loaded).toMatchObject({ source: "server", updatedAt: "t" });
+    expect(loaded.values["drift.numberOfTrials"]).toBe(90);
+    const down = async () => {
+      throw new Error("offline");
+    };
+    await expect(loadExperimentSettings({ source: "server", endpoint: "save.php", fetch: down })).rejects.toBeInstanceOf(SettingsError);
+  });
+});
+
+describe("a session with saved settings", () => {
+  it("starts at the saved angles, moves by the saved step for the saved number of trials", async () => {
+    const values = settings({ "drift.initialAngleA": 90, "drift.initialAngleB": 270, "drift.degreesPerTrial": 30, "drift.numberOfTrials": 12 });
+    const overrides = values; // main.js applies saved settings the same way (resolveEffectiveConfig)
+    const { engine, presenter } = makeEngine({ overrides });
+    await startExperiment(engine);
+    await runAll(engine, presenter);
+    expect(engine.records.map((r) => r.currentAngleA)).toEqual([90, 120, 150, 180, 210, 240, 270, 300, 330, 0, 30, 60]);
+    expect(engine.records.map((r) => r.currentAngleB)).toEqual([270, 300, 330, 0, 30, 60, 90, 120, 150, 180, 210, 240]);
+  });
+
+  it("the engine stores the applied settings in the session metadata", () => {
+    const { engine } = makeEngine();
+    expect(engine.meta).toHaveProperty("experimentSettings", null);
+  });
+});
+
+describe("example faces on the settings page", () => {
+  it("are exactly the first face of each group (experiment's center rule and radius)", async () => {
+    const { exampleFaces } = await import("../../src/admin/settingsView.js");
+    const { realPca } = await import("../helpers/engineHarness.js");
+    const pca = realPca();
+    for (const angleA of [0, 1, 37, 90, 200.5, 359]) {
+      const values = settings({ "drift.initialAngleA": angleA, "drift.initialAngleB": oppositeAngle(angleA) });
+      const examples = exampleFaces(pca, experimentConfig, values);
+      const { engine } = makeEngine({ overrides: values });
+      await startExperiment(engine);
+      const { trial } = engine.pending;
+      expect({ A: examples.A.imageId, B: examples.B.imageId }).toEqual({ A: trial.sample.imageId, B: trial.options.B.imageId });
+      // A is the starting center itself: radius near the computational experiment's 0.45 (the
+      // source rule trades angle error against radius error, so it is close, not exact).
+      expect(Math.abs(examples.A.radius - experimentConfig.scientific.targetRadius)).toBeLessThan(0.05);
+    }
+    expect(exampleFaces(pca, experimentConfig, settings()).A.imageId).toBe("183785.jpg"); // README: center A at 0°
+  });
+});
+
+describe("preloading the faces of the whole circle", () => {
+  it("covers both groups' example face for every whole degree, nearest to the current angle first", async () => {
+    const { circleFaceUrls, exampleFaces } = await import("../../src/admin/settingsView.js");
+    const { realPca } = await import("../helpers/engineHarness.js");
+    const pca = realPca();
+    const urls = circleFaceUrls(pca, experimentConfig, "faces/", 90);
+    expect(new Set(urls).size).toBe(urls.length);
+    const faces = (deg) => exampleFaces(pca, experimentConfig, settings({ "drift.initialAngleA": deg, "drift.initialAngleB": oppositeAngle(deg) }));
+    const url = (face) => `faces/${encodeURIComponent(face.imageId)}`;
+    expect(urls.slice(0, 2)).toEqual([url(faces(90).A), url(faces(90).B)]);
+    for (const deg of [0, 45, 89, 91, 180, 359]) {
+      expect(urls).toContain(url(faces(deg).A));
+      expect(urls).toContain(url(faces(deg).B));
+    }
+  });
+});
+
+describe("comparing the two groups on the settings page", () => {
+  it("shows the choices each group gets in a real session, in order", async () => {
+    const { groupFaces } = await import("../../src/admin/settingsView.js");
+    const { realPca } = await import("../helpers/engineHarness.js");
+    const pca = realPca();
+    for (const angleA of [0, 120]) {
+      const values = settings({ "drift.initialAngleA": angleA, "drift.initialAngleB": oppositeAngle(angleA), "drift.numberOfTrials": 12 });
+      const faces = groupFaces(pca, experimentConfig, values, 12);
+      // A real session with the fixed seed and these settings.
+      const { engine, presenter } = makeEngine({ overrides: values, seed: experimentConfig.randomization.fixedSeed });
+      await startExperiment(engine);
+      await runAll(engine, presenter);
+      expect(faces.A.map((x) => x.imageId)).toEqual(engine.records.map((r) => r.optionAImageId));
+      expect(faces.B.map((x) => x.imageId)).toEqual(engine.records.map((r) => r.optionBImageId));
+    }
+  });
+});
+

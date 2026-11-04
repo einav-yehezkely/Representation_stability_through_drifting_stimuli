@@ -1,0 +1,439 @@
+/* Participant experiment. A single light theme on purpose: every participant sees the faces on
+   the same neutral background, whatever their system theme. */
+:root {
+  --bg: #eef0f3;
+  --surface: #ffffff;
+  --surface-muted: #f6f7f9;
+  --text: #1a1f2b;
+  --muted: #5d6675;
+  --border: #dde1e7;
+  --border-strong: #a9b1bd;
+  --accent: #2c4a78;
+  --accent-hover: #233d64;
+  --accent-soft: #e8eef8;
+  --accent-text: #ffffff;
+  --success: #17703d;
+  --success-soft: #e3f4ea;
+  --danger: #a32020;
+  --danger-soft: #fbe7e7;
+  --radius: 16px;
+  --radius-sm: 10px;
+  --shadow: 0 1px 2px rgba(20, 30, 50, 0.06), 0 10px 30px rgba(20, 30, 50, 0.07);
+  --focus: 0 0 0 3px rgba(44, 74, 120, 0.35);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 16px;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+#app {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: clamp(16px, 5vh, 56px) 16px 48px;
+}
+
+/* ---------------------------------------------------------------- panels */
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: clamp(24px, 5vw, 44px);
+  line-height: 1.65;
+  animation: enter 0.28s ease-out both;
+}
+
+.panel h1 {
+  font-size: clamp(1.4rem, 3.2vw, 1.75rem);
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  font-weight: 650;
+  margin: 0 0 0.6em;
+}
+
+.panel h2 {
+  font-size: 1rem;
+  font-weight: 650;
+  margin: 0 0 0.25em;
+}
+
+.panel p {
+  margin: 0 0 0.9em;
+}
+
+.eyebrow {
+  font-size: 0.78rem;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0 0 0.5em !important;
+}
+
+.lead {
+  font-size: 1.1rem;
+}
+
+.panel-centered {
+  text-align: center;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.panel-centered .actions {
+  justify-content: center;
+}
+
+.icon-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  margin-bottom: 16px;
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.icon-badge svg {
+  width: 28px;
+  height: 28px;
+}
+
+.icon-success {
+  color: var(--success);
+  background: var(--success-soft);
+}
+
+.icon-danger {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+/* ---------------------------------------------------------------- consent */
+
+.consent-body {
+  max-height: 50vh;
+  overflow-y: auto;
+  margin: 8px -12px 20px;
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  scrollbar-width: thin;
+}
+
+.consent-body:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+
+.consent-section {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.consent-section:last-child {
+  border-bottom: none;
+}
+
+.consent-section p {
+  margin: 0;
+  color: #333a47;
+}
+
+.consent-check {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 16px 18px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-muted);
+  font-weight: 550;
+  cursor: pointer;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+
+.consent-check:hover {
+  border-color: var(--border-strong);
+}
+
+.consent-check.checked {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.consent-check input {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: 3px 0 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+/* ---------------------------------------------------------------- instructions */
+
+.note {
+  padding: 14px 18px;
+  border-left: 4px solid var(--accent);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--accent-soft);
+}
+
+.note p:last-child {
+  margin-bottom: 0;
+}
+
+/* ---------------------------------------------------------------- buttons */
+
+.actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 24px;
+}
+
+button,
+a.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-decoration: none;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.2;
+  padding: 12px 26px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--accent);
+  background: var(--accent);
+  color: var(--accent-text);
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s, transform 0.05s;
+  touch-action: manipulation;
+}
+
+button:not(:disabled):hover,
+a.button:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+button:not(:disabled):active,
+a.button:active {
+  transform: translateY(1px);
+}
+
+button:focus-visible,
+a.button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+
+button.large,
+a.button.large {
+  padding: 14px 34px;
+  font-size: 1.05rem;
+}
+
+button.secondary {
+  background: var(--surface);
+  color: var(--accent);
+}
+
+button.secondary:not(:disabled):hover {
+  background: var(--accent-soft);
+  color: var(--accent-hover);
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ---------------------------------------------------------------- trial screen
+   One centered face, then an empty screen, then two identical frames side by side. Both faces
+   share one style so no answer is visually favored. Nothing on this screen animates a face: its
+   onset is the timing reference. */
+
+.trial {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  min-height: calc(100vh - clamp(16px, 5vh, 56px) - 48px);
+}
+
+.stimulus-frame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #e2e5ea;
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+}
+
+.stimulus-frame img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+  pointer-events: none;
+}
+
+.trial [hidden] {
+  display: none;
+}
+
+.pair {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.choices {
+  display: flex;
+  justify-content: center;
+  gap: clamp(12px, 4vw, 48px);
+}
+
+.stimulus-frame.choice,
+.stimulus-frame.choice:disabled {
+  padding: 0;
+  border: none;
+  opacity: 1;
+  cursor: default;
+  outline: 4px solid transparent;
+  outline-offset: 3px;
+}
+
+.stimulus-frame.choice:not(:disabled) {
+  cursor: pointer;
+}
+
+/* No outline on hover: the pointer rests where the last click was, so it would mark one side. */
+.stimulus-frame.choice:not(:disabled):hover {
+  background: #e2e5ea;
+}
+
+.stimulus-frame.choice:focus-visible {
+  outline-color: var(--border-strong);
+}
+
+.trial-prompt {
+  margin: 0;
+  text-align: center;
+}
+
+/* ---------------------------------------------------------------- loading, errors */
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  min-height: 50vh;
+  color: var(--muted);
+  animation: enter 0.2s ease-out 0.15s both; /* skip the flash on fast loads */
+}
+
+.loading p {
+  margin: 0;
+}
+
+.spinner {
+  width: 34px;
+  height: 34px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.status-line {
+  color: var(--muted);
+  min-height: 1.4em;
+}
+
+.error-panel {
+  border-color: #f0c9c9;
+}
+
+.error-detail {
+  color: var(--muted);
+  font-size: 0.85rem;
+  word-break: break-word;
+}
+
+/* ---------------------------------------------------------------- motion */
+
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition: none !important;
+  }
+}
+
+/* ---------------------------------------------------------------- small screens */
+
+@media (max-width: 560px) {
+  .actions button,
+  .actions a.button {
+    flex: 1 1 auto;
+  }
+}
