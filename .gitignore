@@ -1,5 +1,6 @@
 **/split_data/
 **/female_faces/
+**/female_generated/
 **/original_data/
 **/A/
 **/B/
@@ -12,3 +13,17 @@ extract_embeddings/resnet50_scratch_weight.pkl
 __pycache__/
 *.pyc
 output_CE/
+# composites: generated files
+composites/cache/
+composites/output/
+composites/endpoints/
+composites/morph_output/
+composites/models/
+composites/anchors/
+composites/rotation_output*/
+composites/third_party/
+composites/generated/
+composites/bigfive_style/
+composites/endpoint_morph/
+composites/noise_stimuli/
+

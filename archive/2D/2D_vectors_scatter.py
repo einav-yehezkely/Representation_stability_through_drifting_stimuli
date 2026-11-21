@@ -2,7 +2,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 df = pd.read_csv(
-    "pca_top2_filtered_female_vgg_1.csv",
+    # "pca_top2_filtered_female_vgg_1.csv",
+    "pca_top2_filtered_female_generated_vgg.csv",
     header=None
 )
 

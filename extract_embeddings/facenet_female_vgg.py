@@ -28,19 +28,27 @@ from facenet_pytorch import InceptionResnetV1
 BATCH_SIZE = 32
 NUM_WORKERS = 0
 
-OUTPUT_CSV = "female_facenet_vggface2_embeddings.csv"
+# OUTPUT_CSV = "female_facenet_vggface2_embeddings.csv"
+OUTPUT_CSV = "female_generated_facenet_vggface2_embeddings.csv"
 
 
 script_dir = os.path.dirname(
     os.path.abspath(__file__)
 )
 
+# img_dir = os.path.abspath(
+#     os.path.join(
+#         script_dir,
+#         "..",
+#         "..",
+#         "female_faces"
+#     )
+# )
 img_dir = os.path.abspath(
     os.path.join(
         script_dir,
         "..",
-        "..",
-        "female_faces"
+        "female_generated"
     )
 )
 

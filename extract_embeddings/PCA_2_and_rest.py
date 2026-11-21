@@ -17,7 +17,8 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-path = "female_facenet_vggface2_embeddings.csv"  # Path to the data file
+path = "female_generated_facenet_vggface2_embeddings.csv"  # Path to the data file
+# path = "female_facenet_vggface2_embeddings.csv"  # Path to the data file
 # path = "female_resnet50_vggface2_embeddings.csv"
 
 # Load the data
@@ -197,8 +198,70 @@ df_similar_vectors.insert(0, "filename", np.array(names)[mask_sq])
 #     "Saved 10% of images with smallest squared radius in residual PCA space to pca_rest_vectors_10_percent.csv"
 # )
 
+# Save all images in 2D PCA space, before filtering
+df_top2.to_csv(
+    "pca_top2_female_generated_vgg.csv",
+    index=False,
+    header=False,
+)
+print("Saved all 2D points to pca_top2_female_generated_vgg.csv")
+
 df_top2_filtered = df_top2[mask_sq]
-df_top2_filtered.to_csv("pca_top2_filtered_female_vgg.csv", index=False, header=False)
+df_top2_filtered.to_csv("pca_top2_filtered_female_generated_vgg.csv", index=False, header=False)
 print(
     "Saved filtered projection (PC1, PC2) of 10% most similar images to pca_top2_filtered_female_vgg_1.csv"
 )
+
+
+# ============================================================
+# SCATTER PLOTS: BEFORE AND AFTER FILTERING
+# ============================================================
+
+SHOW_SCATTER = True
+
+if SHOW_SCATTER:
+    print(f"Before filtering: {len(df_top2)} images")
+    print(f"After filtering: {len(df_top2_filtered)} images")
+
+    fig, axes = plt.subplots(
+        1, 2,
+        figsize=(14, 7),
+        sharex=True,
+        sharey=True,
+    )
+
+    # Before filtering: all images
+    axes[0].scatter(
+        X_projected_top2[:, 0],
+        X_projected_top2[:, 1],
+        s=30,
+        alpha=0.8,
+        color="gray",
+    )
+    axes[0].set_title(f"Before filtering (n={len(df_top2)})")
+
+    # After filtering: retained images
+    axes[1].scatter(
+        X_projected_top2[mask_sq, 0],
+        X_projected_top2[mask_sq, 1],
+        s=30,
+        alpha=0.8,
+        color="black",
+    )
+    axes[1].set_title(f"After filtering (n={len(df_top2_filtered)})")
+
+    # Identical axis limits for comparison
+    lower = X_projected_top2.min(axis=0)
+    upper = X_projected_top2.max(axis=0)
+    padding = np.maximum((upper - lower) * 0.05, 0.01)
+
+    for ax in axes:
+        ax.set_xlabel("PC1")
+        ax.set_ylabel("PC2")
+        ax.set_xlim(lower[0] - padding[0], upper[0] + padding[0])
+        ax.set_ylim(lower[1] - padding[1], upper[1] + padding[1])
+        ax.set_aspect("equal", adjustable="box")
+        ax.grid(True, alpha=0.25)
+
+    plt.tight_layout()
+    plt.show()
