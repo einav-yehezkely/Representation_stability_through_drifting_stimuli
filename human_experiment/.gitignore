@@ -7,3 +7,4 @@ test-results/
 playwright-report/
 dist.tar.gz
 update.tar.gz
+public/assets/faces_morph/

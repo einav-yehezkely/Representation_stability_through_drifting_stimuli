@@ -710,6 +710,8 @@ body.admin {
   display: block;
   width: 178px;
   height: 218px;
+  object-fit: contain; /* the generated (morph) images are square */
+  background: var(--surface-muted);
   border-radius: 10px;
   margin-bottom: 12px;
   border-bottom: 4px solid var(--group-a);
@@ -1071,4 +1073,51 @@ body.admin {
     min-width: 0;
     flex: 1 1 100%;
   }
+}
+
+/* ---------------------------------------------------------------- image set switch */
+
+.switch-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.admin button.switch-option {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 14px 16px;
+  text-align: left;
+  background: var(--surface);
+  color: var(--text, inherit);
+  border: 1.5px solid var(--border-strong);
+}
+
+.admin button.switch-option .small {
+  font-weight: 400;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.admin button.switch-option:not(:disabled):hover {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+.admin button.switch-option.is-active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+  cursor: default;
+}
+
+.admin button.switch-option.is-active strong::before {
+  content: "✓ ";
+  color: var(--accent);
+}
+
+.switch-status {
+  margin: 10px 0 0;
 }

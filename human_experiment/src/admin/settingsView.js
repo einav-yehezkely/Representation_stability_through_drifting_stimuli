@@ -1,8 +1,9 @@
-// Admin: experiment settings (initial center angles, drift movement). Saved settings apply to
-// sessions that start afterwards; running sessions keep the settings they started with.
+// Admin: experiment settings (image set, initial center angles, drift movement). Saved settings
+// apply to sessions that start afterwards; running sessions keep the settings they started with.
+// The image set is switched with one click (saved immediately); the other settings use "Save".
 
 import { h } from "../components/dom.js";
-import { applySettings, findSettingsProblems, normalizeAngle, oppositeAngle, trialsForFullRotation } from "../config/experimentSettings.js";
+import { applySettings, findSettingsProblems, normalizeAngle, oppositeAngle, STIMULUS_SET_KEY, stimulusSetOf, trialsForFullRotation } from "../config/experimentSettings.js";
 import { planSession } from "../experiment/sequencePlanner.js";
 import { collectNearest } from "../scientific/clusterConstruction.js";
 import { angleDeg, initialCenters } from "../scientific/trajectory.js";
@@ -111,9 +112,20 @@ export function groupTrainingFaces(pca, baseConfig, values, count) {
 
 const PRELOAD_CONCURRENCY = 6;
 
-export function createSettingsView({ source, defaults, getPca, facesDirectory, onSaved, onError }) {
+/**
+ * @param {object} options
+ * @param {object} options.stimulusSets experimentConfig.stimulusSets
+ * @param {(config: object) => Promise<object>} options.loadPcaFor PCA data of a configuration's image set
+ */
+export function createSettingsView({ source, defaults, stimulusSets, loadPcaFor, onSaved, onError }) {
   let saved = null; // { values, updatedAt } | null
   let baseConfig = null; // experimentConfig, for validation (set by load)
+  // The image set participants see now (the saved one); the faces below are from this set.
+  let setKey = defaults[STIMULUS_SET_KEY];
+  let pca = null; // PCA data of setKey
+  let pcaSet = null; // the image set `pca` belongs to
+  let facesDirectory = stimulusSets[setKey].facesDirectory;
+  const getPca = () => pca;
   const field = (label, { unit, ...attrs }, hint) => {
     const input = h("input", { type: "number", step: "any", ...attrs });
     return {
@@ -148,17 +160,20 @@ export function createSettingsView({ source, defaults, getPca, facesDirectory, o
   // The loaded Image objects are kept, so showing one of them later is immediate.
   const preloadStatus = h("span", { class: "muted small preload-status" });
   const preloaded = [];
-  let preloadStarted = false;
+  let preloadedSet = null; // the image set whose faces are being preloaded
   function preloadCircle(values) {
     const pca = getPca();
-    if (preloadStarted || !pca || !baseConfig) return;
-    preloadStarted = true;
+    if (preloadedSet === setKey || !pca || !baseConfig) return;
+    preloadedSet = setKey;
+    preloaded.length = 0;
+    const forSet = setKey;
     const a = values["training.initialAngleA"];
-    const queue = circleFaceUrls(pca, baseConfig, facesDirectory, Number.isFinite(a) ? a : 0);
+    const queue = circleFaceUrls(pca, applySettings(baseConfig, { [STIMULUS_SET_KEY]: setKey }), facesDirectory, Number.isFinite(a) ? a : 0);
     const total = queue.length;
     let done = 0;
     preloadStatus.textContent = `Preparing faces for the whole circle: 0 / ${total}`;
     const next = () => {
+      if (preloadedSet !== forSet) return; // the image set was switched: stop
       const url = queue.shift();
       if (!url) return;
       const image = new Image();
@@ -282,7 +297,110 @@ export function createSettingsView({ source, defaults, getPca, facesDirectory, o
   const saveButton = h("button", { type: "button", onclick: () => save() }, "Save settings");
   const resetButton = h("button", { type: "button", class: "secondary", onclick: () => fill(defaults) }, "Reset to defaults");
 
+  // ---- image set switch: one click switches the images participants see (saved immediately).
+  const switchStatus = h("p", { class: "muted small switch-status", "aria-live": "polite" });
+  const switchProblems = h("ul", { class: "form-problems" });
+  // What each set is made of comes from its manifest (scripts/prepare-assets.mjs), so replacing the
+  // images or the CSV of a set needs no change here.
+  const descriptions = Object.fromEntries(Object.keys(stimulusSets).map((key) => [key, "Loading…"]));
+  const describe = (manifest) => `${manifest.facesSource} · ${manifest.pcaSource} · ${manifest.pcaRowCount} images${manifest.imageWidth ? `, ${manifest.imageWidth}×${manifest.imageHeight} px` : ""}`;
+  const switchButtons = Object.fromEntries(
+    Object.entries(stimulusSets).map(([key, set]) => [
+      key,
+      h(
+        "button",
+        { type: "button", class: "switch-option", "data-stimulus-set": key, "aria-pressed": "false", onclick: () => switchTo(key) },
+        h("strong", { text: set.label }),
+        h("span", { class: "small", "data-description": key, text: descriptions[key] }),
+      ),
+    ]),
+  );
+
+  function describeSets() {
+    for (const key of Object.keys(stimulusSets)) {
+      loadPcaFor(applySettings(baseConfig, { [STIMULUS_SET_KEY]: key }))
+        .then((data) => (descriptions[key] = describe(data.manifest)))
+        .catch(() => (descriptions[key] = "The images of this set are missing (run npm run prepare-assets and upload them)."))
+        .then(() => {
+          switchButtons[key].querySelector("[data-description]").textContent = descriptions[key];
+          renderSwitch();
+        });
+    }
+  }
+
+  let switching = false;
+  function renderSwitch(busy = switching) {
+    for (const [key, button] of Object.entries(switchButtons)) {
+      button.setAttribute("aria-pressed", String(key === setKey));
+      button.classList.toggle("is-active", key === setKey);
+      button.disabled = busy;
+    }
+    const set = stimulusSets[setKey];
+    switchStatus.textContent = busy ? "Switching…" : `Participants now see: ${set.label} (${descriptions[setKey]}).`;
+  }
+
+  /** Show the faces of image set `key` (loads its PCA data). */
+  async function useSet(key) {
+    setKey = key;
+    facesDirectory = stimulusSets[key].facesDirectory;
+    pca = null;
+    update();
+    try {
+      const loaded = await loadPcaFor(applySettings(baseConfig, { [STIMULUS_SET_KEY]: key }));
+      if (setKey !== key) return;
+      pca = loaded;
+      pcaSet = key;
+    } catch (error) {
+      if (setKey === key) onError(error);
+      return;
+    }
+    update();
+    preloadCircle(read());
+  }
+
+  async function switchTo(key) {
+    if (key === setKey || !baseConfig) return;
+    const set = stimulusSets[key];
+    if (!window.confirm(`Switch the images participants see to "${set.label}"?\n\nSessions that start from now on use these images. Sessions already running keep their images.`)) return;
+    switchProblems.replaceChildren();
+    // The other settings stay as they are saved now (unsaved edits in the form are kept in the form).
+    const values = { ...(saved?.values ?? defaults), [STIMULUS_SET_KEY]: key };
+    switching = true;
+    renderSwitch();
+    try {
+      const target = await loadPcaFor(applySettings(baseConfig, { [STIMULUS_SET_KEY]: key }));
+      const problems = findSettingsProblems(values, baseConfig, { pcaCount: target.count });
+      if (problems.length) {
+        switchProblems.replaceChildren(...problems.map((p) => h("li", { text: `${set.label}: ${p}` })));
+        return;
+      }
+      saved = await source.saveSettings(values);
+      onSaved(saved);
+      await useSet(key);
+      switching = false;
+      renderSwitch();
+      switchStatus.textContent = `Switched ${formatDateTime(saved.updatedAt)}. Participants now see: ${set.label} (${descriptions[key]}).`;
+    } catch (error) {
+      onError(error);
+    } finally {
+      if (switching) {
+        switching = false;
+        renderSwitch();
+      }
+    }
+  }
+
+  const switchCard = card(
+    null,
+    h("h2", { class: "card-title", text: "Images shown to participants" }),
+    h("p", { class: "muted small", text: "Click an image set to switch to it. The change is saved right away and applies to every session that starts afterwards." }),
+    h("div", { class: "switch-options", role: "group", "aria-label": "Image set" }, Object.values(switchButtons)),
+    switchProblems,
+    switchStatus,
+  );
+
   const read = () => ({
+    [STIMULUS_SET_KEY]: setKey,
     "training.initialAngleA": Number.parseFloat(angleA.input.value),
     "training.initialAngleB": Number.parseFloat(angleB.input.value),
     "drift.degreesPerTrial": Number.parseFloat(degrees.input.value),
@@ -364,6 +482,7 @@ export function createSettingsView({ source, defaults, getPca, facesDirectory, o
       { class: "muted intro" },
       "These settings apply to every session that starts after you save them. Sessions already running keep the settings they started with, and every session records the settings it used. Changing settings during data collection mixes conditions, so note when you change them.",
     ),
+    switchCard,
     card(
       null,
       h(
@@ -403,6 +522,12 @@ export function createSettingsView({ source, defaults, getPca, facesDirectory, o
         onError(error);
       }
       fill(saved?.values ?? defaults);
+      const live = stimulusSetOf(config, saved?.values);
+      if (live) setKey = live.key;
+      describeSets();
+      renderSwitch();
+      if (live && (pcaSet !== live.key || !pca)) await useSet(live.key);
+      renderSwitch();
       preloadCircle(read());
     },
   };

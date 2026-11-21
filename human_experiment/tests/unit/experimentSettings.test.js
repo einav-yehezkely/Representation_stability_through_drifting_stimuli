@@ -42,6 +42,7 @@ describe("derived values", () => {
 
   it("defaults are the configuration values", () => {
     expect(settingsFromConfig(experimentConfig)).toEqual({
+      "assets.stimulusSet": "original",
       "training.initialAngleA": 0,
       "training.initialAngleB": 180,
       "drift.degreesPerTrial": 1,

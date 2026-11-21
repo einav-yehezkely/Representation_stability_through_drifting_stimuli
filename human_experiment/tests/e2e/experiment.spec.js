@@ -4,8 +4,9 @@ import { expect, test } from "@playwright/test";
 import { experimentConfig } from "../../src/config/experimentConfig.js";
 import { parseCsv } from "../../src/services/dataStorage/csvSerializer.js";
 
-const PROD = "http://localhost:4173";
-const DEV = "http://localhost:5173";
+// The ports can be changed (E2E_PROD / E2E_DEV) when 4173 or 5173 is taken.
+const PROD = process.env.E2E_PROD ?? "http://localhost:4173";
+const DEV = process.env.E2E_DEV ?? "http://localhost:5173";
 
 async function giveConsent(page) {
   await expect(page.locator('[data-screen="consent"]')).toBeVisible();
@@ -186,4 +187,63 @@ test("development mode: overrides, bypass, full run to CSV, live PCA plot, revie
   await expect(admin.locator('input[aria-label="Seed"]')).toHaveCount(0); // read-only
   await expect(admin.locator(".image-grid .thumb")).toHaveCount(400); // default config: 40 training + 360 drift
   await admin.screenshot({ path: "test-results/admin.png", fullPage: true });
+});
+
+test("image set switch: one click on the admin page switches the faces participants see", async ({ page }) => {
+  // Development server: the admin page saves the settings in this browser (no login).
+  await page.goto(`${DEV}/admin.html#/settings`);
+  const morph = page.locator('button[data-stimulus-set="morph"]');
+  const original = page.locator('button[data-stimulus-set="original"]');
+  await expect(original).toHaveAttribute("aria-pressed", "true");
+  await expect(morph).toContainText("pca_top2_female_generated_vgg.csv");
+  page.once("dialog", (dialog) => dialog.accept());
+  await morph.click();
+  await expect(morph).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".switch-status")).toContainText("Participants now see: Morph");
+  await expect(page.locator('.example-face[data-group="A"] img')).toHaveAttribute("src", /faces_morph\//);
+
+  await page.goto(`${DEV}/index.html`);
+  await giveConsent(page);
+  const img = page.locator(".stimulus-frame img");
+  await expect(page.locator(".response-buttons button").first()).toBeEnabled();
+  await expect(img).toHaveAttribute("src", /assets\/faces_morph\//);
+  expect(await img.evaluate((el) => el.naturalWidth)).toBe(512);
+  const frame = await page.locator(".stimulus-frame").boundingBox();
+  expect(Math.abs(frame.width - frame.height)).toBeLessThan(2); // square frame for the square images
+
+  // And back to the original faces.
+  await page.goto(`${DEV}/admin.html#/settings`);
+  page.once("dialog", (dialog) => dialog.accept());
+  await original.click();
+  await expect(original).toHaveAttribute("aria-pressed", "true");
+  await page.goto(`${DEV}/index.html`);
+  await giveConsent(page);
+  await expect(page.locator(".response-buttons button").first()).toBeEnabled();
+  await expect(img).toHaveAttribute("src", /assets\/faces\//);
+  expect(await img.evaluate((el) => el.naturalWidth)).toBe(178);
+});
+
+test("participant mode (production build) uses the image set saved on the server", async ({ page }) => {
+  await page.route("**/save.php?settings=1", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ ok: true, settings: { updatedAt: "2026-11-21T00:00:00Z", values: { "assets.stimulusSet": "morph", "training.initialAngleA": 0, "training.initialAngleB": 180, "drift.degreesPerTrial": 1, "drift.numberOfTrials": 360 } } }),
+    }),
+  );
+  const requests = [];
+  await page.route("**/save.php", async (route) => {
+    requests.push(JSON.parse(route.request().postData()));
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ok: true }) });
+  });
+  await page.goto(`${PROD}/index.html?PROLIFIC_PID=E2E-MORPH`);
+  await giveConsent(page);
+  const img = page.locator(".stimulus-frame img");
+  await expect(page.locator(".response-buttons button").first()).toBeEnabled();
+  await expect(img).toHaveAttribute("src", /assets\/faces_morph\//);
+  expect(await img.evaluate((el) => el.naturalWidth)).toBe(512);
+  await page.locator(".response-buttons button").first().click();
+  await expect.poll(() => requests.length).toBeGreaterThanOrEqual(2);
+  expect(requests[0].session.pcaSource).toBe("pca_top2_female_generated_vgg.csv");
+  expect(requests[0].session.effectiveConfig.assets.stimulusSet).toBe("morph");
 });

@@ -7,7 +7,7 @@ import { errorScreen, loadingScreen } from "./components/screens.js";
 import { TrialScreen } from "./components/trialScreen.js";
 import { experimentConfig } from "./config/experimentConfig.js";
 import { applySettings, loadExperimentSettings } from "./config/experimentSettings.js";
-import { ConfigError, resolveEffectiveConfig, validateConfig } from "./config/validateConfig.js";
+import { ConfigError, resolveEffectiveConfig, validateConfig, withImageSize } from "./config/validateConfig.js";
 import { uiText } from "./content/uiText.js";
 import { ExperimentEngine } from "./experiment/experimentEngine.js";
 import { createSessionId, resolveParticipantId } from "./experiment/session.js";
@@ -49,16 +49,16 @@ async function boot() {
   // The Vite dev server cannot run save.php, so it uses the development adapter.
   const adapter = import.meta.env.DEV ? experimentConfig.storage.developmentAdapter : experimentConfig.storage.adapter;
   const settle = (promise) => promise.then((value) => ({ value }), (error) => ({ error }));
-  // Start downloading the PCA data and the admin-page settings right away, in parallel with the
-  // storage/recovery step. Settings come from the server, or from this browser under the dev server.
-  const pcaRequest = settle(loadPca(experimentConfig));
-  const settingsRequest = settle(
-    loadExperimentSettings({
-      source: adapter === "server" ? "server" : "local",
-      endpoint: experimentConfig.storage.serverEndpoint,
-      prefix: experimentConfig.storage.localStoragePrefix,
-    }),
-  );
+  // Start downloading the admin-page settings right away, and then the PCA data of the image set
+  // they select, in parallel with the storage/recovery step. Settings come from the server, or
+  // from this browser under the dev server.
+  const settingsPromise = loadExperimentSettings({
+    source: adapter === "server" ? "server" : "local",
+    endpoint: experimentConfig.storage.serverEndpoint,
+    prefix: experimentConfig.storage.localStoragePrefix,
+  });
+  const settingsRequest = settle(settingsPromise);
+  const pcaRequest = settle(settingsPromise.then((s) => loadPca(applySettings(experimentConfig, s.values))));
 
   let storage;
   try {
@@ -75,13 +75,14 @@ async function boot() {
   let baseConfig; // experimentConfig with the settings saved on the admin page
   try {
     validateConfig(experimentConfig);
-    const loaded = await pcaRequest;
-    if (loaded.error) throw loaded.error;
-    pca = loaded.value;
     const loadedSettings = await settingsRequest;
     if (loadedSettings.error) throw loadedSettings.error;
     settings = loadedSettings.value;
-    baseConfig = applySettings(experimentConfig, settings.values);
+    const loaded = await pcaRequest;
+    if (loaded.error) throw loaded.error;
+    pca = loaded.value;
+    // The image size (and so the display scale) comes from the loaded image set's manifest.
+    baseConfig = withImageSize(applySettings(experimentConfig, settings.values), pca.manifest);
   } catch (error) {
     fatal(root, error instanceof ConfigError ? uiText.errors.config : uiText.errors.assets, error);
     return;
@@ -117,6 +118,8 @@ async function boot() {
   });
   const trialScreen = new TrialScreen({
     scale: config.ui.imageDisplayScale,
+    imageWidth: config.assets.imageWidth,
+    imageHeight: config.assets.imageHeight,
     onResponse: (response, time) => engine.respond(response, time),
   });
   engine.presenter = trialScreen;

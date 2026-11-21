@@ -20,9 +20,6 @@ import { ImageLoadError } from "../experiment/experimentEngine.js";
 import { RESPONSES } from "../experiment/responseCoding.js";
 import { h } from "./dom.js";
 
-const SOURCE_WIDTH = 178; // female_faces images are 178 x 218 px
-const SOURCE_HEIGHT = 218;
-
 function nextPaint(raf) {
   return new Promise((resolve) => raf(() => raf(() => resolve())));
 }
@@ -32,8 +29,11 @@ export class TrialScreen {
    * @param {object} options
    * @param {(response:string, time:number) => void} options.onResponse
    * @param {number} options.scale display scale for the source images
+   * @param {number} options.imageWidth source image size in px (config.assets of the chosen image set;
+   *   female_faces images are 178 x 218, female_generated images 512 x 512)
+   * @param {number} options.imageHeight
    */
-  constructor({ onResponse, scale = 2, now = () => performance.now(), raf = (cb) => requestAnimationFrame(cb), loadImage, preloadImage }) {
+  constructor({ onResponse, scale = 2, imageWidth: SOURCE_WIDTH = 178, imageHeight: SOURCE_HEIGHT = 218, now = () => performance.now(), raf = (cb) => requestAnimationFrame(cb), loadImage, preloadImage }) {
     this.onResponse = onResponse;
     this.now = now;
     this.raf = raf;

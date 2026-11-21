@@ -100,6 +100,12 @@ export function findConfigProblems(config, { pcaCount } = {}) {
   for (const key of ["facesDirectory", "pcaDataPath", "manifestPath"]) {
     if (typeof config.assets?.[key] !== "string" || !config.assets[key]) problems.push(`assets.${key} must be a non-empty path`);
   }
+  if (config.stimulusSets && !Object.hasOwn(config.stimulusSets, config.assets?.stimulusSet)) {
+    problems.push(`assets.stimulusSet "${config.assets?.stimulusSet}" is not one of ${Object.keys(config.stimulusSets).join(", ")}`);
+  }
+  for (const key of ["imageWidth", "imageHeight"]) {
+    if (config.assets?.[key] !== undefined && !isPositiveInteger(config.assets[key])) problems.push(`assets.${key} must be a positive integer`);
+  }
   return problems;
 }
 
@@ -121,8 +127,33 @@ function deepFreeze(value) {
   return value;
 }
 
+// Fields copied from config.stimulusSets[assets.stimulusSet] into the configuration.
+const STIMULUS_SET_FIELDS = {
+  facesDirectory: "assets.facesDirectory",
+  pcaDataPath: "assets.pcaDataPath",
+  manifestPath: "assets.manifestPath",
+};
+
 /**
- * Apply development overrides (flat "section.key" -> value map) to the base configuration.
+ * The configuration with the image size of the loaded image set (its manifest, written by
+ * scripts/prepare-assets.mjs) and the display scale that shows it ui.imageDisplayWidth px wide.
+ * A manifest without an image size (older assets) leaves the configuration unchanged.
+ */
+export function withImageSize(config, manifest) {
+  const width = manifest?.imageWidth;
+  const height = manifest?.imageHeight;
+  if (!isPositiveInteger(width) || !isPositiveInteger(height)) return config;
+  const overrides = { "assets.imageWidth": width, "assets.imageHeight": height };
+  if (Number.isFinite(config.ui?.imageDisplayWidth) && config.ui.imageDisplayWidth > 0) {
+    overrides["ui.imageDisplayScale"] = config.ui.imageDisplayWidth / width;
+  }
+  return resolveEffectiveConfig(config, overrides);
+}
+
+/**
+ * Apply development overrides (flat "section.key" -> value map) to the base configuration,
+ * then fill in the paths of the chosen stimulus set (assets.stimulusSet); a field that is
+ * itself overridden keeps the override.
  * Returns a frozen deep copy; the base configuration is never mutated.
  */
 export function resolveEffectiveConfig(baseConfig, overrides = {}) {
@@ -133,6 +164,15 @@ export function resolveEffectiveConfig(baseConfig, overrides = {}) {
       throw new ConfigError([`unknown override "${path}"`]);
     }
     effective[section][key] = value;
+  }
+  if (effective.stimulusSets) {
+    const set = effective.stimulusSets[effective.assets?.stimulusSet];
+    if (!set) throw new ConfigError([`unknown stimulus set "${effective.assets?.stimulusSet}" (known: ${Object.keys(effective.stimulusSets).join(", ")})`]);
+    for (const [field, path] of Object.entries(STIMULUS_SET_FIELDS)) {
+      if (set[field] === undefined || path in overrides) continue;
+      const [section, key] = path.split(".");
+      effective[section][key] = set[field];
+    }
   }
   return deepFreeze(effective);
 }

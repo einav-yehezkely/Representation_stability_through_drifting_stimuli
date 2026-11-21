@@ -1,5 +1,6 @@
 {
-  "generatedAt": "2026-10-28T09:49:09.885Z",
+  "generatedAt": "2026-11-21T10:08:31.564Z",
+  "stimulusSet": "original",
   "pcaSource": "pca_top2_filtered_female_vgg_1.csv",
   "pcaAxes": [
     "PC1",
@@ -9,5 +10,7 @@
   "pcaRowCount": 11817,
   "facesSource": "female_faces/",
   "facesCount": 11817,
-  "facesListSha256": "4b74042aaa606fe5086bda3624d111a219d11d8b390985803b3b6780c328752f"
+  "facesListSha256": "4b74042aaa606fe5086bda3624d111a219d11d8b390985803b3b6780c328752f",
+  "imageWidth": 178,
+  "imageHeight": 218
 }

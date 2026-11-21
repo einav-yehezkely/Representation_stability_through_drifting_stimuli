@@ -73,10 +73,17 @@ async function boot() {
   root.replaceChildren(h("div", { class: "loading" }, h("span", { class: "spinner" }), h("p", { text: "Loading…" })));
 
   const source = import.meta.env.DEV ? new LocalAdminSource({ prefix: experimentConfig.storage.localStoragePrefix }) : new ServerAdminSource();
-  let pca = null;
-  const pcaReady = loadPca(experimentConfig)
-    .then((value) => (pca = value))
-    .catch(() => null); // only the plot and the planned order need it
+  // PCA data per image set (each set has its own file), loaded once when first needed.
+  const pcaCache = new Map();
+  const loadPcaFor = (config) => {
+    const key = config.assets.pcaDataPath;
+    if (!pcaCache.has(key)) {
+      const request = loadPca(config);
+      request.catch(() => pcaCache.delete(key)); // a failed load is retried next time
+      pcaCache.set(key, request);
+    }
+    return pcaCache.get(key);
+  };
 
   try {
     await ensureLoggedIn(source);
@@ -134,16 +141,27 @@ async function boot() {
   // The planned order follows the saved experiment settings (what the next session will use).
   let preview = null;
   let previewShown = false;
+  let plannedPca = null;
+  let plannedPcaReady = Promise.resolve(null);
   const usePlannedConfig = (savedSettings) => {
-    preview = createSequencePreview({ getPca: () => pca, config: applySettings(experimentConfig, savedSettings?.values), facesDirectory });
+    const config = applySettings(experimentConfig, savedSettings?.values);
+    plannedPca = null;
+    const ready = loadPcaFor(config)
+      .then((value) => {
+        if (plannedPcaReady === ready) plannedPca = value;
+        return value;
+      })
+      .catch(() => null); // only the planned order needs it
+    plannedPcaReady = ready;
+    preview = createSequencePreview({ getPca: () => plannedPca, config, facesDirectory: config.assets.facesDirectory });
     previewShown = false;
   };
   usePlannedConfig(await source.getSettings().catch(() => null));
   const settingsView = createSettingsView({
     source,
     defaults: settingsFromConfig(experimentConfig),
-    getPca: () => pca,
-    facesDirectory,
+    stimulusSets: experimentConfig.stimulusSets,
+    loadPcaFor,
     onSaved: usePlannedConfig,
     onError: showError,
   });
@@ -159,13 +177,12 @@ async function boot() {
 
     if (sessionMatch) {
       main.replaceChildren(h("div", { class: "loading" }, h("span", { class: "spinner" }), h("p", { text: "Loading session…" })));
-      await pcaReady;
       try {
         main.replaceChildren(
           await renderSessionDetail({
             source,
             sessionId: sessionMatch[1],
-            pca,
+            loadPcaFor, // the PCA data of the session's own image set
             config: experimentConfig,
             facesDirectory,
             onBack: () => (window.location.hash = "#/"),
@@ -180,14 +197,13 @@ async function boot() {
     }
     if (hash.startsWith("#/settings")) {
       main.replaceChildren(settingsView.element);
-      await pcaReady;
       await settingsView.load(experimentConfig);
       return;
     }
     if (hash.startsWith("#/preview")) {
       main.replaceChildren(preview.element);
       if (!previewShown) {
-        await pcaReady;
+        await plannedPcaReady;
         preview.show();
         previewShown = true;
       }

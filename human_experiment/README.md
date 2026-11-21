@@ -28,7 +28,7 @@ To serve the study, deploy the contents of `dist/` to a web server with PHP (see
 
 | Script | Purpose |
 | --- | --- |
-| `npm run prepare-assets` | Reads `../pca_top2_filtered_female_vgg_1.csv` and `../female_faces/` (read-only). Writes `public/assets/faces/` (and removes copies of images no longer in the file), `public/assets/pca.json` and `public/assets/assets-manifest.json`. Fails loudly if an image is missing. The source file is `PCA_FILE` in [scripts/prepare-assets.mjs](scripts/prepare-assets.mjs) (also in `scripts/reference/make_parity_fixtures.py`). |
+| `npm run prepare-assets` | Prepares both [image sets](#image-sets) (read-only inputs): `original` from `../pca_top2_filtered_female_vgg_1.csv` + `../female_faces/` into `public/assets/faces/`, `pca.json`, `assets-manifest.json`; `morph` from `../pca_top2_female_generated_vgg.csv` + `../female_generated/` into `public/assets/faces_morph/`, `pca_morph.json`, `assets-manifest_morph.json`. Removes copies of images no longer in a CSV, measures the image size, and fails loudly if an image is missing or the images of a set differ in size. `npm run prepare-assets -- morph` prepares only that set. The sources are `SETS` in [scripts/prepare-assets.mjs](scripts/prepare-assets.mjs) (the original CSV also in `scripts/reference/make_parity_fixtures.py`). |
 | `npm test` | Unit and integration tests (Vitest, jsdom). Requires `prepare-assets` first. |
 | `npm run test:e2e` | Real-browser tests in the installed Chrome (Playwright). Run `npm run build` first. |
 | `npm run parity:fixtures` | Regenerates `tests/fixtures/parity/parity.json` from verbatim copies of the source Python functions. |
@@ -233,6 +233,17 @@ Collecting data: open `https://<site>/admin.html` and use **Download CSV**, or d
 - **Session view**: summary tiles, a chart of rolling accuracy over the last 20 trials with the start of drift marked, the **image order** (every face in the order it was shown, numbered within its phase, with its group, the answer and ✓/✗; filter by phase, group and correctness; click a face for its details), the PCA stimulus plot (colored by what the participant answered, see [Researcher visualization](#researcher-visualization)), the full trial table, and a CSV download for that session. An unfinished session counts as *in progress* while its file changed in the last 30 minutes, and as *interrupted* after that.
 - **Planned image order**: the faces every session sees, in order, for the fixed seed (shown read-only; it can only be changed in the configuration file) and the saved experiment settings. Stimulus selection is deterministic, so this is exact. Training images always come in this order (answers only decide how many are shown), and drift images are the same however long training took.
 - **Settings**: the experiment settings below.
+
+### Image sets
+
+The top of the **Settings** tab has two buttons, **Original faces** and **Morph (generated faces)**. One click (and a confirmation) switches the images participants see; it is saved right away and applies to sessions that start afterwards. Each button shows what the set is made of (folder, CSV, number of images, image size), read from the set's manifest.
+
+- Both sets are always part of the site (`assets/faces/` and `assets/faces_morph/`), so switching needs no upload.
+- Each session records the set it used: `effectiveConfig.assets.stimulusSet` and the `pcaSource` / `pcaSha256` columns of the CSV. The session view of the admin page shows every session with its own set.
+- Faces are shown `ui.imageDisplayWidth` (356) px wide whatever the image size: the original 178×218 faces at 2×, the 512×512 generated faces at about 0.7×.
+- Settings saved before the switch existed (no `assets.stimulusSet`) use the original set.
+
+**Replacing the morph images.** Put the new CSV (no header: `filename, PC1, PC2`) and image folder in the repository root and set `pcaFile` and `facesSource` of `morph` in `SETS` in [scripts/prepare-assets.mjs](scripts/prepare-assets.mjs). If the new files have the same names (`pca_top2_female_generated_vgg.csv`, `female_generated/`), nothing needs changing. Then run `npm run prepare-assets -- morph` and `npm run build`, and upload `dist/assets/faces_morph/`, `dist/assets/pca_morph.json` and `dist/assets/assets-manifest_morph.json`. The number of images, the image size and the names on the admin page follow from the files. Delete the old `faces_morph/` folder on the server first if the new images have other names. The images of a set must all have the same size (PNG or JPEG).
 
 ### Experiment settings
 

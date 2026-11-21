@@ -215,12 +215,26 @@ function session_path_from_query(): string
 
 // ---------------------------------------------------------------- settings
 
-const MAX_DRIFT_TRIALS = 11817; // number of PCA images (no repeats within drift)
+// Image sets the admin page can switch between (stimulusSets in src/config/experimentConfig.js)
+// and their manifests, written by scripts/prepare-assets.mjs next to this file.
+const STIMULUS_SET_MANIFESTS = ['original' => 'assets/assets-manifest.json', 'morph' => 'assets/assets-manifest_morph.json'];
+
+/** Number of images of an image set (from its manifest): the maximum number of drift trials. */
+function stimulus_set_image_count(string $set): int
+{
+    $manifest = json_decode((string) @file_get_contents(__DIR__ . '/' . STIMULUS_SET_MANIFESTS[$set]), true);
+    $count = is_array($manifest) ? ($manifest['pcaRowCount'] ?? null) : null;
+    if (!is_int($count) || $count < 1) json_fail(500, "the images of image set \"$set\" are missing on the server");
+    return $count;
+}
 
 /** Validate the settings sent by the admin page (the browser validates them too). */
 function validated_settings($values): array
 {
     if (!is_array($values)) json_fail(400, 'missing settings');
+    $set = $values['assets.stimulusSet'] ?? 'original'; // older admin pages did not send it
+    if (!is_string($set) || !array_key_exists($set, STIMULUS_SET_MANIFESTS)) json_fail(400, 'unknown image set');
+    $maxDriftTrials = stimulus_set_image_count($set); // no repeats within drift
     $number = function (string $key) use ($values): float {
         $v = $values[$key] ?? null;
         if (!(is_int($v) || is_float($v)) || !is_finite((float) $v)) json_fail(400, "$key must be a number");
@@ -233,8 +247,9 @@ function validated_settings($values): array
     $separation = fmod(fmod($angleB - $angleA, 360.0) + 360.0, 360.0);
     if (abs($separation - 180.0) > 1e-9) json_fail(400, 'center B must be 180° from center A');
     if (!($degrees > 0 && $degrees <= 360)) json_fail(400, 'degrees per trial must be greater than 0 and at most 360');
-    if (!is_int($trials) || $trials < 1 || $trials > MAX_DRIFT_TRIALS) json_fail(400, 'the number of drift trials must be an integer between 1 and ' . MAX_DRIFT_TRIALS);
+    if (!is_int($trials) || $trials < 1 || $trials > $maxDriftTrials) json_fail(400, "the number of drift trials must be an integer between 1 and $maxDriftTrials for this image set");
     return [
+        'assets.stimulusSet' => $set,
         'training.initialAngleA' => $values['training.initialAngleA'],
         'training.initialAngleB' => $values['training.initialAngleB'],
         'drift.degreesPerTrial' => $values['drift.degreesPerTrial'],

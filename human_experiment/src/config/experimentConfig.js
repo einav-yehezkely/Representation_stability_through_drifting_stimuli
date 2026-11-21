@@ -24,9 +24,35 @@ export const experimentConfig = {
   },
 
   assets: {
-    facesDirectory: "assets/faces/", // served copy of female_faces/ (scripts/prepare-assets.mjs)
-    pcaDataPath: "assets/pca.json", // derived from pca_top2_filtered_female_vgg_1.csv (scripts/prepare-assets.mjs)
+    // Which image set participants see: a key of stimulusSets, chosen on the admin page
+    // (settings key "assets.stimulusSet"). The three paths are filled in from that set by
+    // resolveEffectiveConfig; the values here are those of the default set.
+    stimulusSet: "original",
+    facesDirectory: "assets/faces/", // served copy of the set's images (scripts/prepare-assets.mjs)
+    pcaDataPath: "assets/pca.json", // derived from the set's PCA CSV (scripts/prepare-assets.mjs)
     manifestPath: "assets/assets-manifest.json",
+    // Size of the source images in px. Taken from the loaded set's manifest (prepare-assets
+    // measures the images), so these defaults are only used before the data is loaded.
+    imageWidth: 178,
+    imageHeight: 218,
+  },
+
+  // The image sets the admin page can switch between. Which CSV and image folder each set is made
+  // from is defined only in scripts/prepare-assets.mjs (SETS); everything else (number of images,
+  // image size, the file names shown on the admin page) is read from the generated manifest.
+  stimulusSets: {
+    original: {
+      label: "Original faces",
+      facesDirectory: "assets/faces/",
+      pcaDataPath: "assets/pca.json",
+      manifestPath: "assets/assets-manifest.json",
+    },
+    morph: {
+      label: "Morph (generated faces)",
+      facesDirectory: "assets/faces_morph/",
+      pcaDataPath: "assets/pca_morph.json",
+      manifestPath: "assets/assets-manifest_morph.json",
+    },
   },
 
   scientific: {
@@ -55,7 +81,10 @@ export const experimentConfig = {
 
   ui: {
     feedbackDurationMs: 1000, // placeholder OQ3
-    imageDisplayScale: 2, // placeholder OQ3: source images are 178x218 px
+    // Faces are shown imageDisplayWidth px wide (placeholder OQ3: 2 x the 178 px original faces).
+    // imageDisplayScale = imageDisplayWidth / assets.imageWidth is set when the image set is loaded.
+    imageDisplayWidth: 356,
+    imageDisplayScale: 2,
     preloadCount: 3, // next images downloaded and decoded in advance (performance only; 0 disables)
     feedbackText: { correct: "Correct", incorrect: "Incorrect" },
   },

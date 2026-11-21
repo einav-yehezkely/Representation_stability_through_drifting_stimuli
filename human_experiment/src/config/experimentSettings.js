@@ -1,5 +1,7 @@
 // Experiment settings the researcher can change on the admin page, without a new build:
-// the initial center angles and the drift movement. They are stored on the server
+// the image set (assets.stimulusSet), the initial center angles and the drift movement.
+// Settings saved before the image set could be chosen have no image set: they use the default
+// set (experimentConfig.assets.stimulusSet). They are stored on the server
 // (save.php?settings=1 reads them, admin_api.php writes them) or, under the Vite dev server, in
 // this browser's localStorage. Every new session applies them on top of experimentConfig; the
 // resulting effectiveConfig is recorded in the session metadata as before.
@@ -9,7 +11,9 @@
 
 import { findConfigProblems, resolveEffectiveConfig } from "./validateConfig.js";
 
-export const SETTINGS_KEYS = ["training.initialAngleA", "training.initialAngleB", "drift.degreesPerTrial", "drift.numberOfTrials"];
+export const STIMULUS_SET_KEY = "assets.stimulusSet";
+export const NUMERIC_SETTINGS_KEYS = ["training.initialAngleA", "training.initialAngleB", "drift.degreesPerTrial", "drift.numberOfTrials"];
+export const SETTINGS_KEYS = [STIMULUS_SET_KEY, ...NUMERIC_SETTINGS_KEYS];
 
 export class SettingsError extends Error {
   constructor(message) {
@@ -28,6 +32,13 @@ export function trialsForFullRotation(degreesPerTrial) {
   return Number.isFinite(degreesPerTrial) && degreesPerTrial > 0 ? Math.max(1, Math.round(360 / degreesPerTrial)) : null;
 }
 
+/** The stimulus set ({ key, label, description, facesDirectory, ... }) these settings select. */
+export function stimulusSetOf(baseConfig, values) {
+  const key = values?.[STIMULUS_SET_KEY] ?? baseConfig.assets.stimulusSet;
+  const set = baseConfig.stimulusSets?.[key];
+  return set ? { key, ...set } : null;
+}
+
 /** The settings values of a configuration. */
 export function settingsFromConfig(config) {
   return Object.fromEntries(SETTINGS_KEYS.map((path) => [path, path.split(".").reduce((o, k) => o[k], config)]));
@@ -42,8 +53,11 @@ export function applySettings(baseConfig, values) {
 /** Problems with a settings object (empty when valid). */
 export function findSettingsProblems(values, baseConfig, { pcaCount } = {}) {
   const problems = [];
-  for (const key of SETTINGS_KEYS) {
+  for (const key of NUMERIC_SETTINGS_KEYS) {
     if (typeof values?.[key] !== "number" || !Number.isFinite(values[key])) problems.push(`${key} must be a number`);
+  }
+  if (values && STIMULUS_SET_KEY in values && !Object.hasOwn(baseConfig.stimulusSets ?? {}, values[STIMULUS_SET_KEY])) {
+    problems.push(`Unknown image set "${values[STIMULUS_SET_KEY]}".`);
   }
   if (problems.length) return problems;
   if (!(values["drift.degreesPerTrial"] > 0 && values["drift.degreesPerTrial"] <= 360)) problems.push("Degrees per trial must be greater than 0 and at most 360.");

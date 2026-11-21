@@ -62,9 +62,13 @@ function trialTable(trials) {
   );
 }
 
-export async function renderSessionDetail({ source, sessionId, pca, config, facesDirectory, onBack, onRefresh }) {
+export async function renderSessionDetail({ source, sessionId, pca: givenPca = null, loadPcaFor = null, config, facesDirectory: defaultFacesDirectory, onBack, onRefresh }) {
   const { meta, trials, status, lastActivity, warnings } = await source.getSession(sessionId);
   const effectiveConfig = meta.effectiveConfig ?? config;
+  // Each session is shown with the image set it was recorded with (its effectiveConfig.assets;
+  // sessions from before the image set could be switched have the original set's paths).
+  const facesDirectory = effectiveConfig.assets?.facesDirectory ?? defaultFacesDirectory;
+  const pca = loadPcaFor ? await loadPcaFor(effectiveConfig).catch(() => givenPca) : givenPca;
   // Sessions recorded with another PCA file: their coordinates belong to that file, not to the
   // data loaded now (the plot's background and trajectory come from the current file).
   const otherPcaFile = Boolean(pca && meta.pcaSha256 && meta.pcaSha256 !== pca.sha256);

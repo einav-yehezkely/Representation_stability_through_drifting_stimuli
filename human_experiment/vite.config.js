@@ -13,7 +13,7 @@ export default defineConfig({
     // The 11,817 face images (and their copy in dist/) never change while developing; watching
     // them kept the dev server busy and made every face take seconds to load. Consequence: after
     // `npm run prepare-assets` changes the faces, restart `npm run dev` so it serves the new files.
-    watch: { ignored: ["**/dist/**", "**/public/assets/faces/**", "**/test-results/**"] },
+    watch: { ignored: ["**/dist/**", "**/public/assets/faces/**", "**/public/assets/faces_morph/**", "**/test-results/**"] },
   },
   build: {
     outDir: resolve(projectDir, "dist"),
