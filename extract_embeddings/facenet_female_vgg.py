@@ -29,7 +29,7 @@ BATCH_SIZE = 32
 NUM_WORKERS = 0
 
 # OUTPUT_CSV = "female_facenet_vggface2_embeddings.csv"
-OUTPUT_CSV = "female_generated_facenet_vggface2_embeddings.csv"
+OUTPUT_CSV = "women_generated_facenet_vggface2_embeddings.csv"
 
 
 script_dir = os.path.dirname(
@@ -48,7 +48,7 @@ img_dir = os.path.abspath(
     os.path.join(
         script_dir,
         "..",
-        "female_generated"
+        "women_generated"
     )
 )
 

@@ -13,7 +13,7 @@ from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 BASE_DIR = Path(__file__).resolve().parents[2]
 
 PCA_FILE = BASE_DIR / "pca_top2_female_generated_vgg.csv"
-IMAGES_DIR = BASE_DIR / "female_generated"
+IMAGES_DIR = BASE_DIR / "women_generated"
 
 THUMBNAIL_SIZE = 60
 SEED = 42

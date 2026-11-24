@@ -17,7 +17,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-path = "female_generated_facenet_vggface2_embeddings.csv"  # Path to the data file
+path = "women_generated_facenet_vggface2_embeddings.csv"  # Path to the data file
 # path = "female_facenet_vggface2_embeddings.csv"  # Path to the data file
 # path = "female_resnet50_vggface2_embeddings.csv"
 
@@ -207,7 +207,8 @@ df_top2.to_csv(
 print("Saved all 2D points to pca_top2_female_generated_vgg.csv")
 
 df_top2_filtered = df_top2[mask_sq]
-df_top2_filtered.to_csv("pca_top2_filtered_female_generated_vgg.csv", index=False, header=False)
+# df_top2_filtered.to_csv("pca_top2_filtered_female_vgg.csv", index=False, header=False)
+df_top2_filtered.to_csv("woman_generated_pca_top2_filtered_vgg.csv", index=False, header=False)
 print(
     "Saved filtered projection (PC1, PC2) of 10% most similar images to pca_top2_filtered_female_vgg_1.csv"
 )
