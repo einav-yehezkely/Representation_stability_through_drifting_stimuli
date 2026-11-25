@@ -37,6 +37,7 @@ export const EXTRA_TRIAL_COLUMNS = Object.freeze([
   "windowAccuracy",
   "criterionPassed",
   "imageLoadFailures",
+  "responseInput", // "click" or "key" (A/B keys); schema version 2
 ]);
 
 // Session metadata repeated on every row.

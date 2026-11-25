@@ -120,7 +120,7 @@ async function boot() {
     scale: config.ui.imageDisplayScale,
     imageWidth: config.assets.imageWidth,
     imageHeight: config.assets.imageHeight,
-    onResponse: (response, time) => engine.respond(response, time),
+    onResponse: (response, time, input) => engine.respond(response, time, input),
   });
   engine.presenter = trialScreen;
 

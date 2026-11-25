@@ -38,7 +38,13 @@ const OUT_DIR = path.join(projectDir, "public", "assets");
 // pca_PC3_PC4_filtered.csv (PC3/PC4) was tried for the original set on 2026-10-28 and reverted.
 const SETS = {
   original: { pcaFile: "pca_top2_filtered_female_vgg_1.csv", axes: ["PC1", "PC2"], facesSource: "female_faces", facesDir: "faces", pcaJson: "pca.json", manifest: "assets-manifest.json" },
-  morph: { pcaFile: "pca_top2_female_generated_vgg.csv", axes: ["PC1", "PC2"], facesSource: "female_generated", facesDir: "faces_morph", pcaJson: "pca_morph.json", manifest: "assets-manifest_morph.json" },
+  // 2026-11-24: the morph set is the four PCA-edge women of composites/pca_edge_morph.py (one noisy
+  // variant around each of the 360 morph frames + 100 noisy variants around 0 deg and 180 deg),
+  // copied from composites/generated/pca_edges/experiment_set*. The previous morph set (seeds 38/46,
+  // female_generated/) is kept in human_experiment/stimulus_backups/morph_38_46/; to restore it use
+  //   pcaFile: "human_experiment/stimulus_backups/morph_38_46/pca_top2_female_generated_vgg.csv",
+  //   facesSource: "human_experiment/stimulus_backups/morph_38_46/faces"
+  morph: { pcaFile: "pca_top2_women_generated_4_corners_morph.csv", axes: ["PC1", "PC2"], facesSource: "women_generated_4_corners_morph",facesDir: "faces_morph", pcaJson: "pca_morph.json", manifest: "assets-manifest_morph.json" },
 };
 
 function sha256(bufferOrString) {

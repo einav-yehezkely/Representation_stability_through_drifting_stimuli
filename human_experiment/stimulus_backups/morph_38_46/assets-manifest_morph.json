@@ -1,0 +1,16 @@
+{
+  "generatedAt": "2026-11-21T10:08:31.814Z",
+  "stimulusSet": "morph",
+  "pcaSource": "pca_top2_female_generated_vgg.csv",
+  "pcaAxes": [
+    "PC1",
+    "PC2"
+  ],
+  "pcaSha256": "abfc7876e7ef983d300edfe28dd7ac38330add992739c98a312acf7681ca5e62",
+  "pcaRowCount": 560,
+  "facesSource": "female_generated/",
+  "facesCount": 560,
+  "facesListSha256": "190159e454ecab74a69227d8cd3e548567f272e9fa2e474317730f80daece6cd",
+  "imageWidth": 512,
+  "imageHeight": 512
+}

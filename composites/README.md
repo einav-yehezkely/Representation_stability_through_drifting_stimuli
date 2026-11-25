@@ -252,6 +252,53 @@ py composites/latent_circle.py --seeds 38 46 --out composites/generated/very_dif
 - **The generated faces have not been placed in the project's PCA space** (deferred on request). A PCA recomputed from the full embeddings CSV (`composites/cache/pca_resnet50.npz`) does **not** reproduce `pca_top2_filtered_female_vgg_1.csv`: the correlation is only 0.87 / 0.81. The exact preprocessing behind that file needs checking first.
 - **Nothing is committed yet.**
 
+## 9. Four women at the edges of the generated-women PCA (`pca_edge_morph.py`, 2026-11-24)
+
+**PCA.** The script recomputes the PCA of `women_generated_facenet_vggface2_embeddings.csv`: FaceNet InceptionResnetV1-VGGFace2, 512-D, 38 generated women, the same steps as `extract_embeddings/PCA_2_and_rest.py`. The result is identical to `pca_top2_female_generated_vgg.csv`. PC1 explains 13.7% of the variance and PC2 9.7%.
+
+**Anchors.** For each angle, the anchor is the woman with the largest projection on that direction:
+
+| Angle | Seed | PC1 | PC2 | Actual angle |
+|---|---|---|---|---|
+| 0° | 17 | +0.644 | −0.138 | 348° |
+| 90° | 4 | −0.207 | +0.513 | 112° |
+| 180° | 34 | −0.560 | −0.035 | 184° |
+| 270° | 45 | −0.050 | −0.659 | 266° |
+
+The anchors are rendered exactly as in `women_generated/` (ψ = 0.7, no pose or colour fixing). The pixel difference from those files is 0. Seed 32 is the other candidate for 90° (`--seeds 17 32 34 45`).
+
+**Morph.** The morph goes 0 → 90 → 180 → 270 → 0 in W space, with 360 frames. Between neighbouring anchors it interpolates spherically around the mean latent of the four, as in `rotate_morph.py`. Every frame is a real face. Re-embedded in the PCA, the path passes through all four anchors. The 90° → 0° segment cuts close to the centre.
+
+**Noise.** Each anchor at 0° and 180° gets 100 variants, `w = 0.7·w_anchor + 0.3·w_random`. With random-face noise, about 5% of the variants around seed 17 came out as men. Each variant is therefore checked with DeepFace (Woman ≥ 90) and redrawn if it fails:
+
+| Side | Draws | Rejected |
+|---|---|---|
+| Seed 17 | 132 | 32 |
+| Seed 34 | 103 | 3 |
+
+The rejections also remove some short-haired women. In the PCA, the clouds are centred at (+0.33, −0.21) for seed 17 and (−0.35, −0.04) for seed 34. The mean distance from the anchor is 0.37 and 0.29. The clouds are pulled toward the centre, because the random faces pull toward the average face.
+
+**Output** (`generated/pca_edges/`):
+- `anchors.png`, `anchors.csv`
+- `morph/`: `frames/morph_<θ>deg.png`, `morph.csv` (weights and the PC1/PC2 of each frame), `strip.png`, `morph.gif`, `morph.mp4`
+- `noise/<θ>deg_seed<NNNN>/seed<NNNN>_variant_<iii>.png`, `noise/variants.csv` (PC1/PC2 and Woman score), `noise/sheet_*.png`
+- `pca_overview.png`
+- `circle_noise/`: one noisy variant (a = 0.3, women only) around every morph frame, `circle_<θ>deg.png`, plus `circle_noise.csv` and `sheet.png`. It has its own random stream (noise seed + 1). 152 draws were rejected.
+- **Why circle noise.** In the experiment the drift walks along the circle 1° per trial. It showed consecutive morph frames, which are 1° apart and almost identical, so participants saw the same woman changing very slowly. In a simulated drift (360 trials, nearest-unused selection), consecutive images of the same group changed as follows:
+
+  | Set | Mean pixel difference | Near-identical pairs (difference < 4) |
+  |---|---|---|
+  | Morph frames | 17.2 | 146 |
+  | Circle noise | 37.3 | 0 |
+
+  The morph frames stay on disk, but they are no longer in the experiment set.
+- `experiment_set/` and `experiment_set.csv`: the 360 circle-noise variants and the two pools of 100, 560 images in one folder, with their measured PC1/PC2 (no header). A copy at the repository root, `women_generated_4_corners_morph/` and `pca_top2_women_generated_4_corners_morph.csv`, has been the `morph` set of `human_experiment/` since 2026-11-24 (see `SETS` in `human_experiment/scripts/prepare-assets.mjs`). After a new run of the script, copy the set there again. The previous morph set (38/46) is kept in `human_experiment/stimulus_backups/morph_38_46/`. That folder includes its 560-row CSV, rebuilt byte for byte from `pca_morph.json`, because the root `pca_top2_female_generated_vgg.csv` now holds the 38-women PCA.
+
+```
+py composites/pca_edge_morph.py
+py composites/pca_edge_morph.py --export-only    # rebuild experiment_set/ only
+```
+
 ## Files
 
 | Script | Purpose | Default output |
@@ -267,6 +314,7 @@ py composites/latent_circle.py --seeds 38 46 --out composites/generated/very_dif
 | `generate_faces.py` | StyleGAN2 candidate sheet and full-size picks | `generated/` |
 | `noise_average_generated.py` | Noisy latent variants, averaged | `generated/noise_average/<run>/` |
 | `latent_circle.py` | Closed circle of faces through two women in W space | `<out>/<A>_to_<B>/`, `<out>/<B>_to_<A>/` |
+| `pca_edge_morph.py` | Edge women of the generated-women PCA: circular W-space morph and noisy variants | `generated/pca_edges/` |
 | `pick_different_pair.py` | Rank generated women by identity difference (ResNet50-VGGFace2) | `generated/very_different/` |
 
 **Git-ignored folders** (they can be regenerated): `cache/`, `models/`, `third_party/`, `output/`, `endpoints/`, `endpoint_morph/`, `morph_output/`, `anchors/`, `rotation_output*/`, `noise_stimuli/`, `bigfive_style/`, `generated/`.

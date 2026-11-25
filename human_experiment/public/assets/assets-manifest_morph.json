@@ -1,16 +1,16 @@
 {
-  "generatedAt": "2026-11-21T10:08:31.814Z",
+  "generatedAt": "2026-11-24T11:21:13.567Z",
   "stimulusSet": "morph",
-  "pcaSource": "pca_top2_female_generated_vgg.csv",
+  "pcaSource": "pca_top2_women_generated_4_corners_morph.csv",
   "pcaAxes": [
     "PC1",
     "PC2"
   ],
-  "pcaSha256": "abfc7876e7ef983d300edfe28dd7ac38330add992739c98a312acf7681ca5e62",
+  "pcaSha256": "cce43752da298b49a559334818905ef88285d9daf2dd9390e5fb347b06b1070d",
   "pcaRowCount": 560,
-  "facesSource": "female_generated/",
+  "facesSource": "women_generated_4_corners_morph/",
   "facesCount": 560,
-  "facesListSha256": "190159e454ecab74a69227d8cd3e548567f272e9fa2e474317730f80daece6cd",
+  "facesListSha256": "f6cc5cf2ff18ab942935f5f6ea0ce5c38c6089c99ba8b6207b3e8572f8cfdad8",
   "imageWidth": 512,
   "imageHeight": 512
 }

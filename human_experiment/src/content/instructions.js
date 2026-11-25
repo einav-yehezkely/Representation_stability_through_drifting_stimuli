@@ -15,6 +15,7 @@ export const instructionsContent = {
     { label: "B", text: "you are confident the face belongs to Group B" },
   ],
   closingParagraphs: [
+    "You can click the buttons, or press the A key for \"A\" and the B key for \"B\" on your keyboard.",
     "At the beginning, you will be told after each answer whether it was correct or incorrect. Use this feedback to learn the two groups.",
     "At first you will have to guess. That is expected.",
   ],

@@ -44,7 +44,7 @@ function setup({ developmentMode = false, overrides = { "drift.numberOfTrials": 
       img.src = url;
       return img;
     },
-    onResponse: (response, time) => engine.respond(response, time),
+    onResponse: (response, time, input) => engine.respond(response, time, input),
   });
   engine.presenter = trialScreen;
   mountExperiment(root, engine, trialScreen, { developmentMode });
@@ -102,6 +102,7 @@ describe("instructions and transition wording", () => {
     const text = JSON.stringify(instructionsContent).toLowerCase();
     for (const r of ["\"a\"", "probably a", "probably b", "\"b\""]) expect(text).toContain(r);
     expect(text).toContain("feedback");
+    expect(text).toMatch(/a key.*b key/); // keyboard answers are explained
     expect(text).not.toMatch(/drift|move|moving|rotat|shift|chang/);
   });
 
@@ -184,6 +185,48 @@ describe("trial screen (acceptance checks 3, 5, 7, 8)", () => {
     await tick();
     expect(engine.records).toHaveLength(1);
     expect(engine.records[0].responseTimeMs).toBe(321);
+  });
+
+  it("the A and B keys answer A and B like the buttons, and are recorded as key input", async () => {
+    const { root, engine, tick, advance } = setup({ loadDelay: 1000 });
+    const key = (code, extra = {}) => document.dispatchEvent(new KeyboardEvent("keydown", { code, key: "x", bubbles: true, cancelable: true, ...extra }));
+    await engine.acceptConsent();
+    key("KeyA"); // instructions screen: no effect
+    await engine.startTraining();
+    await waitFor(() => engine.state.status === "responding", tick);
+    advance(250);
+    key("KeyA", { repeat: true }); // held key: ignored
+    key("KeyA", { ctrlKey: true }); // shortcut: ignored
+    key("KeyC"); // other key: ignored
+    await tick();
+    expect(engine.records).toHaveLength(0);
+    key("KeyA", { key: "ש" }); // Hebrew layout: same physical key
+    key("KeyB"); // second answer in the same trial: ignored
+    expect(buttons(root).find((b) => b.textContent === "A").classList.contains("selected")).toBe(true);
+    await waitFor(() => engine.records.length === 1, tick);
+    expect(engine.records[0]).toMatchObject({ response: "A", binaryResponse: "A", responseInput: "key", responseTimeMs: 250 });
+
+    // Next trial: B key; then a click is recorded as a click.
+    await waitFor(() => engine.state.status === "responding", tick);
+    key("KeyB");
+    await waitFor(() => engine.records.length === 2, tick);
+    expect(engine.records[1]).toMatchObject({ response: "B", responseInput: "key" });
+    await waitFor(() => engine.state.status === "responding", tick);
+    click(buttons(root)[1]);
+    await waitFor(() => engine.records.length === 3, tick);
+    expect(engine.records[2]).toMatchObject({ response: "Probably A", responseInput: "click" });
+  });
+
+  it("keys do nothing while the image is still loading", async () => {
+    const { engine, tick } = setup();
+    const key = (code) => document.dispatchEvent(new KeyboardEvent("keydown", { code, bubbles: true }));
+    await engine.acceptConsent();
+    const started = engine.startTraining();
+    key("KeyA"); // before onset: buttons are disabled
+    await started;
+    await waitFor(() => engine.state.status === "responding", tick);
+    await tick();
+    expect(engine.records).toHaveLength(0);
   });
 
   it("an image load failure shows an English error with retry and creates no record", async () => {

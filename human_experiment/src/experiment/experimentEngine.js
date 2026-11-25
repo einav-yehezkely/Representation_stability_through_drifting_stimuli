@@ -260,9 +260,10 @@ export class ExperimentEngine {
 
   /**
    * Accept a participant response. `responseTime` is the performance.now() value captured first
-   * thing in the input handler. Only the first response per trial is accepted.
+   * thing in the input handler. Only the first response per trial is accepted. `input` is how the
+   * answer was given: "click" (mouse/touch on a button) or "key" (the A or B key).
    */
-  async respond(response, responseTime) {
+  async respond(response, responseTime, input = "click") {
     if (!this.accepting || !this.pending) return false;
     if (!RESPONSES.includes(response)) throw new Error(`Unknown response: ${response}`);
     this.accepting = false;
@@ -311,6 +312,7 @@ export class ExperimentEngine {
       windowAccuracy: criterionAfter ? criterionAfter.accuracy : null,
       criterionPassed: criterionAfter ? criterionAfter.passed : null,
       imageLoadFailures: pending.loadFailures,
+      responseInput: input,
     };
     await this.persistAndAdvance(record, criterionAfter);
     return true;

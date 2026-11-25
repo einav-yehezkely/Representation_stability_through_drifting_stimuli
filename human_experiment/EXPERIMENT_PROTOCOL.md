@@ -11,7 +11,7 @@ Humans learn to sort faces into two categories, A and B, with feedback. Then the
 ## 2. Participants and setting
 
 - **Recruitment**: online, via Prolific. The participant link may carry `?PROLIFIC_PID=<id>`.
-- **Device**: a desktop or laptop web browser. Answers are given by mouse click; there are no keyboard responses.
+- **Device**: a desktop or laptop web browser. Answers are given by mouse click on the four buttons. Since 2026-11-24 the A and B keys can also be used for the answers "A" and "B" (the "Probably" answers have no key), and the instructions say so. Each trial records which input was used (`responseInput`: `click` or `key`).
 - **Identity**: the participant ID is `PROLIFIC_PID` when present, otherwise a generated anonymous ID (`anon-<16 hex>`). No other personal information is collected. The page URL itself is not stored.
 - **Sample size, inclusion and exclusion criteria, and compensation**: *not specified in the implementation; to be set by the researcher.*
 
@@ -96,8 +96,8 @@ Participants are never offered a download of their data.
 1. Response buttons are disabled and the previous face is removed.
 2. The next face is loaded and decoded off-screen. Upcoming faces are preloaded, so this is usually instant.
 3. The face appears. Once it has been painted on screen, the onset time is taken and the buttons are enabled at that same moment.
-4. The participant clicks one of four buttons, always in this order: **`A` · `Probably A` · `Probably B` · `B`**. There is no response deadline.
-5. Only the first click counts. Response time = click − onset, measured with `performance.now()`. It never includes image loading, saving, or feedback time.
+4. The participant clicks one of four buttons, always in this order: **`A` · `Probably A` · `Probably B` · `B`**. Instead of clicking `A` or `B`, the participant can press the A or B key. There is no response deadline.
+5. Only the first answer counts, by click or by key. Response time = answer − onset, measured with `performance.now()`. It never includes image loading, saving, or feedback time.
 6. The answer is saved to the server, and the next trial starts only after the server confirms the save. In training, the feedback is shown before the next trial.
 
 **Response coding**:

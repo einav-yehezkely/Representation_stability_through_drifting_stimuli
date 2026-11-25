@@ -8,7 +8,7 @@
 
 export const experimentConfig = {
   experimentVersion: "1.0.0",
-  schemaVersion: "1",
+  schemaVersion: "2", // 2: trial column responseInput (click / key) added 2026-11-24
 
   training: {
     initialAngleA: 0, // degrees; also the initial drift centers (no duplicate drift setting)

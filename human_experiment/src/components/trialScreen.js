@@ -15,10 +15,19 @@
 //      and the response buttons are enabled — the same instant.
 //   5. On a click, performance.now() is captured first, before any other work, and passed to the
 //      engine, which computes responseTime = click - onset.
+//
+// Keyboard: the A and B keys give the answers "A" and "B" (the confident ones), exactly like
+// clicking those buttons: only while the buttons are enabled, only the first answer per trial,
+// time captured first. The physical key is used (event.code), so it also works when the keyboard
+// is set to another language (e.g. Hebrew, where the A key types a different letter). Held-down
+// (auto-repeat) keys and key combinations with Ctrl/Alt/Meta are ignored.
 
 import { ImageLoadError } from "../experiment/experimentEngine.js";
 import { RESPONSES } from "../experiment/responseCoding.js";
 import { h } from "./dom.js";
+
+// Physical key -> response. Only the two confident answers have keys.
+export const RESPONSE_KEYS = Object.freeze({ KeyA: "A", KeyB: "B" });
 
 function nextPaint(raf) {
   return new Promise((resolve) => raf(() => raf(() => resolve())));
@@ -27,13 +36,13 @@ function nextPaint(raf) {
 export class TrialScreen {
   /**
    * @param {object} options
-   * @param {(response:string, time:number) => void} options.onResponse
+   * @param {(response:string, time:number, input:"click"|"key") => void} options.onResponse
    * @param {number} options.scale display scale for the source images
    * @param {number} options.imageWidth source image size in px (config.assets of the chosen image set;
    *   female_faces images are 178 x 218, female_generated images 512 x 512)
    * @param {number} options.imageHeight
    */
-  constructor({ onResponse, scale = 2, imageWidth: SOURCE_WIDTH = 178, imageHeight: SOURCE_HEIGHT = 218, now = () => performance.now(), raf = (cb) => requestAnimationFrame(cb), loadImage, preloadImage }) {
+  constructor({ onResponse, scale = 2, imageWidth: SOURCE_WIDTH = 178, imageHeight: SOURCE_HEIGHT = 218, now = () => performance.now(), raf = (cb) => requestAnimationFrame(cb), loadImage, preloadImage, keyTarget = globalThis.document }) {
     this.onResponse = onResponse;
     this.now = now;
     this.raf = raf;
@@ -51,6 +60,7 @@ export class TrialScreen {
       h("button", { type: "button", "data-response": label, disabled: true, onclick: (event) => this.handleClick(event, label) }, label),
     );
     this.element = h("div", { class: "trial" }, this.frame, h("div", { class: "response-buttons" }, this.buttons), this.feedback);
+    keyTarget?.addEventListener("keydown", (event) => this.handleKey(event));
   }
 
   static async decodeImage(url) {
@@ -64,11 +74,23 @@ export class TrialScreen {
 
   handleClick(event, label) {
     const time = this.now(); // captured before anything else
-    const button = event.currentTarget;
+    this.accept(event.currentTarget, label, time, "click");
+  }
+
+  handleKey(event) {
+    const time = this.now(); // captured before anything else
+    const label = RESPONSE_KEYS[event.code];
+    if (!label || event.repeat || event.ctrlKey || event.altKey || event.metaKey) return;
+    if (!this.element.isConnected) return; // only while the trial screen is shown
+    event.preventDefault();
+    this.accept(this.buttons.find((b) => b.dataset.response === label), label, time, "key");
+  }
+
+  accept(button, label, time, input) {
     if (button.disabled) return;
     this.disableResponses();
     button.classList.add("selected"); // shows which answer was registered
-    this.onResponse(label, time);
+    this.onResponse(label, time, input);
   }
 
   // ---- presenter interface used by the engine
